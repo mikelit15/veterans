@@ -1410,7 +1410,6 @@ def main():
     global worksheet
     # worksheet = workbook[cemetery]
     warFlag = False
-    
     uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
     firstFileFlag = True
     for letter in uppercase_alphabet:
