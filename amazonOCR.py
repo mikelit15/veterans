@@ -15,6 +15,26 @@ from nameparser.config import CONSTANTS
 from openpyxl.styles import PatternFill
 from fuzzywuzzy import fuzz
 
+
+'''
+Redacts sensitive information (e.g., social security or ID numbers) from 
+a registration card by adding a black box over the specified area. The 
+method of redaction varies based on the card format. The first page of the 
+PDF is saved as a PNG, and the black box is added to the PNG. A new PDF is 
+then created using the redacted PNG for the first page and the original 
+second page.
+
+@param file (str) - Path to the file to be processed
+@param flag (bool) - Flag indicating the card format, effects the position 
+                     of the redaction
+@param cemetery (str) - Name of the cemetery, used for the save location
+@param letter (str) - Last name letter, used for sorting and saving the 
+                      file in the correct directory
+
+@return new_pdf_file (str) - Path to the newly created redacted PDF file
+
+@author Mike
+'''
 def redact(file, flag, cemetery, letter):
     pdf_document  = fitz.open(file)
     first_page  = pdf_document.load_page(0)
@@ -51,6 +71,21 @@ def redact(file, flag, cemetery, letter):
     pdf_document.close()
     return new_pdf_file    
 
+
+'''
+Merges 'A' and 'B' redacted files into a single combined file, showing 
+both versions of the card, both redacted. This is particularly used for 
+displaying both sides of a card or different versions of a document.
+
+@param pathA (str) - File path for file A (first document to be merged)
+@param pathB (str) - File path for file B (second document to be merged)
+@param cemetery (str) - Name of the cemetery, used for categorizing and 
+                        saving the merged document
+@param letter (str) - Last name letter, used for sorting and saving the 
+                      file in the correct directory
+
+@author Mike
+'''
 def mergeImages(pathA, pathB, cemetery, letter):
     fullLocation = r"\\ucclerk\pgmdoc\Veterans"
     redactedLocation = f'{cemetery} - Redacted'
@@ -74,6 +109,25 @@ def mergeImages(pathA, pathB, cemetery, letter):
     with open(f'{fullLocation}\\{cemetery}{letter}{fileName[2].replace("a.pdf", "")} redacted.pdf', 'wb') as out_pdf:
         merger2.write(out_pdf)
 
+
+'''
+Extracts key-value pairs from the specified file using AWS Textract, 
+which performs analysis to identify and extract text, forms, and tables.
+
+@param file_name (str) - Path to the file to be processed
+@param id (int) - Identifier for the file, used for logging or referencing.
+@param cemetery (str) - Name of the cemetery, used for categorizing the data
+
+@return key_map (dict)- Dictionary of keys extracted from the document
+@return value_map (dict) - Dictionary of values extracted from the document
+@return block_map (dict) - Dictionary of text blocks extracted from the document
+@return civil (str) - Extracted information related to civil aspects
+@return cem (str) - Name of the cemetery extracted from the document
+@return world (str) - Extracted information related to war aspects
+@return bYear (str) - Extracted birth year
+
+@author Mike
+'''
 def get_kv_map(file_name, id, cemetery):
     with open(file_name, 'rb') as file:
         img_test = file.read()
@@ -143,6 +197,19 @@ def get_kv_map(file_name, id, cemetery):
                 value_map[block_id] = block
     return key_map, value_map, block_map, civil, cem, world, bYear
 
+
+'''
+Establishes relationships between keys and their corresponding values 
+by analyzing block relationships and types.
+
+@param key_map (dict) - Dictionary containing blocks identified as keys
+@param value_map (dict) - Dictionary containing blocks identified as values
+@param block_map (dict) - Dictionary containing all blocks
+
+@return kvs (defaultdict(list)) - Dictionary of keys and their corresponding list of values
+
+@author Mike
+'''
 def get_kv_relationship(key_map, value_map, block_map):
     kvs = defaultdict(list)
     for block_id, key_block in key_map.items():
@@ -153,6 +220,18 @@ def get_kv_relationship(key_map, value_map, block_map):
         kvs[key].append(val)
     return kvs
 
+
+'''
+Identifies the value block associated with a given key block by 
+analyzing their relationships.
+
+@param key_block (dict) - The block identified as a key
+@param value_map (dict) - Dictionary containing blocks identified as values
+
+@return value_block (dict) - The value block corresponding to the given key block
+
+@author Mike
+'''
 def find_value_block(key_block, value_map):
     for relationship in key_block['Relationships']:
         if relationship['Type'] == 'VALUE':
@@ -160,6 +239,17 @@ def find_value_block(key_block, value_map):
                 value_block = value_map[value_id]
     return value_block
 
+
+'''
+Extracts and concatenates text from a block or a collection of blocks.
+
+@param result (dict) - Block from which text needs to be extracted
+@param block_map (dict) - Dictionary containing all blocks
+
+@return text (str) - Text extracted from the specified block or collection of blocks
+
+@author Mike
+'''
 def get_text(result, blocks_map):
     text = ''
     if 'Relationships' in result:
@@ -174,24 +264,72 @@ def get_text(result, blocks_map):
                             text += 'X '
     return text
 
+
+'''
+Prints the key-value pairs in a readable format. Useful for debugging 
+or presenting the extracted data.
+
+@param kvs (defaultdict(list)) - Dictionary containing the key-value pairs to be printed
+
+@author Mike
+'''
 def print_kvs(kvs):
     for key, value in kvs.items():
         print(key, ":", value)
     
     print("\n")
-    
+
+
+'''
+Searches for and retrieves the value associated with a specified key 
+from the dictionary of key-value pairs.
+
+@param kvs (defaultdict(list)) - Dictionary containing key-value pairs
+@param search_key (str) - The key for which the value needs to be retrieved
+
+@return value (str or None) - The value associated with the search_key, 
+                              if found. Otherwise, None
+
+@author Mike
+''' 
 def search_value(kvs, search_key):
     for key, value in kvs.items():
         key = str.rstrip(key)
         if key.upper() == search_key.upper():
             return value
 
+
+'''
+Searches for and retrieves the value associated with a specified key from 
+the dictionary of key-value pairs, using fuzzy matching to account for 
+potential variations or typos in the key names.
+
+@param kvs (defaultdict(list)) - Dictionary containing key-value pairs
+@param search_key (str) - The key for which the value needs to be retrieved, 
+                          allowing for some variation in the key name
+
+@return value (str or None) - The value associated with the search_key, 
+                              if found. Otherwise, None
+
+@author Mike
+''' 
 def search_value_x(kvs, search_key):
     search_pattern = r'\b' + re.escape(search_key) + r'\b' 
     for key, value in kvs.items():
         if re.search(search_pattern, key, re.IGNORECASE):
             return value
-        
+
+
+'''
+Parses and formats a full name into its constituent parts: first name, 
+middle name, last name, and suffix. The function handles various naming 
+conventions and appends the formatted name components to a list.
+
+@param finalVals (list) - List where the processed name components will be appended
+@param value (str) - The raw name string to be processed
+
+@author Mike
+''' 
 def nameRule(finalVals, value):
     CONSTANTS.force_mixed_case_capitalization = True
     name = HumanName(value)
@@ -268,6 +406,23 @@ def nameRule(finalVals, value):
     finalVals.append(middleName.replace(",", "."))
     finalVals.append(suffix.replace(",", "."))
 
+
+'''
+Processes and formats birth date information. Handles partial and full 
+dates, converting them into a consistent format.
+
+@param birth (str) - Raw birth date string
+@param bYear (str) - Birth year, particularly if only the year is provided
+@param birthYYFlag (bool) - Flag indicating if the birth year is provided as 
+                            a two-digit number
+
+@return birth (str) - Cleaned and Formatted birth date
+@return bYear (str) - Birth year, particularly if only the year is provided
+@return birthYYFlag (bool) - Updated flag indicating if the birth year is provided 
+                             as a two-digit number
+
+@author Mike
+''' 
 def parseBirth(birth, bYear, birthYYFlag):
     pattern = r'([A-Za-z]+),\s*(\d{4})'
     match = re.match(pattern, birth.strip())
@@ -375,6 +530,23 @@ def parseBirth(birth, bYear, birthYYFlag):
             birth = ""
     return birth, bYear, birthYYFlag
 
+
+'''
+Processes and formats death date information. Handles partial and full dates, 
+converting them into a consistent format.
+
+@param death (str) - Raw death date string
+@param dYear (str) - Death year, particularly if only the year is provided
+@param deathYYFlag (bool )- Flag indicating if the death year is provided as 
+                            a two-digit number
+
+@return death (str) - Cleaned and formatted death date
+@return dYear (str) - Death year, particularly if only the year is provided
+@return deathYYFlag (bool) - Updated flag indicating if the death year is provided 
+                            as a two-digit number
+
+@author Mike
+''' 
 def parseDeath(death, dYear, deathYYFlag):
     pattern = r'([A-Za-z]+),\s*(\d{4})'
     match = re.match(pattern, death.strip())
@@ -485,6 +657,24 @@ def parseDeath(death, dYear, deathYYFlag):
             death = ""
     return death, dYear, deathYYFlag
 
+
+'''
+Analyzes and formats date-related information based on various rules and 
+conditions. It reconciles birth and death dates with other date-related information.
+
+@param finalVals (list) - List where the processed date information will be appended
+@param value (string) - Current value being processed (typically related to death date)
+@param dob (string) - Date of birth
+@param buried (string) - Date of burial
+@param buriedYear (string) - Year of burial
+@param cent (string) -  Century of the event (used for two-digit years)
+@param war (string) - War during which the person served, if applicable
+
+@return warFlag (bool) - Flag indicating if a two-digit year comparison was made to 
+                         determine the century
+
+@author Mike
+''' 
 def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
     warFlag = False
     warsFlag = False
@@ -925,6 +1115,21 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
             finalVals.append("") 
     return warFlag
 
+
+'''
+Processes and formats the burial year information. It adjusts the year 
+based on the century and war involvement, and reconciles it with other 
+date-related information.
+
+@param value (str) - Extracted value from the document, typically related to burial date
+@param bYear (str) - Burial year, particularly if only the year is known
+@param cent (str) - Century of the burial event
+@param warsFlag (bool) - Flag indicating involvement in a war
+
+@return buriedYear (str) - Processed and formatted burial year
+
+@author Mike
+'''
 def buriedRule(value, bYear, cent, warsFlag):
     buried = value
     buried = buried.replace("I", "1").replace("-", "/")
@@ -983,6 +1188,22 @@ def buriedRule(value, bYear, cent, warsFlag):
                     buriedYear = ""
     return buriedYear
 
+
+'''
+Processes and categorizes the war based on the provided textual value. It 
+standardizes different war names and handles abbreviations and misspellings. 
+It also accounts for specific war names provided through 'civil' and 'world' parameters
+
+@param value (str) - The raw text value extracted from the document which may 
+                     contain war information
+@param civil (str) - Specific indicator if the person participated in the Civil War
+@param world (str) - Specific indicator if the person participated in World War I
+
+@return war (str) - The standardized war name or an empty string if no 
+                    matching category was found
+
+@author Mike
+'''
 def warRule(value, civil, world):
     war = value
     if war:
@@ -1045,6 +1266,21 @@ def warRule(value, civil, world):
         war = ""
     return war
 
+
+'''
+Determines and appends the military branch based on the provided value. It 
+handles various abbreviations and naming conventions, and considers the 
+context of the war when determining the branch.
+
+@param finalVals (list) - A list where the processed military branch will be appended
+@param value (str) - The raw text value extracted from the document which may 
+                     contain branch information
+@param war (str) - The standardized war name to provide context for the branch 
+                   determination
+                   
+@author Mike
+
+'''
 def branchRule(finalVals, value, war):
     armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", \
             "cav", "div", "sig", "art", "corps", "corp"]
@@ -1085,6 +1321,24 @@ def branchRule(finalVals, value, war):
     finalVals.append(value)   
     finalVals.append(branch)   
 
+
+'''
+Creates a record by extracting and processing information from a document file. 
+It handles various data fields, including name, birth, death, military service, 
+and others. It calls other functions to process specific fields.
+
+@param file_name (str) - The path to the document file
+@param id (int) - The ID to be assigned to the record
+@param cemetery (str) - The name of the cemetery to associate with the record
+
+@return finalVals (list) - A list of processed values for different data fields of 
+                           the record
+@return flag (bool) - A flag indicating if a specific condition (e.g., special handling 
+                      or a specific record type) was encountered during processing
+@return warFlag (bool) - A flag indicating if war-related data was processed
+    
+@author Mike
+'''
 def createRecord(file_name, id, cemetery):
     civil = ""
     world = ""
@@ -1175,6 +1429,26 @@ def createRecord(file_name, id, cemetery):
                 buried = buried[0]
     return finalVals, flag, warFlag
 
+
+'''
+Creates a temporary record for processing 'A' and 'B' cards. It's similar to 
+'createRecord' but tailored for handling these specific card types. It extracts 
+and processes information from a document file and calls other functions for 
+specific fields.
+
+@param file_name (str) - The path to the document file
+@param val (str) - A value indicating the type of card ('A' or 'B')
+@param int (int) - The ID to be assigned to the record
+@param cemetery (str) - The name of the cemetery to associate with the record
+
+@return finalVals (list) - A list of processed values for different data fields 
+                           of the record
+@return flag (bool) - A flag indicating if a specific condition (e.g., special 
+                      handling or a specific record type) was encountered during processing
+@return warFlag (bool) - A flag indicating if war-related data was processed
+
+@author Mike
+'''
 def tempRecord(file_name, val, id, cemetery):
     print("Performing Temp", id, val.upper())
     buried = ""
@@ -1266,6 +1540,20 @@ def tempRecord(file_name, val, id, cemetery):
                 buried = buried[0]
     return finalVals, flag, warFlag
 
+
+'''
+Merges two sets of record values, typically from 'A' and 'B' cards, into a 
+single record. It compares and chooses the most appropriate value for each 
+field and handles row highlighting in the output based on specific conditions.
+
+@param vals1 (list) - The first set of record values
+@param vals2 (list) - The second set of record values
+@param rowIndex (int) - The row index in the output where the merged record will be placed
+@param id (int) - The ID assigned to the merged record
+@param warFlag (bool) - A flag indicating if war-related data was processed
+
+@author Mike
+'''
 def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
     counter = 1
     def length(item):
@@ -1323,7 +1611,21 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
             cell.fill = highlight_color
             cell = worksheet.cell(row=rowIndex, column=16)
             cell.fill = highlight_color
-            
+       
+       
+'''
+Cleans and renames file names in a given letter and cemetery for inconsistencies 
+when scanning. It standardizes the naming convention of files and ensures correct ordering.
+
+@param cemetery (str) - The name of the cemetery
+@param letter (str) - The letter or section of the cemetery being processed
+@param name_path (str) - The path where the files are located
+@param cem_path (str) - The path to the cemetery directory
+@param counterA (int) - The starting counter for naming files
+@param is_file_first (bool) - Flag indicating if the current file is the first in the series
+
+@author Mike
+'''     
 def clean(cemetery, letter, name_path, cem_path, counterA, is_first_file):
     pdf_files = sorted(os.listdir(name_path))
     letters = sorted([folder for folder in os.listdir(cem_path) if os.path.isdir(os.path.join(cem_path, folder))])
@@ -1369,12 +1671,50 @@ def clean(cemetery, letter, name_path, cem_path, counterA, is_first_file):
         counter += 1
         is_first_file = False
 
+
+'''
+Finds the next empty row in the worksheet to begin processing at that index.
+
+@param worksheet - The worksheet object being operated on
+
+@return worksheet.max_row + 1 (int) - The row index of the next empty row in the worksheet
+
+@author Mike
+'''  
 def find_next_empty_row(worksheet):
     for row in worksheet.iter_rows(min_row=2, min_col=1, max_col=1):
         if row[0].value is None:
             return row[0].row
     return worksheet.max_row + 1 
 
+
+'''
+The main function that controls files sent to be processed as well as 
+the data that is put into the excel sheet. It sets up the current working 
+directory, the current sheet in the spreadsheet, and loops through all the 
+images in a set letter in a set cemetery. This function is the primary 
+controller for processing, saving, and handling of records.
+
+Main functions that controls files sent to be processed as well as 
+the data that is put into the excel sheet. Sets up the current working 
+directory as well as the current sheet in the excel spreadsheet. Loops
+through all the images in a set Letter in a set Cemetery, this is for 
+damage control. 
+
+The loop finds the last record recorded in the excel sheet
+and then starts indexing from there. Calls createRecord is normal card, 
+calls tempRecord and mergeRecord for A and B cards.
+
+calls redactImage for every card processed. Places the record ID and a 
+hyperlink to the redacted image in the excel sheet during processing.
+Saves worksheet after every image is done processing to reduce loss of 
+data upon errors.
+
+Controls highlighting of entire row of record upon different conditions 
+that are caught by the program. 
+
+@author Mike
+'''
 def main():
     cemeterys = ['Beth David', 'Beth Isreal', 'B\'Nai Abraham', 'B\'Nai Isreal', \
         'B\'Nai Jeshurum', 'Elizabeth Jewish', 'Evergreen', 'EvergreenP', 'Extra', \
