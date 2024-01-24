@@ -17,18 +17,18 @@ from fuzzywuzzy import fuzz
 
 
 '''
-Redacts sensitive information (e.g., social security or ID numbers) from 
-a registration card by adding a black box over the specified area. The 
-method of redaction varies based on the card format. The first page of the 
-PDF is saved as a PNG, and the black box is added to the PNG. A new PDF is 
-then created using the redacted PNG for the first page and the original 
-second page.
+Redacts sensitive information (e.g., social security or ID numbers) from a registration 
+card by adding a black box over the specified area. The method of redaction varies based 
+on the card format. The first page of the PDF is saved as a PNG, and the black box is 
+added to the PNG. A new PDF is then created using the redacted PNG for the first page and 
+the original second page.
 
 @param file (str) - Path to the file to be processed
 @param flag (bool) - Flag indicating the card format, effects the position 
                      of the redaction
-@param cemetery (str) - Name of the cemetery, used for the save location
-@param letter (str) - Last name letter, used for sorting and saving the 
+@param cemetery (str) - Name of the cemetery, used for categorizing and saving the 
+                        file in the correct directory
+@param letter (str) - Last name letter, used for categorizing and saving the 
                       file in the correct directory
 
 @return new_pdf_file (str) - Path to the newly created redacted PDF file
@@ -73,16 +73,15 @@ def redact(file, flag, cemetery, letter):
 
 
 '''
-Merges 'A' and 'B' redacted files into a single combined file, showing 
-both versions of the card, both redacted. This is particularly used for 
-displaying both sides of a card or different versions of a document.
+Merges 'A' and 'B' redacted files into a single combined file, showing both versions 
+of the card, both redacted.
 
 @param pathA (str) - File path for file A (first document to be merged)
 @param pathB (str) - File path for file B (second document to be merged)
-@param cemetery (str) - Name of the cemetery, used for categorizing and 
-                        saving the merged document
-@param letter (str) - Last name letter, used for sorting and saving the 
-                      file in the correct directory
+@param cemetery (str) - Name of the cemetery, used for categorizing and saving the 
+                        merged file in the correct directory
+@param letter (str) - Last name letter, used for categorizing and saving the 
+                      merged file in the correct directory
 
 @author Mike
 '''
@@ -111,20 +110,23 @@ def mergeImages(pathA, pathB, cemetery, letter):
 
 
 '''
-Extracts key-value pairs from the specified file using AWS Textract, 
-which performs analysis to identify and extract text, forms, and tables.
+Extracts key-value pairs from the specified file using AWS Textract, which performs 
+an AI analysis to identify and extract text from the form.
 
 @param file_name (str) - Path to the file to be processed
-@param id (int) - Identifier for the file, used for logging or referencing.
-@param cemetery (str) - Name of the cemetery, used for categorizing the data
+@param id (int) - ID of the file, used for referencing the specific file that is 
+                  currently being processed, printed in the terminal
+@param cemetery (str) - Name of the cemetery, used for brute force extraction, for example
+                        if the key was not found or combined with another key. Also used 
+                        with fuzzy API to catch cemetery if it has minor spelling mistakes
 
 @return key_map (dict)- Dictionary of keys extracted from the document
 @return value_map (dict) - Dictionary of values extracted from the document
-@return block_map (dict) - Dictionary of text blocks extracted from the document
-@return civil (str) - Extracted information related to civil aspects
-@return cem (str) - Name of the cemetery extracted from the document
-@return world (str) - Extracted information related to war aspects
-@return bYear (str) - Extracted birth year
+@return block_map (dict) - Dictionary of blocks extracted from the document
+@return civil (str) - Extracted "Civil War" if text found outside of the war key
+@return cem (str) - Brute force extraction of cemetery, if key does not work
+@return world (str) - Extracted "World War 1" if text found outside of the war key
+@return bYear (str) - Extracted 2-digit birth year, for key "19"
 
 @author Mike
 '''
@@ -199,8 +201,8 @@ def get_kv_map(file_name, id, cemetery):
 
 
 '''
-Establishes relationships between keys and their corresponding values 
-by analyzing block relationships and types.
+Establishes relationships between keys and their corresponding values by analyzing 
+block relationships and types.
 
 @param key_map (dict) - Dictionary containing blocks identified as keys
 @param value_map (dict) - Dictionary containing blocks identified as values
@@ -222,10 +224,10 @@ def get_kv_relationship(key_map, value_map, block_map):
 
 
 '''
-Identifies the value block associated with a given key block by 
-analyzing their relationships.
+Identifies the value block associated with a given key block by analyzing their 
+relationships.
 
-@param key_block (dict) - The block identified as a key
+@param key_block (dict) - Dictionary containing blocks identified as keys
 @param value_map (dict) - Dictionary containing blocks identified as values
 
 @return value_block (dict) - The value block corresponding to the given key block
@@ -275,20 +277,19 @@ or presenting the extracted data.
 '''
 def print_kvs(kvs):
     for key, value in kvs.items():
-        print(key, ":", value)
-    
+        print(key, ":", value)  
     print("\n")
 
 
 '''
-Searches for and retrieves the value associated with a specified key 
-from the dictionary of key-value pairs.
+Searches for and retrieves the value associated with a specified key from the dictionary 
+of key-value pairs. Compares strings for equality.
 
 @param kvs (defaultdict(list)) - Dictionary containing key-value pairs
-@param search_key (str) - The key for which the value needs to be retrieved
+@param search_key (str) - The key for which the value needs to be retrieved for
 
-@return value (str or None) - The value associated with the search_key, 
-                              if found. Otherwise, None
+@return value (str or None) - The value associated with the search_key, if found. 
+                              Otherwise, None
 
 @author Mike
 ''' 
@@ -300,16 +301,14 @@ def search_value(kvs, search_key):
 
 
 '''
-Searches for and retrieves the value associated with a specified key from 
-the dictionary of key-value pairs, using fuzzy matching to account for 
-potential variations or typos in the key names.
+Searches for and retrieves the value associated with a specified key from the dictionary 
+of key-value pairs. Uses REGEX instead of comparing strings.
 
 @param kvs (defaultdict(list)) - Dictionary containing key-value pairs
-@param search_key (str) - The key for which the value needs to be retrieved, 
-                          allowing for some variation in the key name
+@param search_key (str) - The key for which the value needs to be retrieved for
 
-@return value (str or None) - The value associated with the search_key, 
-                              if found. Otherwise, None
+@return value (str or None) - The value associated with the search_key, if found. 
+                            Otherwise, None
 
 @author Mike
 ''' 
@@ -321,12 +320,12 @@ def search_value_x(kvs, search_key):
 
 
 '''
-Parses and formats a full name into its constituent parts: first name, 
-middle name, last name, and suffix. The function handles various naming 
-conventions and appends the formatted name components to a list.
+Parses and formats a full name into its constituent parts: first name, middle name, 
+last name, and suffix. The function handles various naming conventions and appends 
+the formatted name components to a list.
 
 @param finalVals (list) - List where the processed name components will be appended
-@param value (str) - The raw name string to be processed
+@param value (str) - The extracted raw name to be processed
 
 @author Mike
 ''' 
@@ -408,18 +407,18 @@ def nameRule(finalVals, value):
 
 
 '''
-Processes and formats birth date information. Handles partial and full 
-dates, converting them into a consistent format.
+Processes and formats birth date information. Handles partial and full dates, converting 
+them into a consistent format.
 
-@param birth (str) - Raw birth date string
+@param birth (str) - Extracted raw full birth date
 @param bYear (str) - Birth year, particularly if only the year is provided
-@param birthYYFlag (bool) - Flag indicating if the birth year is provided as 
-                            a two-digit number
+@param birthYYFlag (bool) - Flag indicating if the birth year is provided as a two-digit 
+                            number
 
-@return birth (str) - Cleaned and Formatted birth date
-@return bYear (str) - Birth year, particularly if only the year is provided
-@return birthYYFlag (bool) - Updated flag indicating if the birth year is provided 
-                             as a two-digit number
+@return birth (str) - Cleaned and formatted full birth date
+@return bYear (str) - Birth year, seperated from full date if applicable
+@return birthYYFlag (bool) - Updated flag indicating if the birth year is provided as 
+                             a two-digit number
 
 @author Mike
 ''' 
@@ -532,18 +531,18 @@ def parseBirth(birth, bYear, birthYYFlag):
 
 
 '''
-Processes and formats death date information. Handles partial and full dates, 
-converting them into a consistent format.
+Processes and formats death date information. Handles partial and full dates, converting 
+them into a consistent format.
 
-@param death (str) - Raw death date string
+@param death (str) - Extracted raw full death date 
 @param dYear (str) - Death year, particularly if only the year is provided
-@param deathYYFlag (bool )- Flag indicating if the death year is provided as 
-                            a two-digit number
-
-@return death (str) - Cleaned and formatted death date
-@return dYear (str) - Death year, particularly if only the year is provided
-@return deathYYFlag (bool) - Updated flag indicating if the death year is provided 
-                            as a two-digit number
+@param deathYYFlag (bool) - Flag indicating if the death year is provided as a two-digit 
+                            number
+ 
+@return death (str) - Cleaned and formatted full death date
+@return dYear (str) - Death year, seperated from full date if applicable
+@return deathYYFlag (bool) - Updated flag indicating if the death year is provided as a 
+                             two-digit number
 
 @author Mike
 ''' 
@@ -659,18 +658,22 @@ def parseDeath(death, dYear, deathYYFlag):
 
 
 '''
-Analyzes and formats date-related information based on various rules and 
-conditions. It reconciles birth and death dates with other date-related information.
+Analyzes and formats date-related information based on various rules and conditions. 
+It reconciles birth and death dates with other date-related information. Handles conditions
+where missing birth and/or death dates and/or years. Attempts to correct 2-digit years
+using cent date, else uses buried date, else uses war info, else uses "<" comparison and 
+this comparison calls for the activation of warFlag signaling to highlight the row due to 
+possible wrong century.
 
 @param finalVals (list) - List where the processed date information will be appended
 @param value (string) - Current value being processed (typically related to death date)
 @param dob (string) - Date of birth
 @param buried (string) - Date of burial
 @param buriedYear (string) - Year of burial
-@param cent (string) -  Century of the event (used for two-digit years)
+@param cent (string) -  Century of the event (used for 2-digit years)
 @param war (string) - War during which the person served, if applicable
 
-@return warFlag (bool) - Flag indicating if a two-digit year comparison was made to 
+@return warFlag (bool) - Flag indicating if a 2-digit year comparison was made to 
                          determine the century
 
 @author Mike
@@ -1117,14 +1120,13 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
 
 
 '''
-Processes and formats the burial year information. It adjusts the year 
-based on the century and war involvement, and reconciles it with other 
-date-related information.
+Processes and formats the burial year information. It adjusts the year based on the 
+century and war involvement, and reconciles it with other date-related information.
 
-@param value (str) - Extracted value from the document, typically related to burial date
-@param bYear (str) - Burial year, particularly if only the year is known
-@param cent (str) - Century of the burial event
-@param warsFlag (bool) - Flag indicating involvement in a war
+@param value (str) - Extracted raw burial date
+@param bYear (str) - Burial year, particularly if only the year is printed on the card
+@param cent (str) - If not none, provides century data for death year
+@param warsFlag (bool) - Flag indicating involvement in a 19th century war
 
 @return buriedYear (str) - Processed and formatted burial year
 
@@ -1190,17 +1192,16 @@ def buriedRule(value, bYear, cent, warsFlag):
 
 
 '''
-Processes and categorizes the war based on the provided textual value. It 
-standardizes different war names and handles abbreviations and misspellings. 
-It also accounts for specific war names provided through 'civil' and 'world' parameters
+Processes and categorizes the war based on the extracted value. It standardizes different 
+war names and handles abbreviations and misspellings. It also accounts for brute force 
+extraction through 'civil' and 'world' parameters taken from get_kv_map().
 
-@param value (str) - The raw text value extracted from the document which may 
-                     contain war information
+@param value (str) - Extracted raw war name 
 @param civil (str) - Specific indicator if the person participated in the Civil War
 @param world (str) - Specific indicator if the person participated in World War I
 
-@return war (str) - The standardized war name or an empty string if no 
-                    matching category was found
+@return war (str) - The standardized war name or an empty string if no matching category 
+                    was found
 
 @author Mike
 '''
@@ -1268,15 +1269,13 @@ def warRule(value, civil, world):
 
 
 '''
-Determines and appends the military branch based on the provided value. It 
-handles various abbreviations and naming conventions, and considers the 
-context of the war when determining the branch.
+Determines and appends the military branch based on the extracted text. It handles various 
+abbreviations and naming conventions.
 
 @param finalVals (list) - A list where the processed military branch will be appended
-@param value (str) - The raw text value extracted from the document which may 
-                     contain branch information
-@param war (str) - The standardized war name to provide context for the branch 
-                   determination
+@param value (str) - The raw branch name
+@param war (str) - A net for if war name is caught by the branch key, or misinput on the
+                   registration card
                    
 @author Mike
 
@@ -1323,19 +1322,20 @@ def branchRule(finalVals, value, war):
 
 
 '''
-Creates a record by extracting and processing information from a document file. 
-It handles various data fields, including name, birth, death, military service, 
-and others. It calls other functions to process specific fields.
+Creates a record by extracting and processing information from a document file. It 
+handles various data fields, including name, birth, death, military service, and others. 
+It calls the specialized functions to handle parsing, cleaning, and standardizing the
+extracted text from the veteran cards to be put into the excel sheet.  
 
 @param file_name (str) - The path to the document file
-@param id (int) - The ID to be assigned to the record
-@param cemetery (str) - The name of the cemetery to associate with the record
+@param id (int) - The id of the file, which is assigned to the record in Excel
+@param cemetery (str) - The name of the cemetery where the record is from
 
-@return finalVals (list) - A list of processed values for different data fields of 
-                           the record
-@return flag (bool) - A flag indicating if a specific condition (e.g., special handling 
-                      or a specific record type) was encountered during processing
-@return warFlag (bool) - A flag indicating if war-related data was processed
+@return finalVals (list) - A list of processed values for completed data fields of the 
+                           current file
+@return flag (bool) - A flag indicated the size type of the document, used for redaction
+@return warFlag (bool) - A flag indicating if "<" comparison was made during date parsing,
+                         used for highlighting the row for a second look
     
 @author Mike
 '''
