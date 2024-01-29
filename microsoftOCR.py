@@ -3,6 +3,7 @@ import openpyxl
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.formrecognizer import DocumentAnalysisClient
 from openpyxl.styles import Font
+from collections import defaultdict
 import os
 import PyPDF2
 import fitz
@@ -35,15 +36,15 @@ the original second page.
 
 @author Mike
 '''
-def redact(file, flag, cemetery, letter):
+def redact(file, flag, cemetery, letter, coords):
     pdf_document  = fitz.open(file)
     first_page  = pdf_document.load_page(0)
     first_page_image  = first_page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
     image_file  = "temp.png"
     first_page_image.save(image_file)
     img = cv2.imread(image_file)
-    pt1 = (2670, 500)
-    pt3 = (3526, 950)
+    pt1 = (coords[0][0]-75, coords[0][1]-350)
+    pt3 = (3525, coords[1][1]+50)
     if flag:
         pt1 = (2670, 260)
         pt3 = (3500, 570)
@@ -55,7 +56,7 @@ def redact(file, flag, cemetery, letter):
     c.drawImage(image_file, 0, 0, width=image.width, height=image.height)
     c.save()
 
-    fullLocation = r"\\ucclerk\pgmdoc\Veterans"
+    fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
@@ -115,19 +116,53 @@ def analyze_document(file_path, id):
     with open(file_path, "rb") as file:
         img_test = file.read()
         bytes_test = bytearray(img_test)
-        print('Image loaded ', id)
-    poller = document_analysis_client.begin_analyze_document("prebuilt-document", document=bytes_test)
+        print('Image loaded', id)
+    poller = document_analysis_client.begin_analyze_document("Test8n", document=bytes_test)
     result = poller.result()
     return result
 
 def extract_key_value_pairs(result):
-    key_value_pairs = {}
-    for kv_pair in result.key_value_pairs:
-        key_content = kv_pair.key.content if kv_pair.key and kv_pair.key.content else ''
-        value_content = kv_pair.value.content if kv_pair.value and kv_pair.value.content else ''
-        key_value_pairs[key_content] = value_content
-    return key_value_pairs
-
+    kvs = defaultdict(list)
+    coords = []
+    for idx, invoice in enumerate(result.documents):
+        name = invoice.fields.get("Name")
+        if name.content != None:
+            kvs["NAME"].append(name.content)
+        serial = invoice.fields.get("Serial No.")
+        if serial:
+            for region in serial.bounding_regions:
+                polygon = region.polygon
+                coords.append((int(polygon[0].x * 600), int(polygon[0].y * 600)))
+                coords.append((int(polygon[2].x * 600), int(polygon[2].y * 600)))
+        born = invoice.fields.get("Born")
+        if born.content != None:
+            kvs["BORN"].append(born.content)
+        death = invoice.fields.get("Date of Death")
+        if death.content != None:
+            kvs["DATE OF DEATH"].append(death.content)
+        buried = invoice.fields.get("Buried")
+        if buried.content != None:
+            kvs["BURIED"].append(buried.content)
+        century = invoice.fields.get("19")
+        if century.content != None:
+            kvs["19"].append(century.content)
+        cemetery = invoice.fields.get("IN")
+        if cemetery.content != None:
+            kvs["IN"].append(cemetery.content)
+        warRecord = invoice.fields.get("War Record")
+        if warRecord.content != None:
+            kvs["WAR RECORD"].append(warRecord.content)
+        branch = invoice.fields.get("Branch of Service")
+        if branch.content != None:
+            kvs["BRANCH OF SERVICE"].append(branch.content)
+        war = invoice.fields.get("War")
+        if war.content != None:
+            if "War" in war.content:
+                kvs[""].append(war.content)
+        # care = invoice.fields.get("Care Assigned")
+        # if care.content != None:
+        #     extracted.append(True)
+    return kvs, coords, war
 
 '''
 Prints the key-value pairs in a readable format. Useful for debugging 
@@ -140,9 +175,8 @@ or presenting the extracted data.
 def print_kvs(kvs):
     print("----Key-value pairs found in document----")
     for key, value in kvs.items():
-        print(f"'{key}' : '{value}'")
-
-
+        print(key, ":", value)
+    print("\n")
 '''
 Searches for and retrieves the value associated with a specified key from the dictionary 
 of key-value pairs. Compares strings for equality.
@@ -261,6 +295,8 @@ def nameRule(finalVals, value):
     if suffix:
         if not "." in suffix:
             suffix += "."
+    if len(middleName) == 1:
+        middleName += "."
     finalVals.append(lastName.replace(",", "").replace(".", ""))
     finalVals.append(firstName.replace(",", ""))
     finalVals.append(middleName.replace(",", "."))
@@ -430,7 +466,11 @@ def parseDeath(death, dYear, deathYYFlag):
             dYear = year3[-4:]
             death = death.replace(",", " ")
             death = dateparser.parse(death)
-            death = death.strftime("%m/%d/%Y")
+            try:
+                death = death.strftime("%m/%d/%Y")
+            except AttributeError:
+                dYear = ""
+                death = ""
         elif len(year3) > 6:
             temp = year3[:4]
             if temp.isnumeric():
@@ -562,6 +602,8 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
     if birth[-1:] == ".":
         birth = birth[:-1]
     if birth[-1:] == "/":
+        birth = birth[:-1]
+    if birth[-1:] == "-":
         birth = birth[:-1]
     if "Age" in birth:
         match = re.search(r'\b\d{4}\b', birth)
@@ -709,11 +751,11 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                         dYear = "19" + dYear
                     death = death[:-2] + dYear
                     if birth:
-                        finalVals.append("")
+                        finalVals.append(birth)
                     else:
                         finalVals.append("")
                     if bYear:
-                        finalVals.append("")
+                        finalVals.append(int(bYear))
                     else:
                         finalVals.append("")
                     if len(dYear) == 2:
@@ -996,8 +1038,10 @@ def buriedRule(value, bYear, cent, warsFlag):
     buried = value
     buried = buried.replace("I", "1").replace("-", "/")
     buriedYear = bYear
-    if cent:
+    if len(cent) == 2:
         buriedYear = "19" + cent
+    elif len(cent) == 4:
+        buriedYear = cent
     elif buried or buriedYear:
         if dateparser.parse(buried, settings={'STRICT_PARSING': True}) == None:
             if buriedYear:
@@ -1142,7 +1186,7 @@ abbreviations and naming conventions.
 '''
 def branchRule(finalVals, value, war):
     armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", \
-            "cav", "div", "sig", "art", "corps", "corp"]
+            "cav", "div", "sig", "art", "corps", "corp", "artillery"]
     navys = ["hospital", "navy", "naval"]
     guards = ["113", "102d", "114", "44", "181", "250", "112"]
     branch = value
@@ -1169,7 +1213,7 @@ def branchRule(finalVals, value, war):
         elif word in navys:
             branch = "Navy"
             break
-        elif "coast" in word:
+        elif "coast" in word or "USCG" in word:
             branch = "Coast Guard"
             break
         elif word in guards:
@@ -1199,15 +1243,15 @@ extracted text from the veteran cards to be put into the excel sheet.
     
 @author Mike
 '''
-def createRecord(file_name, id, cemetery):
+def createRecord(file_name, id):
     civil = ""
     world = ""
     war = ""
     bYear = ""
+    coords = None
     cent = ""
     buried = ""
     warFlag = False
-    cem = []
     finalVals = []
     pageReader = PyPDF2.PdfReader(open(file_name, 'rb'))
     page = pageReader.pages[0]
@@ -1215,9 +1259,9 @@ def createRecord(file_name, id, cemetery):
     pdf_writer.add_page(page)
     with open("temp.pdf", 'wb') as output_pdf:
         pdf_writer.write(output_pdf)
-    document_result  = analyze_document("temp.pdf", id)
-    kvs = extract_key_value_pairs(document_result)
-    print_kvs(kvs)
+    document_result = analyze_document("temp.pdf", id)
+    kvs, coords, world = extract_key_value_pairs(document_result)
+    print_kvs(kvs)  
     keys = ["", "NAME", "WAR RECORD", "BORN", "19", "BURIED", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
     flag = False
     flag3 = False
@@ -1228,7 +1272,7 @@ def createRecord(file_name, id, cemetery):
     dob = ""
     for x in keys:
         try:
-            value = search_value(kvs, x)
+            value = search_value(kvs, x)[0]
         except TypeError:
             value = "" 
         if x == "NAME":
@@ -1258,14 +1302,8 @@ def createRecord(file_name, id, cemetery):
         elif x == "BRANCH OF SERVICE":
             branchRule(finalVals, value, war)
         elif x == "IN":
-            try:
-                cem = cem.replace(",", "").replace(".", "").replace(":", "")
-                cem = cem.lower()
-                first = cem[0].upper()
-                cem = first + cem[1:]
-                finalVals.append(cem)
-            except IndexError:
-                finalVals.append("")
+            value = value.split()[0]
+            finalVals.append(value)
         elif x == "19":
             if value:
                 try:
@@ -1279,15 +1317,7 @@ def createRecord(file_name, id, cemetery):
                 pass
         elif x == "BURIED":
             buried = value
-            if "in" in buried:
-                buried = buried.replace("?", "")
-                buried = buried.split("in")
-                try:
-                    cem = buried[1].replace(" ", "").replace(",", "").replace(".", "").replace(":", "")
-                except IndexError:
-                    pass
-                buried = buried[0]
-    return finalVals, flag, warFlag
+    return finalVals, flag, warFlag, coords
 
 
 '''
@@ -1372,14 +1402,8 @@ def tempRecord(file_name, val, id, cemetery):
         elif x == "BRANCH OF SERVICE":
             branchRule(finalVals, value, war)
         elif x == "IN":
-            try:
-                cem = cem.replace(",", "").replace(".", "").replace(":", "")
-                cem = cem.lower()
-                first = cem[0].upper()
-                cem = first + cem[1:]
-                finalVals.append(cem)
-            except IndexError:
-                finalVals.append("")
+            value = value.split()[0]
+            finalVals.append(value)
         elif x == "19":
             if value:
                 try:
@@ -1390,14 +1414,6 @@ def tempRecord(file_name, val, id, cemetery):
                 pass
         elif x == "BURIED":
             buried = value
-            if "in" in buried:
-                buried = buried.replace("?", "")
-                buried = buried.split("in")
-                try:
-                    cem = buried[1].replace(" ", "").replace(",", "").replace(".", "").replace(":", "")
-                except IndexError:
-                    pass
-                buried = buried[0]
     return finalVals, flag, warFlag
 
 
@@ -1591,12 +1607,12 @@ def main():
         'CedarHillM', 'Cedar Lawn', 'Christ Church', 'Clinton', 'Clover']
     global cemSet
     cemSet = set(cemeterys)
-    network_folder = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+    network_folder = r"\\ucclerk\pgmdoc\Veterans"
     os.chdir(network_folder)
-    # workbook = openpyxl.load_workbook('Veterans.xlsx')
+    workbook = openpyxl.load_workbook('Veterans.xlsx')
     global cemetery
-    cemetery = "Evergreen"
-    cem_path = os.path.join(network_folder, cemetery)
+    cemetery = "Fairview"
+    cem_path = os.path.join(network_folder, fr"Cemetery\{cemetery}")
     if cemetery == "Misc":
         miscCem = "Arlington"
         cem_path = os.path.join(cem_path, miscCem)
@@ -1604,124 +1620,125 @@ def main():
     letter = "A"
     name_path = letter
     name_path = os.path.join(cem_path, name_path)
-    initialCount = 42772
+    # initialCount = 4843
     pathA = ""
     rowIndex = 2
     global worksheet
-    # worksheet = workbook[cemetery]
+    worksheet = workbook[cemetery]
     warFlag = False
-    uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
-    firstFileFlag = True
-    for letter in uppercase_alphabet:
-        try:
-            name_path = os.path.join(cem_path, letter)
-            print(letter)
-            clean(cemetery, letter, name_path, cem_path, initialCount, firstFileFlag)
-            firstFileFlag = False
-        except FileNotFoundError:
-            continue
     
-    # pdf_files = sorted(os.listdir(name_path))
-    # initialID = 1
-    # for y in range(len(pdf_files)):
-    #     warFlag = False
-    #     file_path = os.path.join(name_path, pdf_files[y])
-    #     rowIndex = find_next_empty_row(worksheet)
+    # uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
+    # firstFileFlag = True
+    # for letter in uppercase_alphabet:
     #     try:
-    #         id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
-    #     except TypeError:
-    #         id = initialID
-    #     if "output" in pdf_files[y] or "redacted" in pdf_files[y]:
+    #         name_path = os.path.join(cem_path, letter)
+    #         print(letter)
+    #         clean(cemetery, letter, name_path, cem_path, initialCount, firstFileFlag)
+    #         firstFileFlag = False
+    #     except FileNotFoundError:
     #         continue
-    #     else:
-    #         string = pdf_files[y][:-4]
-    #         string = string.split(letter) 
-    #         string = string[-1].lstrip('0')
-    #         if "a" not in string and "b" not in string:
-    #             if id != int(string.replace("a", "").replace("b", "")):
-    #                 continue
-    #             vals, flag, warFlag = createRecord(file_path, id, cemetery)
-    #             redactedFile = redact(file_path, flag, cemetery, letter)
-    #             link_text = "PDF Image"
-    #             worksheet.cell(row=rowIndex, column=15).value = link_text
-    #             worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-    #             worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
-    #             counter = 1
-    #             worksheet.cell(row=rowIndex, column=counter, value=id)
-    #             counter += 1
-    #             for x in vals:
-    #                 worksheet.cell(row=rowIndex, column=counter, value=x)
-    #                 counter += 1
-    #             # Grey if record adjusted using comparison
-    #             if warFlag:
-    #                 highlight_color = PatternFill(start_color="899499", end_color="899499", fill_type="solid")
-    #                 for colIndex in range(2, 15):
-    #                     cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                     cell.fill = highlight_color
-    #                     cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             # Purple if cemetery does not match
-    #             if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
-    #                 highlight_color = PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid")
-    #                 for colIndex in range(2, 15):
-    #                     cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                     cell.fill = highlight_color
-    #                     cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             # Light Blue if record has no DOD
-    #             if (worksheet[f'{"I"}{rowIndex}'].value) == "":
-    #                 highlight_color = PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid")
-    #                 for colIndex in range(2, 15):
-    #                     cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                     cell.fill = highlight_color
-    #                     cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             # Yellow if record last name does not match
-    #             try:
-    #                 if (worksheet[f'B{rowIndex}'].value)[0] != letter:
-    #                     highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    #                     for colIndex in range(2, 15):
-    #                         cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                         cell.fill = highlight_color
-    #                         cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             except IndexError:
-    #                     highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    #                     for colIndex in range(2, 15):
-    #                         cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                         cell.fill = highlight_color
-    #                         cell = worksheet.cell(row=rowIndex, column=16)
-    #                         cell.fill = highlight_color
-    #             id += 1
-    #             rowIndex += 1
-    #         else:
-    #             if id != int(string.replace("a", "").replace("b", "")):
-    #                 continue
-    #             else:
-    #                 if "a" in string:
-    #                     if (file_path.replace("a.pdf", "") in pdf_files):
-    #                         continue
-    #                     pathA = file_path
-    #                     vals1, flag, warFlag = tempRecord(file_path, "a", id, cemetery)
-    #                     redactedFile = redact(file_path, flag, cemetery, letter)
-    #                 if "b" in string:
-    #                     if (file_path.replace("b.pdf", "") in pdf_files):
-    #                         continue
-    #                     vals2, flag, warFlagB = tempRecord(file_path, "b", id, cemetery)
-    #                     if not warFlag or not warFlagB:
-    #                         warFlag = False
-    #                     else:
-    #                         warFlag = True
-    #                     redactedFile = redact(file_path, flag, cemetery, letter)
-    #                     mergeRecords(vals1, vals2, rowIndex, id, warFlag)
-    #                     mergeImages(pathA, file_path, cemetery, letter)
-    #                     link_text = "PDF Image"
-    #                     worksheet.cell(row=rowIndex, column=15).value = link_text
-    #                     worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-    #                     worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
-    #                     id += 1
-    #                     rowIndex += 1
-    #     workbook.save('Veterans.xlsx')
+    
+    pdf_files = sorted(os.listdir(name_path))
+    initialID = 4843
+    for y in range(len(pdf_files)):
+        warFlag = False
+        file_path = os.path.join(name_path, pdf_files[y])
+        rowIndex = find_next_empty_row(worksheet)
+        try:
+            id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
+        except TypeError:
+            id = initialID
+        if "output" in pdf_files[y] or "redacted" in pdf_files[y]:
+            continue
+        else:
+            string = pdf_files[y][:-4]
+            string = string.split(letter) 
+            string = string[-1].lstrip('0')
+            if "a" not in string and "b" not in string:
+                if id != int(string.replace("a", "").replace("b", "")):
+                    continue
+                vals, flag, warFlagm, coords = createRecord(file_path, id)
+                redactedFile = redact(file_path, flag, cemetery, letter, coords)
+                link_text = "PDF Image"
+                worksheet.cell(row=rowIndex, column=15).value = link_text
+                worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
+                counter = 1
+                worksheet.cell(row=rowIndex, column=counter, value=id)
+                counter += 1
+                for x in vals:
+                    worksheet.cell(row=rowIndex, column=counter, value=x)
+                    counter += 1
+                # Grey if record adjusted using comparison
+                if warFlag:
+                    highlight_color = PatternFill(start_color="899499", end_color="899499", fill_type="solid")
+                    for colIndex in range(2, 15):
+                        cell = worksheet.cell(row=rowIndex, column=colIndex)
+                        cell.fill = highlight_color
+                        cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                # Purple if cemetery does not match
+                if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
+                    highlight_color = PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid")
+                    for colIndex in range(2, 15):
+                        cell = worksheet.cell(row=rowIndex, column=colIndex)
+                        cell.fill = highlight_color
+                        cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                # Light Blue if record has no DOD
+                if (worksheet[f'{"I"}{rowIndex}'].value) == "":
+                    highlight_color = PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid")
+                    for colIndex in range(2, 15):
+                        cell = worksheet.cell(row=rowIndex, column=colIndex)
+                        cell.fill = highlight_color
+                        cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                # Yellow if record last name does not match
+                try:
+                    if (worksheet[f'B{rowIndex}'].value)[0] != letter:
+                        highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+                        for colIndex in range(2, 15):
+                            cell = worksheet.cell(row=rowIndex, column=colIndex)
+                            cell.fill = highlight_color
+                            cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                except IndexError:
+                        highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+                        for colIndex in range(2, 15):
+                            cell = worksheet.cell(row=rowIndex, column=colIndex)
+                            cell.fill = highlight_color
+                            cell = worksheet.cell(row=rowIndex, column=16)
+                            cell.fill = highlight_color
+                id += 1
+                rowIndex += 1
+            else:
+                if id != int(string.replace("a", "").replace("b", "")):
+                    continue
+                else:
+                    if "a" in string:
+                        if (file_path.replace("a.pdf", "") in pdf_files):
+                            continue
+                        pathA = file_path
+                        vals1, flag, warFlag = tempRecord(file_path, "a", id, cemetery)
+                        redactedFile = redact(file_path, flag, cemetery, letter)
+                    if "b" in string:
+                        if (file_path.replace("b.pdf", "") in pdf_files):
+                            continue
+                        vals2, flag, warFlagB = tempRecord(file_path, "b", id, cemetery)
+                        if not warFlag or not warFlagB:
+                            warFlag = False
+                        else:
+                            warFlag = True
+                        redactedFile = redact(file_path, flag, cemetery, letter)
+                        mergeRecords(vals1, vals2, rowIndex, id, warFlag)
+                        mergeImages(pathA, file_path, cemetery, letter)
+                        link_text = "PDF Image"
+                        worksheet.cell(row=rowIndex, column=15).value = link_text
+                        worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                        worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
+                        id += 1
+                        rowIndex += 1
+        workbook.save('Veterans.xlsx')
 
 if __name__ == "__main__":
     main()

@@ -56,7 +56,7 @@ def redact(file, flag, cemetery, letter):
     c.save()
 
     fullLocation = r"\\ucclerk\pgmdoc\Veterans"
-    redactedLocation = f'{cemetery} - Redacted'
+    redactedLocation = fr'Cemetery - Redacted\{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
     fileName = file.split(letter)
@@ -1716,30 +1716,30 @@ that are caught by the program.
 @author Mike
 '''
 def main():
-    cemeterys = ['Beth David', 'Beth Isreal', 'B\'Nai Abraham', 'B\'Nai Isreal', \
-        'B\'Nai Jeshurum', 'Elizabeth Jewish', 'Evergreen', 'EvergreenP', 'Extra', \
-        'Fairview', 'Gomel', 'Graceland', 'Hazelwood', 'Hebrew CemeteryN', \
-        'Hebrew CemeterySP', 'Hillside', 'Historian', 'Hollywood', 'Hollywood Memorial', \
-        'Isreal Verein', 'Jewish Educational', 'Medal of Honor', 'Misc', 'Misc OOS', \
-        'Mt. Calvary', 'Mt. Lebanon', 'Mt. Moriah', 'Mt. Olivet', 'Oheb Shalom', \
-        'Oheb ShalomL', 'Rahway', 'Rheimahvvim', 'Rosedale', 'Rosehill', \
-        'Rosehill Crematory', 'St. Gertrude', 'St. Mary', 'St. MaryP', 'St. Teresa', \
-        'Torah']
-    miscs = ['Alpine', 'Arlington', 'Atlantic County', 'Atlantic View', 'BaptistPL', \
-        'BaptistSP', 'Bay ViewJC', 'Bay ViewL', 'Belvidere', 'Bloomfield', 'Bloomsbury', \
-        'Brainard', 'Brick Dock', 'Bronze Memorials', 'Calvary', 'Cedar HillEM', \
-        'CedarHillM', 'Cedar Lawn', 'Christ Church', 'Clinton', 'Clover']
     global cemSet
-    cemSet = set(cemeterys)
+    global miscSet
+    global jewishSet
     network_folder = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
     os.chdir(network_folder)
+    cemeterys = []
+    for x in os.listdir():
+        cemeterys.append(x)
+    miscs = []
+    for x in os.listdir("Misc"):
+        miscs.append(x)
+    jewishs = []
+    for x in os.listdir("Jewish"):
+        jewishs.append(x)
+    cemSet = set(cemeterys)
+    miscSet = set(miscs)
+    jewishSet = set(jewishs)
     # workbook = openpyxl.load_workbook('Veterans.xlsx')
     global cemetery
     cemetery = "Evergreen"
     cem_path = os.path.join(network_folder, cemetery)
-    if cemetery == "Misc":
-        miscCem = "Arlington"
-        cem_path = os.path.join(cem_path, miscCem)
+    # if cemetery == "Misc":
+    #     miscCem = "Arlington"
+    #     cem_path = os.path.join(cem_path, miscCem)
     global letter
     letter = "A"
     name_path = letter
