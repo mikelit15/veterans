@@ -55,8 +55,8 @@ def redact(file, flag, cemetery, letter):
     c.drawImage(image_file, 0, 0, width=image.width, height=image.height)
     c.save()
 
-    fullLocation = r"\\ucclerk\pgmdoc\Veterans"
-    redactedLocation = fr'Cemetery - Redacted\{cemetery} - Redacted'
+    fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+    redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
     fileName = file.split(letter)
@@ -86,7 +86,7 @@ of the card, both redacted.
 @author Mike
 '''
 def mergeImages(pathA, pathB, cemetery, letter):
-    fullLocation = r"\\ucclerk\pgmdoc\Veterans"
+    fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
@@ -120,7 +120,7 @@ an AI analysis to identify and extract text from the form.
                         if the key was not found or combined with another key. Also used 
                         with fuzzy API to catch cemetery if it has minor spelling mistakes
 
-@return key_map (dict)- Dictionary of keys extracted from the document
+@return key_map (dict) - Dictionary of keys extracted from the document
 @return value_map (dict) - Dictionary of values extracted from the document
 @return block_map (dict) - Dictionary of blocks extracted from the document
 @return civil (str) - Extracted "Civil War" if text found outside of the war key
@@ -1719,7 +1719,7 @@ def main():
     global cemSet
     global miscSet
     global jewishSet
-    network_folder = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+    network_folder = r"\\ucclerk\pgmdoc\Veterans"
     os.chdir(network_folder)
     cemeterys = []
     for x in os.listdir():
@@ -1736,7 +1736,7 @@ def main():
     # workbook = openpyxl.load_workbook('Veterans.xlsx')
     global cemetery
     cemetery = "Evergreen"
-    cem_path = os.path.join(network_folder, cemetery)
+    cem_path = os.path.join(network_folder, fr"Cemetery\{cemetery}")
     # if cemetery == "Misc":
     #     miscCem = "Arlington"
     #     cem_path = os.path.join(cem_path, miscCem)
@@ -1750,6 +1750,7 @@ def main():
     global worksheet
     # worksheet = workbook[cemetery]
     warFlag = False
+    
     uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
     firstFileFlag = True
     for letter in uppercase_alphabet:
