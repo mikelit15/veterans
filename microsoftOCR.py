@@ -134,7 +134,7 @@ def analyze_document(file_path, id):
         img_test = file.read()
         bytes_test = bytearray(img_test)
         print('Image loaded', id)
-    poller = document_analysis_client.begin_analyze_document("Test9n", document=bytes_test)
+    poller = document_analysis_client.begin_analyze_document("Test10n", document=bytes_test)
     result = poller.result()
     return result
 
@@ -385,7 +385,7 @@ def parseBirth(birth, bYear, birthYYFlag):
             bYear = birth.strftime("%Y")[-2:]
             birth = birth.strftime("%m/%d/%Y")[:-2]
         elif len(year) == 6 or len(year) == 5:
-            bYear = year[-4:]
+            bYear = year[:4]
             birth = birth.replace(",", " ")
             birth = dateparser.parse(birth)
             birth = birth.strftime("%m/%d/%Y")
@@ -604,6 +604,56 @@ def parseDeath(death, dYear, deathYYFlag):
 
 
 '''
+Processes and formats the burial year information. It adjusts the year based on the 
+century and war involvement, and reconciles it with other date-related information.
+
+@param value (str) - Extracted raw burial date
+@param cent (str) - Value in "19" field, confirms death year is in 1900s and provides year
+@param warsFlag (bool) - Flag indicating involvement in a 19th century war
+
+@return buried4Year (str) - The full year of burial, 4 digits
+@return buried2Year (str) - The partial year of burial, last 2 digits if full is not 
+                            available
+
+@author Mike
+'''
+def buriedRule(value, cent, warsFlag):
+    buried = value.replace("I", "1").replace("-", "/")
+    buried4Year = ""
+    buried2Year = ""
+    if len(cent) == 2:
+        buried4Year = "19" + cent
+    elif len(cent) == 4:
+        buried4Year = cent
+    elif len(cent) == 3:
+        buried4Year = "19" + cent[-2:]
+    elif buried:
+        if dateparser.parse(buried, settings={'STRICT_PARSING': True}) != None:
+            year5 = buried.split('/')[-1]
+            if year5 == buried:
+                year5 = buried.split(',')[-1]
+                if year5[0] == " ":
+                    year5 = year5[1:]
+                if len(year5) == 4:
+                    buried4Year = year5
+                elif len(year5) == 2:
+                    buried2Year = year5
+            else:
+                if year5[-1:] == " ":
+                    year5 = year5[:-1]
+                if len(year5) == 4:
+                    buried4Year = year5
+                elif len(year5) == 2:
+                    if warsFlag:
+                        buried4Year = "19" + year5
+                    else:
+                        buried2Year = year5
+        else:
+            print("buried no good")
+    return buried4Year, buried2Year
+
+
+'''
 Analyzes and formats date-related information based on various rules and conditions. 
 It reconciles birth and death dates with other date-related information. Handles conditions
 where missing birth and/or death dates and/or years. Attempts to correct 2-digit years
@@ -612,39 +662,32 @@ this comparison calls for the activation of warFlag signaling to highlight the r
 possible wrong century.
 
 @param finalVals (list) - List where the processed date information will be appended
-@param value (string) - Current value being processed (typically related to death date)
-@param dob (string) - Date of birth
-@param buried (string) - Date of burial
-@param buriedYear (string) - Year of burial
-@param cent (string) -  Century of the event (used for 2-digit years)
-@param war (string) - War during which the person served, if applicable
+@param value (str) - Current value being processed (typically related to death date)
+@param dob (str) - Raw date of birth
+@param buried (str) - Raw date of burial
+@param cent (str) -  Value in "19" field, confirms death year is in 1900s and provides year
+@param war (str) - War during which the person served, if applicable
 
 @return warFlag (bool) - Flag indicating if a 2-digit year comparison was made to 
                          determine the century
 
 @author Mike
 ''' 
-def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
+def dateRule(finalVals, value, dob, buried, cent, war):
     warFlag = False
     warsFlag = False
     wars = ["World War 1", "World War 2", "Korean War", "Vietnam War", "Mexican Border War"]
     if war in wars:
         warsFlag = True
-    if not buriedYear:
-        buriedYear = buriedRule(buried, buriedYear, cent, warsFlag)
     birthYYFlag = False
     deathYYFlag = False
     bYear = ""
     dYear = ""
+    buried4Year = ""
+    buried2Year = ""
     birth = dob.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "")
-    if "At" in birth:
-        birth = birth.split("At")
-        birth = birth[0] 
-    elif "AT" in birth:
-        birth = birth.split("AT")
-        birth = birth[0] 
-    elif "at" in birth:
-        birth = birth.split("at")
+    if "at" in birth.lower():
+        birth = birth.lower().split("at")[1]
         birth = birth[0] 
     while birth and not birth[-1].isalnum():
         birth = birth[:-1]
@@ -657,6 +700,10 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
             match = re.search(r'\b\d{2}\b', birth)
             if match:
                 birth = ""
+    if "born" in birth.lower():
+        birth = birth.lower().split("born")[1]
+    # temp = birth[:3].replace('7', '/')
+    # birth = temp + birth[3:]
     death = value.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "")
     if death[-1:] == " ":
         death = death[:-1]
@@ -680,13 +727,19 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
     elif len(death.replace(" ", "")) == 4:
         dYear = death
         death = ""
+    if "death" in death.lower():
+        death = death.lower().split("death")[1]
+    # temp2 = death[:3].replace('7', '/')
+    # death = temp2 + death[3:]
+    if not death and not dYear:
+        buried4Year, buried2Year = buriedRule(buried, cent, warsFlag)
     if birth != "" and death != "":
         if dateparser.parse(birth, settings={'STRICT_PARSING': True}) != None:
             if dateparser.parse(death, settings={'STRICT_PARSING': True}) != None:
                 birth, bYear, birthYYFlag = parseBirth(birth, bYear, birthYYFlag)
                 death, dYear, deathYYFlag = parseDeath(death, dYear, deathYYFlag)
                 if birthYYFlag and deathYYFlag:
-                    if cent.isnumeric():
+                    if cent:
                         if bYear > dYear:
                             bYear = "18" + bYear
                             dYear = "19" + dYear
@@ -695,6 +748,29 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                             dYear = "19" + dYear
                         birth = birth[:-2] + bYear
                         death = death[:-2] + dYear
+                        finalVals.append(birth)
+                        finalVals.append(int(bYear))
+                        finalVals.append(death)
+                        finalVals.append(int(dYear))
+                    elif buried4Year:
+                        if buried4Year[:2] == "17" and buried4Year[2:] > bYear:
+                            bYear = "17" + bYear
+                            dYear = buried4Year
+                        elif buried4Year[:2] == "18" and buried4Year[2:] < bYear:
+                            bYear = "17" + bYear
+                            dYear = buried4Year
+                        elif buried4Year[:2] == "18" and buried4Year[2:] > bYear:
+                            bYear = "18" + bYear
+                            dYear = buried4Year
+                        elif buried4Year[:2] == "19" and buried4Year[2:] < bYear:
+                            bYear = "18" + bYear
+                            dYear = buried4Year
+                        elif buried4Year[:2] == "19" and buried4Year[2:] > bYear:
+                            bYear = "19" + bYear
+                            dYear = buried4Year
+                        elif buried4Year[:2] == "20" and buried4Year[2:] < bYear:
+                            bYear = "19" + bYear
+                            dYear = buried4Year
                         finalVals.append(birth)
                         finalVals.append(int(bYear))
                         finalVals.append(death)
@@ -727,35 +803,10 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                             finalVals.append(int(bYear))
                             finalVals.append(death)
                             finalVals.append(int(dYear))
-                    elif buriedYear:
-                        if buriedYear[:2] == "18" and dYear > bYear:
-                            bYear = "18" + bYear
-                            dYear = "18" + dYear
-                        elif buriedYear[:2] == "19" and dYear < bYear:
-                            bYear = "18" + bYear
-                            dYear = "19" + dYear
-                        elif buriedYear[:2] == "19" and dYear > bYear:
-                            bYear = "19" + bYear
-                            dYear = "19" + dYear
-                        elif bYear < dYear:
-                            bYear = "19" + bYear
-                            dYear = "19" + dYear
-                            warFlag = True
-                        elif bYear > dYear:
-                            bYear = "18" + bYear
-                            dYear = "19" + dYear
-                            warFlag = True
-                        birth = birth[:-2] + bYear
-                        death = death[:-2] + dYear
-                        finalVals.append(birth)
-                        if bYear:
-                            finalVals.append(int(bYear))
                         else:
                             finalVals.append("")
-                        finalVals.append(death)
-                        if dYear:
-                            finalVals.append(int(dYear))
-                        else:
+                            finalVals.append("") 
+                            finalVals.append("")
                             finalVals.append("")
                     elif dYear < bYear:
                         bYear = "18" + bYear
@@ -796,17 +847,6 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                         dYear = "17" + dYear
                     elif bYear[:2] == "17" and bYear[-2:] > dYear: 
                         dYear = "18" + dYear
-                    else:
-                        if war in wars and dYear < bYear[-2:]:
-                            bYear = "19" + bYear[-2:]
-                            dYear = "20" + dYear
-                        elif war in wars and dYear > bYear[-2:]:
-                            bYear = "19" + bYear[-2:]
-                            dYear = "19" + dYear
-                        else:
-                            bYear = "18" + bYear[-2:]
-                            dYear = "19" + dYear
-                        birth = birth[:-4] + bYear
                     death = death[:-2] + dYear
                     if birth:
                         finalVals.append(birth)
@@ -837,21 +877,10 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                         bYear = "18" + bYear
                     elif dYear[:2] == "20":
                         bYear = "19" + bYear
-                    elif dYear[:2] == "17" and dYear[-2:] > bYear:
+                    elif dYear[:2] == "17" and dYear[-2:] > dYear:
                         bYear = "17" + bYear
-                    elif dYear[:2] == "17" and dYear[-2:] < bYear:
+                    elif dYear[:2] == "17" and dYear[-2:] < dYear:
                         bYear = "18" + bYear
-                    else:
-                        if war in wars and dYear[-2:] < bYear:
-                            bYear = "19" + bYear
-                            dYear = "20" + dYear[-2:]
-                        elif war in wars and dYear[-2:] > bYear:
-                            bYear = "19" + bYear
-                            dYear = "19" + dYear[-2:]
-                        else:
-                            bYear = "18" + bYear
-                            dYear = "19" + dYear[-2:]
-                        death = death[:-4] + dYear
                     birth = birth[:-2] + bYear
                     finalVals.append(birth)
                     finalVals.append(int(bYear))
@@ -917,7 +946,7 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
             birth, bYear, birthYYFlag = parseBirth(birth, bYear, birthYYFlag)
             death, dYear, deathYYFlag = parseDeath(death, dYear, deathYYFlag)
             if birthYYFlag and deathYYFlag:
-                if cent.isnumeric() or buriedYear.isnumeric():
+                if cent:
                     if bYear > dYear:
                         bYear = "18" + bYear
                         dYear = "19" + dYear
@@ -936,6 +965,14 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                     finalVals.append(int("18" + bYear))
                     finalVals.append("")
                     finalVals.append(int("19" + dYear))
+                    warFlag = True
+                    return warFlag
+                elif dYear > bYear:
+                    finalVals.append("")
+                    finalVals.append(int("19" + bYear))
+                    finalVals.append("")
+                    finalVals.append(int("19" + dYear))
+                    warFlag = True
                     return warFlag
             elif birthYYFlag and not deathYYFlag:
                 if dYear[:2] == "19" and dYear[-2:] < bYear:
@@ -1013,10 +1050,13 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                 death = death[:-2] + dYear
                 finalVals.append(death)
                 finalVals.append(int(dYear))
-            elif cent.isnumeric() or buriedYear.isnumeric():
+            elif cent:
                 finalVals.append("")
                 finalVals.append("") 
-                dYear = "19" + dYear
+                if len(cent) == 4:
+                    dYear = cent
+                elif len(cent) == 2:
+                    dYear = "19" + dYear
                 finalVals.append(death[:-2] + dYear)
                 finalVals.append(int(dYear))
             elif war in wars:
@@ -1039,11 +1079,24 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                 finalVals.append("")
                 finalVals.append(int(dYear))
                 return warFlag
-            elif buriedYear != "":
-                if buriedYear < bYear[:-2]:
-                    dYear = "19" + buriedYear
-                else:
-                    dYear = "18" + buriedYear
+            elif buried4Year != "":
+                dYear = buried4Year
+                finalVals.append("")
+                finalVals.append(int(dYear))
+                return warFlag
+            elif buried2Year != "":
+                if bYear[:2] == "17" and bYear[2:] < buried2Year:
+                    dYear = "17" + buried2Year
+                elif bYear[:2] == "17" and bYear[2:] > buried2Year:
+                    dYear = "18" + buried2Year
+                elif bYear[:2] == "18" and bYear[2:] < buried2Year:
+                    dYear = "18" + buried2Year
+                elif bYear[:2] == "18" and bYear[2:] > buried2Year:
+                    dYear = "19" + buried2Year
+                elif bYear[:2] == "19" and bYear[2:] < buried2Year:
+                    dYear = "19" + buried2Year
+                elif bYear[:2] == "19" and bYear[2:] > buried2Year:
+                    dYear = "20" + buried2Year
                 finalVals.append("")
                 finalVals.append(int(dYear))
                 return warFlag
@@ -1084,13 +1137,13 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
                 finalVals.append("")
                 finalVals.append("") 
     elif birth == "" and death == "":
-        if buriedYear.isnumeric():
-            if len(buriedYear) == 2:
-                dYear = "19" + buriedYear
-            elif len(buriedYear) == 4:
-                dYear = buriedYear
-        elif cent.isnumeric():
-            dYear = "19" + cent
+        if buried4Year:
+            dYear = buried4Year
+        elif cent:
+            if len(cent) == 4:
+                dYear = cent
+            elif len(cent) == 2:
+                dYear = "19" + cent
         if bYear != "" and dYear != "":
             finalVals.append("")
             finalVals.append(int(bYear))
@@ -1112,82 +1165,6 @@ def dateRule(finalVals, value, dob, buried, buriedYear, cent, war):
             finalVals.append("")
             finalVals.append("") 
     return warFlag
-
-
-'''
-Processes and formats the burial year information. It adjusts the year based on the 
-century and war involvement, and reconciles it with other date-related information.
-
-@param value (str) - Extracted raw burial date
-@param bYear (str) - Burial year, particularly if only the year is printed on the card
-@param cent (str) - If not none, provides century data for death year
-@param warsFlag (bool) - Flag indicating involvement in a 19th century war
-
-@return buriedYear (str) - Processed and formatted burial year
-
-@author Mike
-'''
-def buriedRule(value, bYear, cent, warsFlag):
-    buried = value
-    buried = buried.replace("I", "1").replace("-", "/")
-    buriedYear = bYear
-    if len(cent) == 2:
-        buriedYear = "19" + cent
-    elif len(cent) == 4:
-        buriedYear = cent
-    elif len(cent) == 3:
-        buriedYear = "19" + cent[-2:]
-    elif buried or buriedYear:
-        if dateparser.parse(buried, settings={'STRICT_PARSING': True}) == None:
-            if buriedYear:
-                if len(buriedYear) == 2:
-                    buriedYear = buriedYear
-                elif len(buriedYear) == 4:
-                    buriedYear = buriedYear[2:]
-                else:
-                    buriedYear = ""
-                if "," in buried:
-                    temp = buried + " 19" + buriedYear
-                    if dateparser.parse(temp, settings={'STRICT_PARSING': True}) != None:
-                        buried = dateparser.parse(temp)
-                        buried = buried.strftime("%m/%d/%Y")
-                        buriedYear = "19" + buriedYear
-                else:
-                    temp = buried + ", 19" + buriedYear
-                    if dateparser.parse(temp, settings={'STRICT_PARSING': True}) != None:
-                        buried = dateparser.parse(temp)
-                        buried = buried.strftime("%m/%d/%Y")
-                        if len(bYear) == 2:
-                            buriedYear = "19" + bYear
-                        else:
-                            buriedYear = bYear
-                    else:
-                        buried = ""
-                        if len(bYear) == 2:
-                            buriedYear = "19" + bYear
-                        else:
-                            buriedYear = bYear
-            else:
-                try:
-                    before_comma = buried.split(',', 1)[0].strip()
-                    after_comma = buried.split(',', 1)[1].strip()
-                    if len(after_comma) > 4:
-                        buriedYear = buriedRule(before_comma, after_comma[:4], cent, warsFlag) 
-                except IndexError:
-                    print("buried is weird\n")
-                    buried = ""
-        else:
-            year5 = buried.split('/')[-1]
-            if year5[-1:] == " ":
-                year5 = year5[:-1]
-            if len(year5) == 4:
-                buriedYear = year5
-            elif len(year5) == 2:
-                if warsFlag:
-                    buriedYear = "19" + year5
-                else:
-                    buriedYear = ""
-    return buriedYear
 
 
 '''
@@ -1224,9 +1201,7 @@ def warRule(value, world):
     tempText = war.replace("-", "").replace(".", "").replace("#", "").replace(" ", "").replace(",", "")
     ww1_and_2_pattern = re.compile(r'(WW1|WWI|W\.?W\.?\s?(1|I|One|ONE)|World\s*War\s*(1|I|One|ONE))\s*(and|&)?\s*'\
     r'(WW2|WWII|W\.?W\.?\s?(2|II|Two|TWO)|World\s*War\s*(2|II|Two|TWO))', re.IGNORECASE)    
-    # ww1_pattern = re.compile(r'WWI|WW1|WW\s?1|World\s*War\s*(1|I|ONE)|WorldWar1', re.IGNORECASE)
     ww1_pattern = re.compile(r'WW1|WWI|WWl|\b1\b|W\.?W\.?\s?(1|I|l|One|ONE)?|World\s*War\s*(1|I|l|One|ONE)?|WorldWar\s*(1|I|l|One|ONE)?', re.IGNORECASE)    
-    # ww2_pattern = re.compile(r'WWII|WW2|WW11|WWLL|WWll|WW\s?2|World\s*War\s*(II|2|Two|LL|ll)|\b2\b', re.IGNORECASE)
     ww2_pattern = re.compile(r'WW2|WWII|WWll|WW11|\b2\b|W\.?W\.?\s?(2|II|ll|Two|TWO)|World\s*War\s*(2|II|ll|Two|TWO)|WorldWar\s*(2|II|ll|Two|TWO)', re.IGNORECASE)    
     if ww1_and_2_pattern.findall(tempText.upper()):
         war = "World War 1 and World War 2"
@@ -1234,8 +1209,6 @@ def warRule(value, world):
         war = "World War 2"
     elif (ww1_pattern.findall(tempText.upper())):
         war = "World War 1"
-    # if (ww1_and_2_pattern.findall(tempText)):
-    #     war = "World War 1 and 2"
     else:
         war = war.replace(".", "").replace("Calv", "").replace("Vols", "")
         if "Korea" in war:
@@ -1250,6 +1223,10 @@ def warRule(value, world):
             war = "Mexican Border War"
         elif "Rebellion" in war:
             war = "War of the Rebellion"
+        elif "Revolution" in war:
+            war = "Revolutionary War"
+        elif "1812" in war:
+            war = "War of 1812"
         else:
             war = ""
         words = war.split()
@@ -1354,10 +1331,9 @@ extracted text from the veteran cards to be put into the excel sheet.
 def createRecord(file_name, id, cemetery):
     world = ""
     war = ""
-    bYear = ""
+    buried = ""
     coords = None
     cent = ""
-    buried = ""
     warFlag = False
     finalVals = []
     pageReader = PyPDF2.PdfReader(open(file_name, 'rb'))
@@ -1383,31 +1359,49 @@ def createRecord(file_name, id, cemetery):
         except TypeError:
             value = "" 
         if x == "NAME":
-            nameRule(finalVals, value)
+            try:
+                nameRule(finalVals, value)
+            except Exception:
+                finalVals.append("")
+                finalVals.append("")
+                finalVals.append("")
+                finalVals.append("")
         elif x == "BORN":
             dob = value
         elif x == "DATE OF DEATH":
-            warFlag = dateRule(finalVals, value, dob, buried, bYear, cent, war)
+            try:
+                warFlag = dateRule(finalVals, value, dob, buried, cent, war)
+            except Exception:
+                while len(finalVals) < 8:
+                    finalVals.append("")
         elif x == "WAR RECORD" and flag3:
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
         elif x == "WAR RECORD":
-            if "&" in value:
-                wars = value.split("&")
-                war1 = warRule(wars[0], world)
-                war2 = warRule(wars[1], world)
-                war = war1 + " and " + war2
-            elif "and" in value.lower():
-                wars = value.split("and")
-                war1 = warRule(wars[0], world)
-                war2 = warRule(wars[1], world)
-                war = war1 + " and " + war2
-            else:
-                war = warRule(value, world)
-            flag3 = True
+            try:
+                if "&" in value:
+                    wars = value.split("&")
+                    war1 = warRule(wars[0], world)
+                    war2 = warRule(wars[1], world)
+                    war = war1 + " and " + war2
+                elif "and" in value.lower():
+                    wars = value.split("and")
+                    war1 = warRule(wars[0], world)
+                    war2 = warRule(wars[1], world)
+                    war = war1 + " and " + war2
+                else:
+                    war = warRule(value, world)
+                flag3 = True
+            except Exception:
+                finalVals.append("")
+                finalVals.append("")
         elif x == "BRANCH OF SERVICE":
-            branchRule(finalVals, value, war)
+            try:
+                branchRule(finalVals, value, war)
+            except Exception:
+                finalVals.append("")
+                finalVals.append("")
         elif x == "IN":
             if fuzz.partial_ratio(value.lower(), cemetery.lower()) > 80:
                 finalVals.append(cemetery)
@@ -1454,7 +1448,6 @@ def tempRecord(file_name, val, id, cemetery):
     buried = ""
     world = ""
     war = ""
-    bYear = ""
     coords = None
     cent = ""
     warFlag = False
@@ -1482,31 +1475,49 @@ def tempRecord(file_name, val, id, cemetery):
         except TypeError:
             value = "" 
         if x == "NAME":
-            nameRule(finalVals, value)
+            try:
+                nameRule(finalVals, value)
+            except Exception:
+                finalVals.append("")
+                finalVals.append("")
+                finalVals.append("")
+                finalVals.append("")
         elif x == "BORN":
             dob = value
         elif x == "DATE OF DEATH":
-            warFlag = dateRule(finalVals, value, dob, buried, bYear, cent, war)
+            try:
+                warFlag = dateRule(finalVals, value, dob, buried, cent, war)
+            except Exception:
+                while len(finalVals) < 8:
+                    finalVals.append("")
         elif x == "WAR RECORD" and flag3:
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
         elif x == "WAR RECORD":
-            if "&" in value:
-                wars = value.split("&")
-                war1 = warRule(wars[0], world)
-                war2 = warRule(wars[1], world)
-                war = war1 + " and " + war2
-            elif "and" in value:
-                wars = value.split("and")
-                war1 = warRule(wars[0], world)
-                war2 = warRule(wars[1], world)
-                war = war1 + " and " + war2
-            else:
-                war = warRule(value, world)
-            flag3 = True
+            try:
+                if "&" in value:
+                    wars = value.split("&")
+                    war1 = warRule(wars[0], world)
+                    war2 = warRule(wars[1], world)
+                    war = war1 + " and " + war2
+                elif "and" in value.lower():
+                    wars = value.split("and")
+                    war1 = warRule(wars[0], world)
+                    war2 = warRule(wars[1], world)
+                    war = war1 + " and " + war2
+                else:
+                    war = warRule(value, world)
+                flag3 = True
+            except Exception:
+                finalVals.append("")
+                finalVals.append("")
         elif x == "BRANCH OF SERVICE":
-            branchRule(finalVals, value, war)
+            try:
+                branchRule(finalVals, value, war)
+            except Exception:
+                finalVals.append("")
+                finalVals.append("")
         elif x == "IN":
             if fuzz.partial_ratio(value.lower(), cemetery.lower()) > 80:
                 finalVals.append(cemetery)
@@ -1552,14 +1563,14 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
     for x in merged_array:
         worksheet.cell(row=rowIndex, column=counter, value=x)
         counter += 1
-    # Orange if merged record and no issues
+    # Orange if merged record and no issues #
     highlight_color = PatternFill(start_color="E3963E", end_color="E3963E", fill_type="solid")
     for colIndex in range(2, 15):
         cell = worksheet.cell(row=rowIndex, column=colIndex)
         cell.fill = highlight_color
         cell = worksheet.cell(row=rowIndex, column=16)
         cell.fill = highlight_color
-    # Teal if merged, and record adjusted using comparison
+    # Teal if merged, and record adjusted using comparison #
     if warFlag:
         highlight_color = PatternFill(start_color="00FFB9", end_color="00FFB9", fill_type="solid")
         for colIndex in range(2, 15):
@@ -1567,7 +1578,7 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
             cell.fill = highlight_color
             cell = worksheet.cell(row=rowIndex, column=16)
             cell.fill = highlight_color
-    # Blue if merged, and record has no DOD
+    # Blue if merged, and record has no DOD #
     if (worksheet[f'{"I"}{rowIndex}'].value == ""):
         highlight_color = PatternFill(start_color="00C6FF", end_color="00C6FF", fill_type="solid")
         for colIndex in range(2, 15):
@@ -1575,7 +1586,7 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
             cell.fill = highlight_color
             cell = worksheet.cell(row=rowIndex, column=16)
             cell.fill = highlight_color
-    # Pink if merged, and cemetery does not match
+    # Pink if merged, and cemetery does not match #
     if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
         highlight_color = PatternFill(start_color="FC80AC", end_color="FC80AC", fill_type="solid")
         for colIndex in range(2, 15):
@@ -1583,7 +1594,7 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
             cell.fill = highlight_color
             cell = worksheet.cell(row=rowIndex, column=16)
             cell.fill = highlight_color
-    # Red is merged record and last name letter does not match
+    # Red is merged record and last name letter does not match #
     if worksheet[f'{"B"}{rowIndex}'].value[0] != letter:
         highlight_color = PatternFill(start_color="D2042D", end_color="D2042D", fill_type="solid")
         for colIndex in range(2, 15):
@@ -1591,7 +1602,7 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
             cell.fill = highlight_color
             cell = worksheet.cell(row=rowIndex, column=16)
             cell.fill = highlight_color
-    # Dark Green if merged, and first and last name are the same, bug
+    # Dark Green if merged, and first and last name are the same, bug #
     if (worksheet[f'{"B"}{rowIndex}'].value) == (worksheet[f'{"C"}{rowIndex}'].value):
         highlight_color = PatternFill(start_color="0B8C36", end_color="0B8C36", fill_type="solid")
         for colIndex in range(2, 15):
@@ -1599,66 +1610,7 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
             cell.fill = highlight_color
             cell = worksheet.cell(row=rowIndex, column=16)
             cell.fill = highlight_color
-       
-       
-'''
-Cleans and renames file names in a given letter and cemetery for inconsistencies 
-when scanning. It standardizes the naming convention of files and ensures correct ordering.
-
-@param cemetery (str) - The name of the cemetery
-@param letter (str) - The letter or section of the cemetery being processed
-@param name_path (str) - The path where the files are located
-@param cem_path (str) - The path to the cemetery directory
-@param counterA (int) - The starting counter for naming files
-@param is_file_first (bool) - Flag indicating if the current file is the first in the series
-
-@author Mike
-'''     
-def clean(cemetery, letter, name_path, cem_path, counterA, is_first_file):
-    pdf_files = sorted(os.listdir(name_path))
-    letters = sorted([folder for folder in os.listdir(cem_path) if os.path.isdir(os.path.join(cem_path, folder))])
-    try:
-        current_letter_index = letters.index(letter)
-    except ValueError:
-        return
-    folder_before_index = max(0, current_letter_index - 1)
-    folder_before = letters[folder_before_index]
-    pdf_files_before = sorted([file for file in os.listdir(os.path.join(cem_path, folder_before)) if file.lower().endswith('.pdf')])
-    max_counter = 0
-    for file in pdf_files_before:
-        match = re.search(r'\d+', file)
-        if match:
-            number = int(match.group())
-            max_counter = max(max_counter, number)
-    counter = max_counter + 1
-    for x in pdf_files:
-        if is_first_file:
-            counter = counterA 
-        if "a.pdf" in x:
-            newName = f"{cemetery}{letter}{counter:05d}a.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
-            counter -= 1
-        elif "b.pdf"  in x:
-            newName = f"{cemetery}{letter}{counter:05d}b.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
-        elif "a redacted" in x:
-            newName = f"{cemetery}{letter}{counter:05d}a redacted.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
-            counter -= 1
-        elif "b redacted" in x:
-            newName = f"{cemetery}{letter}{counter:05d}b redacted.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
-            counter -= 1
-        elif "redacted" in x:
-            newName = f"{cemetery}{letter}{counter:05d} redacted.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
-            counter -= 1
-        else:    
-            newName = f"{cemetery}{letter}{counter:05d}.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
-        counter += 1
-        is_first_file = False
-
+        
 
 '''
 Finds the next empty row in the worksheet to begin processing at that index.
@@ -1725,31 +1677,15 @@ def main():
     global cemetery
     cemetery = "Fairview"
     cem_path = os.path.join(network_folder, fr"Cemetery\{cemetery}")
-    # if cemetery == "Misc":
-    #     miscCem = "Arlington"
-    #     cem_path = os.path.join(cem_path, miscCem)
     global letter
     letter = "B"
     name_path = letter
     name_path = os.path.join(cem_path, name_path)
-    initialCount = 4843
     pathA = ""
     rowIndex = 2
     global worksheet
     worksheet = workbook[cemetery]
     warFlag = False
-    
-    # uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
-    # firstFileFlag = True
-    # for letter in uppercase_alphabet:
-    #     try:
-    #         name_path = os.path.join(cem_path, letter)
-    #         print(letter)
-    #         clean(cemetery, letter, name_path, cem_path, initialCount, firstFileFlag)
-    #         firstFileFlag = False
-    #     except FileNotFoundError:
-    #         continue
-    
     pdf_files = sorted(os.listdir(name_path))
     initialID = 1
     for y in range(len(pdf_files)):
@@ -1770,7 +1706,7 @@ def main():
                 if "a" not in string and "b" not in string:
                     if id != int(string.replace("a", "").replace("b", "")):
                         continue
-                    vals, flag, warFlagm, coords = createRecord(file_path, id, cemetery)
+                    vals, flag, warFlag, coords = createRecord(file_path, id, cemetery)
                     redactedFile = redact(file_path, flag, cemetery, letter, coords)
                     link_text = "PDF Image"
                     worksheet.cell(row=rowIndex, column=15).value = link_text
@@ -1782,7 +1718,7 @@ def main():
                     for x in vals:
                         worksheet.cell(row=rowIndex, column=counter, value=x)
                         counter += 1
-                    # Grey if record adjusted using comparison
+                    # Grey if record adjusted using comparison #
                     if warFlag:
                         highlight_color = PatternFill(start_color="899499", end_color="899499", fill_type="solid")
                         for colIndex in range(2, 15):
@@ -1790,7 +1726,7 @@ def main():
                             cell.fill = highlight_color
                             cell = worksheet.cell(row=rowIndex, column=16)
                             cell.fill = highlight_color
-                    # Purple if cemetery does not match
+                    # Purple if cemetery does not match #
                     if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
                         highlight_color = PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid")
                         for colIndex in range(2, 15):
@@ -1798,7 +1734,7 @@ def main():
                             cell.fill = highlight_color
                             cell = worksheet.cell(row=rowIndex, column=16)
                             cell.fill = highlight_color
-                    # Light Blue if record has no DOD
+                    # Light Blue if record has no DOD #
                     if (worksheet[f'{"I"}{rowIndex}'].value) == "":
                         highlight_color = PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid")
                         for colIndex in range(2, 15):
@@ -1806,7 +1742,7 @@ def main():
                             cell.fill = highlight_color
                             cell = worksheet.cell(row=rowIndex, column=16)
                             cell.fill = highlight_color
-                    # Yellow if record last name does not match
+                    # Yellow if record last name does not match #
                     try:
                         if (worksheet[f'B{rowIndex}'].value)[0] != letter:
                             highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
