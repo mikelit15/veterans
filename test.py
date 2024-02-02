@@ -1,5 +1,4 @@
-finalVals = ["L", "F", "M", "S"]
-
-while len(finalVals) < 8:
-    finalVals.append("")
-print(finalVals)
+file = '\\\\ucclerk\\pgmdoc\\Veterans\\Cemetery\\Evergreen\\B\\EvergreenB00568.pdf'
+letter = "B"
+fileName = file[-9:]
+print(fileName)

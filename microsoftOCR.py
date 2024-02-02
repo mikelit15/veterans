@@ -61,12 +61,11 @@ def redact(file, flag, cemetery, letter, coords):
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
-    fileName = file.split(letter)
     redacted_pdf_document  = fitz.open(pdfFile)
     new_pdf_document  = fitz.open()
     new_pdf_document.insert_pdf(redacted_pdf_document, from_page=0, to_page=0)
     new_pdf_document.insert_pdf(pdf_document, from_page=1, to_page=1)
-    new_pdf_file  = f'{fullLocation}\\{cemetery}{letter}{fileName[2].replace(".pdf", "")} redacted.pdf'
+    new_pdf_file  = f'{fullLocation}\\{cemetery}{letter}{file[-9:].replace(".pdf", "")} redacted.pdf'
     new_pdf_document.save(new_pdf_file)
     new_pdf_document.close()
     redacted_pdf_document.close()
@@ -134,7 +133,7 @@ def analyze_document(file_path, id):
         img_test = file.read()
         bytes_test = bytearray(img_test)
         print('Image loaded', id)
-    poller = document_analysis_client.begin_analyze_document("Test10n", document=bytes_test)
+    poller = document_analysis_client.begin_analyze_document("Test13n", document=bytes_test)
     result = poller.result()
     return result
 
@@ -191,6 +190,9 @@ def extract_key_value_pairs(result):
         branch = invoice.fields.get("Branch of Service")
         if branch.content != None:
             kvs["BRANCH OF SERVICE"].append(branch.content)
+        app = invoice.fields.get("App")
+        if app.content != None:
+            kvs["Application"].append(app.content)
         world = invoice.fields.get("War")
         if world.content != None:
             if "War" in world.content:
@@ -343,10 +345,10 @@ def nameRule(finalVals, value):
         pass
     if len(middleName) == 1:
         middleName += "."
-    finalVals.append(lastName.replace(",", "").replace(".", ""))
-    finalVals.append(firstName.replace(",", ""))
-    finalVals.append(middleName.replace(",", "."))
-    finalVals.append(suffix.replace(",", "."))
+    finalVals.append(lastName.replace(",", "").replace(".", "").replace(";", ""))
+    finalVals.append(firstName.replace(",", "").replace(";", ""))
+    finalVals.append(middleName.replace(",", ".").replace(";", "").replace("0", "O"))
+    finalVals.append(suffix.replace(",", ".").replace(";", ""))
 
 '''
 Processes and formats birth date information. Handles partial and full dates, converting 
@@ -649,7 +651,7 @@ def buriedRule(value, cent, warsFlag):
                     else:
                         buried2Year = year5
         else:
-            print("buried no good")
+            pass
     return buried4Year, buried2Year
 
 
@@ -673,25 +675,39 @@ possible wrong century.
 
 @author Mike
 ''' 
-def dateRule(finalVals, value, dob, buried, cent, war):
+def dateRule(finalVals, value, dob, buried, cent, war, app):
     warFlag = False
     warsFlag = False
     wars = ["World War 1", "World War 2", "Korean War", "Vietnam War", "Mexican Border War"]
-    if war in wars:
-        warsFlag = True
+    if "and" in war:
+        war = war.split(" and ")[0]
+        if war in wars:
+            warsFlag = True
     birthYYFlag = False
     deathYYFlag = False
     bYear = ""
     dYear = ""
     buried4Year = ""
     buried2Year = ""
-    birth = dob.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "")
+    appYear = ""
+    while app and not app[-1].isnumeric():
+        app = app[:-1]
+    tempYear = app.split(",")[-1].replace(" ", "")
+    if len(tempYear) == 4:
+        appYear = tempYear
+    while appYear and not appYear[-1].isnumeric():
+        appYear = appYear[:-1]
+    if len(dob) == 5:
+        birth = dob.replace(".", "")
+    else:
+        birth = dob
+    birth = birth.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "")
     if "at" in birth.lower():
         birth = birth.lower().split("at")[1]
         birth = birth[0] 
-    while birth and not birth[-1].isalnum():
+    while birth and not birth[-1].isnumeric():
         birth = birth[:-1]
-    if "Age" in birth:
+    if "Age" in birth or "years" in birth:
         match = re.search(r'\b\d{4}\b', birth)
         if match:
             bYear = match.group()
@@ -704,7 +720,8 @@ def dateRule(finalVals, value, dob, buried, cent, war):
         birth = birth.lower().split("born")[1]
     # temp = birth[:3].replace('7', '/')
     # birth = temp + birth[3:]
-    death = value.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "")
+    death = value.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "")\
+        .replace("x", "").replace("Z", "7")
     if death[-1:] == " ":
         death = death[:-1]
     if death[-1:] == ".":
@@ -729,10 +746,14 @@ def dateRule(finalVals, value, dob, buried, cent, war):
         death = ""
     if "death" in death.lower():
         death = death.lower().split("death")[1]
+    while death and not death[-1].isnumeric():
+        death = death[:-1]
     # temp2 = death[:3].replace('7', '/')
     # death = temp2 + death[3:]
-    if not death and not dYear:
+    try:
         buried4Year, buried2Year = buriedRule(buried, cent, warsFlag)
+    except Exception:
+        pass
     if birth != "" and death != "":
         if dateparser.parse(birth, settings={'STRICT_PARSING': True}) != None:
             if dateparser.parse(death, settings={'STRICT_PARSING': True}) != None:
@@ -771,6 +792,47 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                         elif buried4Year[:2] == "20" and buried4Year[2:] < bYear:
                             bYear = "19" + bYear
                             dYear = buried4Year
+                        finalVals.append(birth)
+                        finalVals.append(int(bYear))
+                        finalVals.append(death)
+                        finalVals.append(int(dYear))
+                    elif appYear:
+                        if appYear[2:] < dYear:
+                            if appYear[:2] == "20":
+                                dYear = "19" + dYear
+                            elif appYear[:2] == "19":
+                                dYear = "18" + dYear
+                            elif appYear[:2] == "18":
+                                dYear = "17" + dYear
+                        elif appYear[2:] >= dYear:
+                            if appYear[:2] == "20":
+                                dYear = "20" + dYear
+                            elif appYear[:2] == "19":
+                                dYear = "19" + dYear
+                            elif appYear[:2] == "18":
+                                dYear = "18" + dYear
+                            elif appYear[:2] == "17":
+                                dYear = "17" + dYear
+                        if dYear[2:] < bYear:
+                            if dYear[:2] == "20":
+                                bYear = "19" + bYear
+                            elif dYear[:2] == "19":
+                                bYear = "18" + bYear
+                            elif dYear[:2] == "18":
+                                bYear = "17" + bYear
+                            elif dYear[:2] == "17":
+                                bYear = "16" + bYear
+                        elif dYear[2:] > bYear:
+                            if dYear[:2] == "20":
+                                bYear = "20" + bYear
+                            elif dYear[:2] == "19":
+                                bYear = "19" + bYear
+                            elif dYear[:2] == "18":
+                                bYear = "18" + bYear
+                            elif dYear[:2] == "17":
+                                bYear = "17" + bYear
+                        birth = birth[:-2] + bYear
+                        death = death[:-2] + dYear
                         finalVals.append(birth)
                         finalVals.append(int(bYear))
                         finalVals.append(death)
@@ -1059,6 +1121,19 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                     dYear = "19" + dYear
                 finalVals.append(death[:-2] + dYear)
                 finalVals.append(int(dYear))
+            elif buried4Year:
+                if buried4Year[:2] == "20":
+                    dYear = "20" + dYear
+                elif buried4Year[:2] == "19":
+                    dYear = "19" + dYear
+                elif buried4Year[:2] == "18":
+                    dYear = "18" + dYear
+                elif buried4Year[:2] == "17":
+                    dYear = "17" + dYear
+                finalVals.append("")
+                finalVals.append("") 
+                finalVals.append(death[:-2] + dYear)
+                finalVals.append(int(dYear))
             elif war in wars:
                 finalVals.append("")
                 finalVals.append("") 
@@ -1123,7 +1198,7 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                 finalVals.append("")
                 finalVals.append(int(dYear))
                 return warFlag
-            elif cent.isnumeric():
+            elif cent:
                 if bYear > cent:
                     bYear = "18" + bYear
                 else:
@@ -1131,6 +1206,8 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                 birth = birth[:-2] + bYear
                 finalVals.append(birth)
                 finalVals.append(int(bYear))
+                finalVals.append("")
+                finalVals.append(int("19"+cent))
             else:
                 finalVals.append("")
                 finalVals.append("") 
@@ -1334,6 +1411,7 @@ def createRecord(file_name, id, cemetery):
     buried = ""
     coords = None
     cent = ""
+    app = ""
     warFlag = False
     finalVals = []
     pageReader = PyPDF2.PdfReader(open(file_name, 'rb'))
@@ -1370,7 +1448,11 @@ def createRecord(file_name, id, cemetery):
             dob = value
         elif x == "DATE OF DEATH":
             try:
-                warFlag = dateRule(finalVals, value, dob, buried, cent, war)
+                app = search_value(kvs, "Application")[0]
+            except Exception:
+                pass
+            try:
+                warFlag = dateRule(finalVals, value, dob, buried, cent, war, app)
             except Exception:
                 while len(finalVals) < 8:
                     finalVals.append("")
@@ -1415,13 +1497,16 @@ def createRecord(file_name, id, cemetery):
                     for y in tempCent:
                         if y.isnumeric():
                             cent += y
+                        if len(cent) == 4:
+                            if cent[2:] == "19" and cent[:2] != "19":
+                                cent = cent[2:] + cent[:2]
                 except IndexError:
                     pass
             else:
                 pass
         elif x == "BURIED":
             buried = value
-    return finalVals, flag, warFlag, coords
+    return finalVals, flag, warFlag, coords, kvs
 
 
 '''
@@ -1450,6 +1535,7 @@ def tempRecord(file_name, val, id, cemetery):
     war = ""
     coords = None
     cent = ""
+    app = ""
     warFlag = False
     finalVals = []
     pageReader = PyPDF2.PdfReader(open(file_name, 'rb'))
@@ -1486,7 +1572,11 @@ def tempRecord(file_name, val, id, cemetery):
             dob = value
         elif x == "DATE OF DEATH":
             try:
-                warFlag = dateRule(finalVals, value, dob, buried, cent, war)
+                app = search_value(kvs, "Application")[0]
+            except Exception:
+                pass
+            try:
+                warFlag = dateRule(finalVals, value, dob, buried, cent, war, app)
             except Exception:
                 while len(finalVals) < 8:
                     finalVals.append("")
@@ -1537,7 +1627,7 @@ def tempRecord(file_name, val, id, cemetery):
                 pass
         elif x == "BURIED":
             buried = value
-    return finalVals, flag, warFlag, coords
+    return finalVals, flag, warFlag, coords, kvs
 
 
 '''
@@ -1675,10 +1765,10 @@ def main():
     jewishSet = set(jewishs)
     workbook = openpyxl.load_workbook('Veterans.xlsx')
     global cemetery
-    cemetery = "Fairview"
+    cemetery = "Evergreen"
     cem_path = os.path.join(network_folder, fr"Cemetery\{cemetery}")
     global letter
-    letter = "B"
+    letter = "C"
     name_path = letter
     name_path = os.path.join(cem_path, name_path)
     pathA = ""
@@ -1706,7 +1796,7 @@ def main():
                 if "a" not in string and "b" not in string:
                     if id != int(string.replace("a", "").replace("b", "")):
                         continue
-                    vals, flag, warFlag, coords = createRecord(file_path, id, cemetery)
+                    vals, flag, warFlag, coords, kvs = createRecord(file_path, id, cemetery)
                     redactedFile = redact(file_path, flag, cemetery, letter, coords)
                     link_text = "PDF Image"
                     worksheet.cell(row=rowIndex, column=15).value = link_text
@@ -1768,12 +1858,12 @@ def main():
                             if (file_path.replace("a.pdf", "") in pdf_files):
                                 continue
                             pathA = file_path
-                            vals1, flag, warFlag, coords = tempRecord(file_path, "a", id, cemetery)
+                            vals1, flag, warFlag, coords, kvs = tempRecord(file_path, "a", id, cemetery)
                             redactedFile = redact(file_path, flag, cemetery, letter, coords)
                         if "b" in string:
                             if (file_path.replace("b.pdf", "") in pdf_files):
                                 continue
-                            vals2, flag, warFlagB, coords = tempRecord(file_path, "b", id, cemetery)
+                            vals2, flag, warFlagB, coords, kvs = tempRecord(file_path, "b", id, cemetery)
                             if not warFlag or not warFlagB:
                                 warFlag = False
                             else:
@@ -1798,8 +1888,18 @@ def main():
             for colIndex in range(1, worksheet.max_column + 1):
                 cell = worksheet.cell(row=rowIndex, column=colIndex)
                 cell.fill = highlight_color
+            error_file_path = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
+            with open(error_file_path, 'a') as error_file:
+                error_file.write(f'{kvs} \n\n {error_traceback}')
             id += 1
             rowIndex += 1
+        logFilePath = fr'Logs/{cemetery}{letter}{str(id-1).zfill(5)} Extracted.txt' 
+        with open(logFilePath, 'w') as logFile:
+            logFile.write("----Key-value pairs found in document----\n")
+            for key, values in kvs.items():
+                for value in values:
+                    logFile.write(f'{key}: {value}\n')
+            logFile.write("\n")
         workbook.save('Veterans.xlsx')
 
 if __name__ == "__main__":

@@ -241,6 +241,55 @@ def parseDeath(death, dYear, deathYYFlag):
 
 
 '''
+Processes and formats the burial year information. It adjusts the year based on the 
+century and war involvement, and reconciles it with other date-related information.
+
+@param value (str) - Extracted raw burial date
+@param bYear (str) - Burial year, particularly if only the year is printed on the card
+@param cent (str) - If not none, provides century data for death year
+@param warsFlag (bool) - Flag indicating involvement in a 19th century war
+
+@return buriedYear (str) - Processed and formatted burial year
+
+@author Mike
+'''
+def buriedRule(value, cent, warsFlag):
+    buried = value.replace("I", "1").replace("-", "/")
+    buried4Year = ""
+    buried2Year = ""
+    if len(cent) == 2:
+        buried4Year = "19" + cent
+    elif len(cent) == 4:
+        buried4Year = cent
+    elif len(cent) == 3:
+        buried4Year = "19" + cent[-2:]
+    elif buried:
+        if dateparser.parse(buried, settings={'STRICT_PARSING': True}) != None:
+            year5 = buried.split('/')[-1]
+            if year5 == buried:
+                year5 = buried.split(',')[-1]
+                if year5[0] == " ":
+                    year5 = year5[1:]
+                if len(year5) == 4:
+                    buried4Year = year5
+                elif len(year5) == 2:
+                    buried2Year = year5
+            else:
+                if year5[-1:] == " ":
+                    year5 = year5[:-1]
+                if len(year5) == 4:
+                    buried4Year = year5
+                elif len(year5) == 2:
+                    if warsFlag:
+                        buried4Year = "19" + year5
+                    else:
+                        buried2Year = year5
+        else:
+            print("buried no good")
+    return buried4Year, buried2Year
+
+
+'''
 Analyzes and formats date-related information based on various rules and conditions. 
 It reconciles birth and death dates with other date-related information. Handles conditions
 where missing birth and/or death dates and/or years. Attempts to correct 2-digit years
@@ -261,7 +310,7 @@ possible wrong century.
 
 @author Mike
 ''' 
-def dateRule(finalVals, value, dob, buried, cent, war):
+def dateRule(finalVals, value, dob, buried, cent, war, app):
     warFlag = False
     warsFlag = False
     wars = ["World War 1", "World War 2", "Korean War", "Vietnam War", "Mexican Border War"]
@@ -273,6 +322,10 @@ def dateRule(finalVals, value, dob, buried, cent, war):
     dYear = ""
     buried4Year = ""
     buried2Year = ""
+    appYear = ""
+    tempYear = app.split(",")[-1].replace(" ", "")
+    if len(tempYear) == 4:
+        appYear = tempYear
     birth = dob.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "")
     if "at" in birth.lower():
         birth = birth.lower().split("at")[1]
@@ -290,8 +343,8 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                 birth = ""
     if "born" in birth.lower():
         birth = birth.lower().split("born")[1]
-    # first_three = birth[:3].replace('7', '/')
-    # birth = first_three + birth[3:]
+    # temp = birth[:3].replace('7', '/')
+    # birth = temp + birth[3:]
     death = value.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "")
     if death[-1:] == " ":
         death = death[:-1]
@@ -317,6 +370,8 @@ def dateRule(finalVals, value, dob, buried, cent, war):
         death = ""
     if "death" in death.lower():
         death = death.lower().split("death")[1]
+    # temp2 = death[:3].replace('7', '/')
+    # death = temp2 + death[3:]
     if not death and not dYear:
         buried4Year, buried2Year = buriedRule(buried, cent, warsFlag)
     if birth != "" and death != "":
@@ -361,6 +416,47 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                         finalVals.append(int(bYear))
                         finalVals.append(death)
                         finalVals.append(int(dYear))
+                    elif appYear:
+                        if appYear[2:] < dYear:
+                            if appYear[:2] == "20":
+                                dYear = "19" + dYear
+                            elif appYear[:2] == "19":
+                                dYear = "18" + dYear
+                            elif appYear[:2] == "18":
+                                dYear = "17" + dYear
+                        elif appYear[2:] >= dYear:
+                            if appYear[:2] == "20":
+                                dYear = "20" + dYear
+                            elif appYear[:2] == "19":
+                                dYear = "19" + dYear
+                            elif appYear[:2] == "18":
+                                dYear = "18" + dYear
+                            elif appYear[:2] == "17":
+                                dYear = "17" + dYear
+                        if dYear < bYear:
+                            if dYear[:2] == "20":
+                                bYear = "19" + bYear
+                            elif dYear[:2] == "19":
+                                bYear = "18" + bYear
+                            elif dYear[:2] == "18":
+                                bYear = "17" + bYear
+                            elif dYear[:2] == "17":
+                                bYear = "16" + bYear
+                        elif dYear > bYear:
+                            if dYear[:2] == "20":
+                                bYear = "20" + bYear
+                            elif dYear[:2] == "19":
+                                bYear = "19" + bYear
+                            elif dYear[:2] == "18":
+                                bYear = "18" + bYear
+                            elif dYear[:2] == "17":
+                                bYear = "17" + bYear
+                        birth = birth[:-2] + bYear
+                        death = death[:-2] + dYear
+                        finalVals.append(birth)
+                        finalVals.append(int(bYear))
+                        finalVals.append(death)
+                        finalVals.append(int(dYear))
                     elif war:
                         if war in wars and dYear[0] == "0":
                             bYear = "19" + bYear
@@ -389,6 +485,11 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                             finalVals.append(int(bYear))
                             finalVals.append(death)
                             finalVals.append(int(dYear))
+                        else:
+                            finalVals.append("")
+                            finalVals.append("") 
+                            finalVals.append("")
+                            finalVals.append("")
                     elif dYear < bYear:
                         bYear = "18" + bYear
                         birth = birth[:-2] + bYear
@@ -546,12 +647,14 @@ def dateRule(finalVals, value, dob, buried, cent, war):
                     finalVals.append(int("18" + bYear))
                     finalVals.append("")
                     finalVals.append(int("19" + dYear))
+                    warFlag = True
                     return warFlag
                 elif dYear > bYear:
                     finalVals.append("")
                     finalVals.append(int("19" + bYear))
                     finalVals.append("")
                     finalVals.append(int("19" + dYear))
+                    warFlag = True
                     return warFlag
             elif birthYYFlag and not deathYYFlag:
                 if dYear[:2] == "19" and dYear[-2:] < bYear:
@@ -746,61 +849,14 @@ def dateRule(finalVals, value, dob, buried, cent, war):
     return warFlag
 
 
-'''
-Processes and formats the burial year information. It adjusts the year based on the 
-century and war involvement, and reconciles it with other date-related information.
-
-@param value (str) - Extracted raw burial date
-@param bYear (str) - Burial year, particularly if only the year is printed on the card
-@param cent (str) - If not none, provides century data for death year
-@param warsFlag (bool) - Flag indicating involvement in a 19th century war
-
-@return buriedYear (str) - Processed and formatted burial year
-
-@author Mike
-'''
-def buriedRule(value, cent, warsFlag):
-    buried = value.replace("I", "1").replace("-", "/")
-    buried4Year = ""
-    buried2Year = ""
-    if len(cent) == 2:
-        buried4Year = "19" + cent
-    elif len(cent) == 4:
-        buried4Year = cent
-    elif len(cent) == 3:
-        buried4Year = "19" + cent[-2:]
-    elif buried:
-        if dateparser.parse(buried, settings={'STRICT_PARSING': True}) != None:
-            year5 = buried.split('/')[-1]
-            if year5 == buried:
-                year5 = buried.split(',')[-1]
-                if year5[0] == " ":
-                    year5 = year5[1:]
-                if len(year5) == 4:
-                    buried4Year = year5
-                elif len(year5) == 2:
-                    buried2Year = year5
-            else:
-                if year5[-1:] == " ":
-                    year5 = year5[:-1]
-                if len(year5) == 4:
-                    buried4Year = year5
-                elif len(year5) == 2:
-                    if warsFlag:
-                        buried4Year = "19" + year5
-                    else:
-                        buried2Year = year5
-        else:
-            print("buried no good")
-    return buried4Year, buried2Year
-
 finalVals = []
-birth = "17 Dec. 1897"
-death = "27 Sept 1969"
+birth = "2/20/83"
+death = "12/27/43"
 cent = ""
 buried = ""
 war = ""
-dateRule(finalVals, death, birth, buried, cent, war)
+app = "Aug. 4, 2000"
+dateRule(finalVals, death, birth, buried, cent, war, app)
 for x in finalVals:
     print(x)
     
