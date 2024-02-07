@@ -1762,107 +1762,107 @@ def main():
         except FileNotFoundError:
             continue
     
-    # pdf_files = sorted(os.listdir(name_path))
-    # initialID = 1
-    # for y in range(len(pdf_files)):
-    #     warFlag = False
-    #     file_path = os.path.join(name_path, pdf_files[y])
-    #     rowIndex = find_next_empty_row(worksheet)
-    #     try:
-    #         id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
-    #     except TypeError:
-    #         id = initialID
-    #     if "output" in pdf_files[y] or "redacted" in pdf_files[y]:
-    #         continue
-    #     else:
-    #         string = pdf_files[y][:-4]
-    #         string = string.split(letter) 
-    #         string = string[-1].lstrip('0')
-    #         if "a" not in string and "b" not in string:
-    #             if id != int(string.replace("a", "").replace("b", "")):
-    #                 continue
-    #             vals, flag, warFlag = createRecord(file_path, id, cemetery)
-    #             redactedFile = redact(file_path, flag, cemetery, letter)
-    #             link_text = "PDF Image"
-    #             worksheet.cell(row=rowIndex, column=15).value = link_text
-    #             worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-    #             worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
-    #             counter = 1
-    #             worksheet.cell(row=rowIndex, column=counter, value=id)
-    #             counter += 1
-    #             for x in vals:
-    #                 worksheet.cell(row=rowIndex, column=counter, value=x)
-    #                 counter += 1
-    #             # Grey if record adjusted using comparison
-    #             if warFlag:
-    #                 highlight_color = PatternFill(start_color="899499", end_color="899499", fill_type="solid")
-    #                 for colIndex in range(2, 15):
-    #                     cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                     cell.fill = highlight_color
-    #                     cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             # Purple if cemetery does not match
-    #             if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
-    #                 highlight_color = PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid")
-    #                 for colIndex in range(2, 15):
-    #                     cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                     cell.fill = highlight_color
-    #                     cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             # Light Blue if record has no DOD
-    #             if (worksheet[f'{"I"}{rowIndex}'].value) == "":
-    #                 highlight_color = PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid")
-    #                 for colIndex in range(2, 15):
-    #                     cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                     cell.fill = highlight_color
-    #                     cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             # Yellow if record last name does not match
-    #             try:
-    #                 if (worksheet[f'B{rowIndex}'].value)[0] != letter:
-    #                     highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    #                     for colIndex in range(2, 15):
-    #                         cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                         cell.fill = highlight_color
-    #                         cell = worksheet.cell(row=rowIndex, column=16)
-    #                     cell.fill = highlight_color
-    #             except IndexError:
-    #                     highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-    #                     for colIndex in range(2, 15):
-    #                         cell = worksheet.cell(row=rowIndex, column=colIndex)
-    #                         cell.fill = highlight_color
-    #                         cell = worksheet.cell(row=rowIndex, column=16)
-    #                         cell.fill = highlight_color
-    #             id += 1
-    #             rowIndex += 1
-    #         else:
-    #             if id != int(string.replace("a", "").replace("b", "")):
-    #                 continue
-    #             else:
-    #                 if "a" in string:
-    #                     if (file_path.replace("a.pdf", "") in pdf_files):
-    #                         continue
-    #                     pathA = file_path
-    #                     vals1, flag, warFlag = tempRecord(file_path, "a", id, cemetery)
-    #                     redactedFile = redact(file_path, flag, cemetery, letter)
-    #                 if "b" in string:
-    #                     if (file_path.replace("b.pdf", "") in pdf_files):
-    #                         continue
-    #                     vals2, flag, warFlagB = tempRecord(file_path, "b", id, cemetery)
-    #                     if not warFlag or not warFlagB:
-    #                         warFlag = False
-    #                     else:
-    #                         warFlag = True
-    #                     redactedFile = redact(file_path, flag, cemetery, letter)
-    #                     mergeRecords(vals1, vals2, rowIndex, id, warFlag)
-    #                     mergeImages(pathA, file_path, cemetery, letter)
-    #                     link_text = "PDF Image"
-    #                     worksheet.cell(row=rowIndex, column=15).value = link_text
-    #                     worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-    #                     worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
-    #                     id += 1
-    #                     rowIndex += 1
-    #     workbook.save('Veterans.xlsx')
+    pdf_files = sorted(os.listdir(name_path))
+    initialID = 1
+    for y in range(len(pdf_files)):
+        warFlag = False
+        file_path = os.path.join(name_path, pdf_files[y])
+        rowIndex = find_next_empty_row(worksheet)
+        try:
+            id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
+        except TypeError:
+            id = initialID
+        if "output" in pdf_files[y] or "redacted" in pdf_files[y]:
+            continue
+        else:
+            string = pdf_files[y][:-4]
+            string = string.split(letter) 
+            string = string[-1].lstrip('0')
+            if "a" not in string and "b" not in string:
+                if id != int(string.replace("a", "").replace("b", "")):
+                    continue
+                vals, flag, warFlag = createRecord(file_path, id, cemetery)
+                redactedFile = redact(file_path, flag, cemetery, letter)
+                link_text = "PDF Image"
+                worksheet.cell(row=rowIndex, column=15).value = link_text
+                worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
+                counter = 1
+                worksheet.cell(row=rowIndex, column=counter, value=id)
+                counter += 1
+                for x in vals:
+                    worksheet.cell(row=rowIndex, column=counter, value=x)
+                    counter += 1
+                # Grey if record adjusted using comparison
+                if warFlag:
+                    highlight_color = PatternFill(start_color="899499", end_color="899499", fill_type="solid")
+                    for colIndex in range(2, 15):
+                        cell = worksheet.cell(row=rowIndex, column=colIndex)
+                        cell.fill = highlight_color
+                        cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                # Purple if cemetery does not match
+                if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
+                    highlight_color = PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid")
+                    for colIndex in range(2, 15):
+                        cell = worksheet.cell(row=rowIndex, column=colIndex)
+                        cell.fill = highlight_color
+                        cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                # Light Blue if record has no DOD
+                if (worksheet[f'{"I"}{rowIndex}'].value) == "":
+                    highlight_color = PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid")
+                    for colIndex in range(2, 15):
+                        cell = worksheet.cell(row=rowIndex, column=colIndex)
+                        cell.fill = highlight_color
+                        cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                # Yellow if record last name does not match
+                try:
+                    if (worksheet[f'B{rowIndex}'].value)[0] != letter:
+                        highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+                        for colIndex in range(2, 15):
+                            cell = worksheet.cell(row=rowIndex, column=colIndex)
+                            cell.fill = highlight_color
+                            cell = worksheet.cell(row=rowIndex, column=16)
+                        cell.fill = highlight_color
+                except IndexError:
+                        highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+                        for colIndex in range(2, 15):
+                            cell = worksheet.cell(row=rowIndex, column=colIndex)
+                            cell.fill = highlight_color
+                            cell = worksheet.cell(row=rowIndex, column=16)
+                            cell.fill = highlight_color
+                id += 1
+                rowIndex += 1
+            else:
+                if id != int(string.replace("a", "").replace("b", "")):
+                    continue
+                else:
+                    if "a" in string:
+                        if (file_path.replace("a.pdf", "") in pdf_files):
+                            continue
+                        pathA = file_path
+                        vals1, flag, warFlag = tempRecord(file_path, "a", id, cemetery)
+                        redactedFile = redact(file_path, flag, cemetery, letter)
+                    if "b" in string:
+                        if (file_path.replace("b.pdf", "") in pdf_files):
+                            continue
+                        vals2, flag, warFlagB = tempRecord(file_path, "b", id, cemetery)
+                        if not warFlag or not warFlagB:
+                            warFlag = False
+                        else:
+                            warFlag = True
+                        redactedFile = redact(file_path, flag, cemetery, letter)
+                        mergeRecords(vals1, vals2, rowIndex, id, warFlag)
+                        mergeImages(pathA, file_path, cemetery, letter)
+                        link_text = "PDF Image"
+                        worksheet.cell(row=rowIndex, column=15).value = link_text
+                        worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                        worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
+                        id += 1
+                        rowIndex += 1
+        workbook.save('Veterans.xlsx')
 
 if __name__ == "__main__":
     main()

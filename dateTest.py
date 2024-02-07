@@ -206,37 +206,33 @@ def parseDeath(death, dYear, deathYYFlag):
         else:
             death = ""
     elif " " in death:
-        temp = death.split(" ")
-        if len(temp) == 3:
-            year3 = death.split(' ')[-1]
-            year3 = year3.replace(" ", "")
-            if len(year3) == 4:
+        year3 = death.split(' ')[-1]
+        year3 = year3.replace(" ", "")
+        if len(year3) == 4:
+            death = dateparser.parse(death)
+            dYear = death.strftime("%Y")
+            death = death.strftime("%m/%d/%Y")
+        elif len(year3) == 2:
+            deathYYFlag = True     
+            death = dateparser.parse(death)
+            dYear = death.strftime("%Y")[-2:]
+            death = death.strftime("%m/%d/%Y")[:-2]
+        elif len(year3) == 6 or len(year3) == 5:
+            dYear = year3[-4:]
+            death = death.replace(",", " ")
+            death = dateparser.parse(death)
+            death = death.strftime("%m/%d/%Y")
+        elif len(year3) > 6:
+            temp = year3[:4]
+            if temp.isnumeric():
+                death_no_spaces = death.replace(' ', '')
+                start_index = death_no_spaces.find(year3[4:])
+                num_spaces_before = death[:start_index].count(' ')
+                adjusted_start_index = start_index + num_spaces_before
+                death = death[:adjusted_start_index].strip()
                 death = dateparser.parse(death)
-                dYear = death.strftime("%Y")
                 death = death.strftime("%m/%d/%Y")
-            elif len(year3) == 2:
-                deathYYFlag = True     
-                death = dateparser.parse(death)
-                dYear = death.strftime("%Y")[-2:]
-                death = death.strftime("%m/%d/%Y")[:-2]
-            elif len(year3) == 6 or len(year3) == 5:
-                dYear = year3[-4:]
-                death = death.replace(",", " ")
-                death = dateparser.parse(death)
-                death = death.strftime("%m/%d/%Y")
-            elif len(year3) > 6:
-                temp = year3[:4]
-                if temp.isnumeric():
-                    death_no_spaces = death.replace(' ', '')
-                    start_index = death_no_spaces.find(year3[4:])
-                    num_spaces_before = death[:start_index].count(' ')
-                    adjusted_start_index = start_index + num_spaces_before
-                    death = death[:adjusted_start_index].strip()
-                    death = dateparser.parse(death)
-                    death = death.strftime("%m/%d/%Y")
-                    dYear = temp
-                else:
-                    death = ""
+                dYear = temp
             else:
                 death = ""
         else:
@@ -335,10 +331,10 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     tempYear = app.split(",")[-1].replace(" ", "")
     if len(tempYear) == 4:
         appYear = tempYear
-    birth = dob.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "").replace("\n", " ")
+    birth = dob.replace(":", " ").replace("I", "1").replace(".", " ").replace("&", "")\
+        .replace("x", "").replace("\n", " ").replace(";", " ").replace("_", "")
     if "at" in birth.lower():
-        birth = birth.lower().split("at")[1]
-        birth = birth[0] 
+        birth = birth.lower().split("at")[0]
     while birth and not birth[-1].isalnum():
         birth = birth[:-1]
     if "Age" in birth:
@@ -354,10 +350,9 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
         birth = birth.lower().split("born")[1]
     # temp = birth[:3].replace('7', '/')
     # birth = temp + birth[3:]
-    death = value.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "").replace("x", "").replace("\n", " ")
+    death = value.replace(":", ".").replace("I", "1").replace(".", " ").replace("&", "")\
+        .replace("x", "").replace("\n", " ").replace(";", " ").replace("_", "")
     if death[-1:] == " ":
-        death = death[:-1]
-    if death[-1:] == ".":
         death = death[:-1]
     if death[-1:] == "/":
         death = death[:-1]
@@ -382,7 +377,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     # temp2 = death[:3].replace('7', '/')
     # death = temp2 + death[3:]
     try:
-        buried4Year, buried2Year = buriedRule(buried, cent, warsFlag)
+        buried4Year, buried2Year = buriedRule(buried.replace("_", ""), cent, warsFlag)
     except Exception:
         pass
     if birth != "" and death != "":
@@ -873,10 +868,10 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     return warFlag
 
 finalVals = []
-birth = ""
+birth = "1841"
 death = ""
-cent = "19 64"
-buried = "May 6,"
+cent = ""
+buried = "March 18,1886_"
 war = ""
 app = ""
 dateRule(finalVals, death, birth, buried, cent, war, app)
