@@ -9,12 +9,11 @@ def warRule(value, world):
     war = re.sub(r'\bTT\b', '2', war)  
     ww1_pattern = re.compile(r'WW1|WWI|WWl|\b1\b|W\.?W\.?\s?(1|I|l|T|One|ONE)|World\s*War\s*(1|I|l|T|One|ONE)|WorldWar\s*(1|I|l|T|One|ONE)', re.IGNORECASE)
     ww2_pattern = re.compile(r'WW2|WWII|WWll|WW11|\b2\b|W\.?W\.?\s?(2|II|ll|TT|Two|TWO)|World\s*War\s*(2|II|ll|TT|Two|TWO)|WorldWar\s*(2|II|ll|TT|Two|TWO)', re.IGNORECASE)    
-    ww1_and_ww2_combined_pattern = re.compile(r'(WW\s*I\s*&\s*II|World\s*War\s*I\s*&\s*II|World\s*War\s*1\s*and\s*2)', re.IGNORECASE)
+    ww1_and_ww2_pattern = re.compile(rf'(({ww1_pattern.pattern})\s*(?:and|&|-)\s*({ww2_pattern.pattern}))|((World\s*War)\s*(1|I|One|T)\s*(?:and|&|-)\s*(2|II|Two|TT))', re.IGNORECASE)    
     korean_war_pattern = re.compile(r'Korea', re.IGNORECASE)
     vietnam_war_pattern = re.compile(r'Vietnam', re.IGNORECASE)
     simple_world_war_pattern = re.compile(r'\bWorld\s*War\b', re.IGNORECASE) 
-
-    if ww1_and_ww2_combined_pattern.search(war):
+    if ww1_and_ww2_pattern.search(war):
         identified_wars.extend(["World War 1", "World War 2"])
     elif simple_world_war_pattern.search(war):
         identified_wars.append("World War 1")
@@ -35,9 +34,9 @@ def warRule(value, world):
             war = "Korean War"
         elif "Vietnam" in war:
             war = "Vietnam War"
-        elif "Civil" in war or "Citil" in war or "Gettysburg" in war:
+        elif "Civil" in war or "Citil" in war or "Gettysburg" in war or "Fredericksburg" in war:
             war = "Civil War"
-        elif "Spanish" in war or "Amer" in war or "American" in war:
+        elif "Spanish" in war or "Amer" in war or "American" in war or "SpAm" in war:
             war = "Spanish American War"
         elif "Mexican" in war:
             war = "Mexican Border War"
@@ -60,6 +59,7 @@ def warRule(value, world):
         war = ""
     return war
 
+
 # "WW. #1"
 # World Wars I & II
 # .WW. IT
@@ -67,7 +67,7 @@ def warRule(value, world):
 # WW TT
 
 
-value = "WW 1 & 2"
+value = "Sp-Am"
 world = ""
 war = ""
 # if "&" in value:
