@@ -57,6 +57,7 @@ def redact(file, cemetery, letter, nameCoords, serialCoords):
     c = canvas.Canvas(pdfFile, pagesize=(image.width, image.height))
     c.drawImage(image_file, 0, 0, width=image.width, height=image.height)
     c.save()
+    image.close()
 
     fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     redactedLocation = f'{cemetery} - Redacted'
@@ -71,7 +72,6 @@ def redact(file, cemetery, letter, nameCoords, serialCoords):
         temp = file[-10:]
     new_pdf_file = f'{fullLocation}\\{cemetery}{letter}{temp.replace(".pdf", "")} redacted.pdf'
     new_pdf_document.save(new_pdf_file)
-    image.close()
     new_pdf_document.close()
     redacted_pdf_document.close()
     pdf_document.close()
@@ -100,21 +100,15 @@ def mergeImages(pathA, pathB, cemetery, letter):
     merger = PyPDF2.PdfMerger()
     merger.append(pathA)
     merger.append(pathB)
-    string = pathA[:-5]
-    string = string.split(letter) 
-    string = string[-1].lstrip('0')
     # with open(f'\\ucclerk\pgmdoc\Veterans\\{cemetery}{letter}{fileName[2].replace("a.pdf", ".pdf")}', 'wb') as out_pdf:
     #     merger.write(out_pdf)
     merger2 = PyPDF2.PdfMerger()
     merger2.append(f'{fullLocation}\\{cemetery}{letter}{fileName[-1].replace(".pdf", "")} redacted.pdf')
     merger2.append(f'{fullLocation}\\{cemetery}{letter}{fileName[-1].replace("a.pdf", "b")} redacted.pdf')
-    string = pathA[:-5]
-    string = string.split(letter) 
-    string = string[-1].lstrip('0')
     with open(f'{fullLocation}\\{cemetery}{letter}{fileName[-1].replace("a.pdf", "")} redacted.pdf', 'wb') as out_pdf:
         merger2.write(out_pdf)
-
-
+        
+        
 '''
 Extracts field matches from the specified file using Microsoft Azure Textract, which 
 performs an AI analysis to identify and extract text from the form. Uses a custom built
@@ -138,7 +132,7 @@ def analyze_document(file_path, id):
         img_test = file.read()
         bytes_test = bytearray(img_test)
         print('Image loaded', id)
-    poller = document_analysis_client.begin_analyze_document("Test18n", document=bytes_test)
+    poller = document_analysis_client.begin_analyze_document("Test19n", document=bytes_test)
     result = poller.result()
     return result
 
@@ -278,7 +272,8 @@ the formatted name components to a list.
 @author Mike
 ''' 
 def nameRule(finalVals, value):
-    value = value.replace("NAME", "").replace("Name", "").replace("name", "").replace("\n", "").replace(".", " ")
+    value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
+        .replace("\n", " ").replace(".", " ")
     CONSTANTS.force_mixed_case_capitalization = True
     name = HumanName(value)
     name.capitalize()
@@ -736,62 +731,71 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     buried2Year = ""
     cent = cent.replace(" ", "")
     appYear = ""
-    app = app.replace(".", ",")
-    tempYear = app.split(",")[-1].replace(" ", "")
-    while tempYear and not tempYear[-1].isnumeric():
-        tempYear = tempYear[:-1]
-    if len(tempYear) == 4:
-        appYear = tempYear
+    if "." in app or "," in app:
+        app = app.replace(".", ",")
+        tempYear = app.split(",")[-1].replace(" ", "")
+        while tempYear and not tempYear[-1].isnumeric():
+            tempYear = tempYear[:-1]
+        if len(tempYear) == 4:
+            appYear = tempYear
+    elif app:
+        tempYear = app.split(" ")[-1]
+        while tempYear and not tempYear[-1].isnumeric():
+            tempYear = tempYear[:-1]
+        if len(tempYear) == 4:
+            appYear = tempYear
     birth = dob
-    if birth.count("/") == 2:
-        birth = birth.replace(".", "")
-    birth = birth.replace(":", " ").replace("I", "1").replace(".", " ")\
-        .replace("&", "").replace("x", "").replace("\n", " ").replace(";", " ")\
-        .replace("_", "")
-    if "at" in birth.lower():
-        birth = birth.lower().split("at")[0]
-    while birth and not birth[-1].isnumeric():
-        birth = birth[:-1]
-    if "Age" in birth:
-        match = re.search(r'\b\d{4}\b', birth)
-        if match:
-            bYear = match.group()
-            birth = ""
-        else:
-            match = re.search(r'\b\d{2}\b', birth)
+    if birth:
+        if birth.count("/") == 2:
+            birth = birth.replace(".", "")
+        birth = birth.replace(":", " ").replace("I", "1").replace(".", " ")\
+            .replace("&", "").replace("x", "").replace("\n", " ").replace(";", " ")\
+            .replace("_", "")
+        if "at" in birth.lower():
+            birth = birth.lower().split("at")[0]
+        while birth and not birth[-1].isnumeric():
+            birth = birth[:-1]
+        if "Age" in birth:
+            match = re.search(r'\b\d{4}\b', birth)
             if match:
+                bYear = match.group()
                 birth = ""
-    if "born" in birth.lower():
-        birth = birth.lower().split("born")[1]
+            else:
+                match = re.search(r'\b\d{2}\b', birth)
+                if match:
+                    birth = ""
+        if "born" in birth.lower():
+            birth = birth.lower().split("born")[1]
+        if len(birth.replace(" ", "")) == 4:
+            bYear = birth.replace(" ", "")
+            birth = ""
     # temp = birth[:3].replace('7', '/')
     # birth = temp + birth[3:]
     death = value
-    if death.count("/") == 2:
-        death = death.replace(".", "")
-    death = death.replace(":", " ").replace("I", "1").replace(".", " ")\
-        .replace("&", "").replace("x", "").replace("\n", " ").replace(";", " ")\
-        .replace("_", "")
-    if death[-1] == " ":
-        death = death[:-1]
-    if death[-1] == "/":
-        death = death[:-1]
-    if "-" in birth:
-        birth = birth.replace("-", "/")
-    if "-" in death:
-        death = death.replace("-", "/")
-    if death[0] == "/":
-        death = death[1:]
-    death = death.replace("Found", "").replace("on", "")
-    if len(birth.replace(" ", "")) == 4:
-        bYear = birth.replace(" ", "")
-        birth = ""
-    if len(death.replace(" ", "")) == 4:
-        dYear = death
-        death = ""
-    if "death" in death.lower():
-        death = death.lower().split("death")[1]
-    while death and not death[-1].isnumeric():
-        death = death[:-1]
+    if death:
+        if death.count("/") == 2:
+            death = death.replace(".", "")
+        death = death.replace(":", " ").replace("I", "1").replace(".", " ")\
+            .replace("&", "").replace("x", "").replace("\n", " ").replace(";", " ")\
+            .replace("_", "")
+        if death[-1] == " ":
+            death = death[:-1]
+        if death[-1] == "/":
+            death = death[:-1]
+        if "-" in birth:
+            birth = birth.replace("-", "/")
+        if "-" in death:
+            death = death.replace("-", "/")
+        if death[0] == "/":
+            death = death[1:]
+        death = death.replace("Found", "").replace("on", "")
+        if len(death.replace(" ", "")) == 4:
+            dYear = death
+            death = ""
+        if "death" in death.lower():
+            death = death.lower().split("death")[1]
+        while death and not death[-1].isnumeric():
+            death = death[:-1]
     while buried and not buried[-1].isnumeric():
         buried = buried[:-1]
     # temp2 = death[:3].replace('7', '/')
@@ -1265,6 +1269,22 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
             else:
                 finalVals.append("")
                 finalVals.append("") 
+        elif buried4Year:
+            if buried4Year[:2] == "19" and buried4Year[2:] > bYear:
+                bYear = "19" + bYear
+            elif buried4Year[:2] == "19" and buried4Year[2:] < bYear:
+                bYear = "18" + bYear
+            elif buried4Year[:2] == "20" and buried4Year[2:] < bYear:
+                bYear = "19" + bYear
+            elif buried4Year[:2] == "18" and buried4Year[2:] > bYear:
+                bYear = "18" + bYear
+            elif buried4Year[:2] == "18" and buried4Year[2:] < bYear:
+                bYear = "17" + bYear
+            birth = birth[:-2] + bYear
+            finalVals.append(birth)
+            finalVals.append(int(bYear))
+            finalVals.append("")
+            finalVals.append(int(buried4Year))
         else:
             if dYear:
                 if dYear[:2] == "17" and dYear[-2:] > bYear:
@@ -1384,7 +1404,8 @@ def warRule(value, world):
             war = "Korean War"
         elif "Vietnam" in war:
             war = "Vietnam War"
-        elif "Civil" in war or "Citil" in war or "Gettysburg" in war or "Fredericksburg" in war:
+        elif "Civil" in war or "Citil" in war or "Gettysburg" in war \
+            or "Fredericksburg" in war or "bull" in war:
             war = "Civil War"
         elif "Spanish" in war or "Amer" in war or "American" in war or "SpAm" in war:
             war = "Spanish American War"
@@ -1423,13 +1444,13 @@ abbreviations and naming conventions.
 
 '''
 def branchRule(finalVals, value, war):
-    armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", \
-            "cav", "div", "sig", "art", "corps", "corp", "artillery"]
-    navys = ["hospital", "navy", "naval"]
-    guards = ["113", "102d", "114", "44", "181", "250", "112"]
+    armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", "cav", "div", \
+             "sig", "art", "corps", "corp", "artillery", "army"]
+    navys = ["hospital", "navy", "naval", "usn", "avy"]
+    guards = ["113", "102d", "114", "44", "181", "250", "112", "national"]
     branch = value
     branch = branch.replace("/", " ").replace(".", " ").replace("th", "").replace("-", "")\
-        .replace(", ", " ")
+             .replace(", ", " ")
     words = branch.split()
     if war in value and war != "":
         branch = ""
@@ -1571,7 +1592,7 @@ def createRecord(file_name, id, cemetery):
             if value:
                 try:
                     tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace("/", "").replace(" ", "")\
-                        .replace("\n", "")
+                        .replace("\n", "").replace("_", "").replace("in", "")
                     if tempCent.count("19") == 2:
                         tempCent = tempCent.split("19")
                         if all(item == "" for item in tempCent):
@@ -1580,6 +1601,8 @@ def createRecord(file_name, id, cemetery):
                             for x in tempCent:
                                 if x != "":
                                     cent = "19" + x
+                    else:
+                        cent = tempCent
                 except IndexError:
                     pass
             else:
@@ -1681,10 +1704,17 @@ def tempRecord(file_name, val, id, cemetery):
             if value:
                 try:
                     tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace("/", "").replace(" ", "")\
-                        .replace("\n", "")
-                    for y in tempCent:
-                        if y.isnumeric():
-                            cent += y
+                        .replace("\n", "").replace("_", "").replace("in", "")
+                    if tempCent.count("19") == 2:
+                        tempCent = tempCent.split("19")
+                        if all(item == "" for item in tempCent):
+                            cent = "1919"
+                        else:
+                            for x in tempCent:
+                                if x != "":
+                                    cent = "19" + x
+                    else:
+                        cent = tempCent
                 except IndexError:
                     pass
             else:
@@ -1816,7 +1846,7 @@ def main():
     cemetery = "Evergreen" #Change this to continue running through cemeteries
     cem_path = os.path.join(network_folder, fr"Cemetery\{cemetery}")
     global letter
-    letter = "H" #Change this to continue running through the current cemetery
+    letter = "L" #Change this to continue running through the current cemetery
     name_path = letter 
     name_path = os.path.join(cem_path, name_path)
     pathA = ""
@@ -1863,7 +1893,8 @@ def main():
                         "cemeteryMismatch": PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid"),
                         "noDOD": PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid"),
                         "lastNameMismatch": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
-                        "shortFirstName": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")}
+                        "shortFirstName": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
+                        "badWarName": PatternFill(start_color="F5CBA7", end_color="F5CBA7", fill_type="solid")}
                     required_colors = []
                     if warFlag:
                         required_colors.append(highlight_colors["warFlag"])
@@ -1871,6 +1902,9 @@ def main():
                         required_colors.append(highlight_colors["cemeteryMismatch"])
                     if (worksheet[f'{"I"}{rowIndex}'].value) == "":
                         required_colors.append(highlight_colors["noDOD"])
+                    if (worksheet[f'{"J"}{rowIndex}'].value) != "" and (worksheet[f'{"K"}{rowIndex}'].value) == ""\
+                    or (worksheet[f'{"L"}{rowIndex}'].value) != "" and (worksheet[f'{"M"}{rowIndex}'].value) == "":
+                        required_colors.append(highlight_colors["badWarName"])
                     try:
                         if (worksheet[f'B{rowIndex}'].value)[0] != letter:
                             if (worksheet[f'C{rowIndex}'].value)[0] == letter:
