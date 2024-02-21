@@ -282,8 +282,8 @@ def nameRule(finalVals, value):
     lastName = name.last
     suffix = name.suffix
     title = name.title
-    suffi = ["Jr.", "Sr.", "I", "II", "III", "IV", "V"]
-    temp = value.replace("Jr.", "").replace("Sr.", "").replace("I", "").replace("II", "")\
+    suffi = ["Jr", "Sr", "I", "II", "III", "IV", "V"]
+    temp = value.replace("Jr", "").replace("Sr", "").replace("I", "").replace("II", "")\
         .replace("III", "").replace("IV", "").replace("V", "")
     if ("," in value and "." in firstName):
         if len(middleName) > 0:
@@ -310,7 +310,7 @@ def nameRule(finalVals, value):
             firstName = name.middle
     elif len(suffix) > 0 and not middleName:
         suffix = suffix.replace(", ", "")
-        middleName = suffix.replace("Sr.", "").replace("Jr.", "").replace("I", "").replace("II", "")\
+        middleName = suffix.replace("Sr", "").replace("Jr", "").replace("I", "").replace("II", "")\
         .replace("III", "").replace("IV", "").replace("V", "")
         suffix = suffix.replace(middleName, "")
     elif len(suffix) > 0 and middleName:
@@ -456,7 +456,7 @@ def parseBirth(birth, bYear, birthYYFlag):
     elif " " in birth:
         year = birth.split(' ')[-1]
         year = year.replace(" ", "")
-        if len(year) == 4:
+        if len(year) == 4 and year[0] == "1":
             birth = dateparser.parse(birth)
             bYear = birth.strftime("%Y")
             birth = birth.strftime("%m/%d/%Y")
@@ -590,7 +590,7 @@ def parseDeath(death, dYear, deathYYFlag):
     elif " " in death:
         year3 = death.split(' ')[-1]
         year3 = year3.replace(" ", "")
-        if len(year3) == 4:
+        if len(year3) == 4 and (year3[0] == "1" or year3[0] == "2"):
             death = dateparser.parse(death)
             dYear = death.strftime("%Y")
             death = death.strftime("%m/%d/%Y")
@@ -923,6 +923,25 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                             finalVals.append(int(bYear))
                             finalVals.append(death)
                             finalVals.append(int(dYear))
+                        elif war in wars or (war == "Spanish American War" and dYear < "98"):
+                            if bYear > dYear:
+                                bYear = "18" + bYear
+                                birth = birth[:-2] + bYear
+                                dYear = "19" + dYear
+                                death = death[:-2] + dYear
+                                finalVals.append(birth)
+                                finalVals.append(int(bYear)) 
+                                finalVals.append(death)
+                                finalVals.append(int(dYear))
+                            elif bYear < dYear:
+                                bYear = "19" + bYear
+                                birth = birth[:-2] + bYear
+                                dYear = "19" + dYear
+                                death = death[:-2] + dYear
+                                finalVals.append(birth)
+                                finalVals.append(int(bYear)) 
+                                finalVals.append(death)
+                                finalVals.append(int(dYear))
                         else:
                             finalVals.append("")
                             finalVals.append("") 
@@ -1319,7 +1338,9 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                 finalVals.append("")
                 finalVals.append("") 
     elif birth == "" and death == "":
-        if buried4Year:
+        if dYear:
+            pass
+        elif buried4Year:
             dYear = buried4Year
         elif cent:
             if len(cent) == 4:
@@ -1446,7 +1467,7 @@ abbreviations and naming conventions.
 def branchRule(finalVals, value, war):
     armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", "cav", "div", \
              "sig", "art", "corps", "corp", "artillery", "army"]
-    navys = ["hospital", "navy", "naval", "usn", "avy"]
+    navys = ["hospital", "navy", "naval", "usn", "avy", "usnr"]
     guards = ["113", "102d", "114", "44", "181", "250", "112", "national"]
     branch = value
     branch = branch.replace("/", " ").replace(".", " ").replace("th", "").replace("-", "")\
@@ -1592,7 +1613,7 @@ def createRecord(file_name, id, cemetery):
             if value:
                 try:
                     tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace("/", "").replace(" ", "")\
-                        .replace("\n", "").replace("_", "").replace("in", "")
+                        .replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
                     if tempCent.count("19") == 2:
                         tempCent = tempCent.split("19")
                         if all(item == "" for item in tempCent):
@@ -1602,7 +1623,10 @@ def createRecord(file_name, id, cemetery):
                                 if x != "":
                                     cent = "19" + x
                     else:
-                        cent = tempCent
+                        if tempCent[2:] == "19":
+                            cent = tempCent[2:] + tempCent[:2]
+                        else:
+                            cent = tempCent
                 except IndexError:
                     pass
             else:
@@ -1704,7 +1728,7 @@ def tempRecord(file_name, val, id, cemetery):
             if value:
                 try:
                     tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace("/", "").replace(" ", "")\
-                        .replace("\n", "").replace("_", "").replace("in", "")
+                        .replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
                     if tempCent.count("19") == 2:
                         tempCent = tempCent.split("19")
                         if all(item == "" for item in tempCent):
@@ -1714,7 +1738,10 @@ def tempRecord(file_name, val, id, cemetery):
                                 if x != "":
                                     cent = "19" + x
                     else:
-                        cent = tempCent
+                        if tempCent[2:] == "19":
+                            cent = tempCent[2:] + tempCent[:2]
+                        else:
+                            cent = tempCent
                 except IndexError:
                     pass
             else:
@@ -1753,13 +1780,22 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
         "mergedNoDOD": PatternFill(start_color="00C6FF", end_color="00C6FF", fill_type="solid"),
         "mergedCemeteryMismatch": PatternFill(start_color="FC80AC", end_color="FC80AC", fill_type="solid"),
         "mergedLastNameMismatch": PatternFill(start_color="D2042D", end_color="D2042D", fill_type="solid"),
-        "mergedNameBug": PatternFill(start_color="0B8C36", end_color="0B8C36", fill_type="solid")}
+        "mergedNameBug": PatternFill(start_color="0B8C36", end_color="0B8C36", fill_type="solid"),
+        "badDate": PatternFill(start_color="99CC00", end_color="99CC00", fill_type="solid")}
     required_colors = []
     required_colors.append(highlight_colors["mergedNoIssues"])
     if warFlag:
         required_colors.append(highlight_colors["mergedAdjusted"])
     if (worksheet[f'{"I"}{rowIndex}'].value == ""):
         required_colors.append(highlight_colors["mergedNoDOD"])
+    if worksheet[f'{"G"}{rowIndex}'].value:
+        if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
+            required_colors.append(highlight_colors["badDate"])
+    if worksheet[f'{"I"}{rowIndex}'].value:
+        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" and \
+          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "2" and \
+           str(worksheet[f'{"I"}{rowIndex}'].value)[1] != "0"):
+                required_colors.append(highlight_colors["badDate"]) 
     if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
         required_colors.append(highlight_colors["mergedCemeteryMismatch"])
     if worksheet[f'{"B"}{rowIndex}'].value[0] != letter:
@@ -1894,7 +1930,8 @@ def main():
                         "noDOD": PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid"),
                         "lastNameMismatch": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
                         "shortFirstName": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
-                        "badWarName": PatternFill(start_color="F5CBA7", end_color="F5CBA7", fill_type="solid")}
+                        "badWarName": PatternFill(start_color="F5CBA7", end_color="F5CBA7", fill_type="solid"),
+                        "badDate": PatternFill(start_color="99CC00", end_color="99CC00", fill_type="solid")}
                     required_colors = []
                     if warFlag:
                         required_colors.append(highlight_colors["warFlag"])
@@ -1902,6 +1939,14 @@ def main():
                         required_colors.append(highlight_colors["cemeteryMismatch"])
                     if (worksheet[f'{"I"}{rowIndex}'].value) == "":
                         required_colors.append(highlight_colors["noDOD"])
+                    if worksheet[f'{"G"}{rowIndex}'].value:
+                        if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
+                            required_colors.append(highlight_colors["badDate"])
+                    if worksheet[f'{"I"}{rowIndex}'].value:
+                        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" and \
+                          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "2" and 
+                           str(worksheet[f'{"I"}{rowIndex}'].value)[1] != "0"):
+                                required_colors.append(highlight_colors["badDate"]) 
                     if (worksheet[f'{"J"}{rowIndex}'].value) != "" and (worksheet[f'{"K"}{rowIndex}'].value) == ""\
                     or (worksheet[f'{"L"}{rowIndex}'].value) != "" and (worksheet[f'{"M"}{rowIndex}'].value) == "":
                         required_colors.append(highlight_colors["badWarName"])
