@@ -1392,15 +1392,38 @@ extraction through the 'world' parameter taken from get_kv_map().
 @author Mike
 '''
 def warRule(value, world):
+    value = value.replace("\n", " ")
     ww1years = ["1914", "1915", "1916", "1917", "1918"]
     war = value.strip()
     identified_wars = []  
-    war = war.replace("N.", "W").replace("N", "W").replace(" ", "").replace("-", "").replace(".", "").replace("#", "").replace(",", "")
+    war = war.replace("N.", "W").replace("N", "W").replace(" ", "").replace("-", " ")\
+             .replace(".", "").replace("#", "").replace(",", "")
     war = re.sub(r'\bT\b', '2', war)  
     war = re.sub(r'\bTT\b', '2', war)  
-    ww1_pattern = re.compile(r'WW1|WWI|WWl|\b1\b|W\.?W\.?\s?(1|I|l|T|One|ONE)|World\s*War\s*(1|I|l|T|One|ONE)|WorldWar\s*(1|I|l|T|One|ONE)', re.IGNORECASE)
-    ww2_pattern = re.compile(r'WW2|WWII|WWll|WW11|\b2\b|W\.?W\.?\s?(2|II|ll|TT|Two|TWO)|World\s*War\s*(2|II|ll|TT|Two|TWO)|WorldWar\s*(2|II|ll|TT|Two|TWO)', re.IGNORECASE)    
-    ww1_and_ww2_pattern = re.compile(rf'(({ww1_pattern.pattern})\s*(?:and|&|-)\s*({ww2_pattern.pattern}))|((World\s*War)\s*(1|I|One|T)\s*(?:and|&|-)\s*(2|II|Two|TT))', re.IGNORECASE)    
+    ww1_pattern = re.compile(
+        r'WW1|'  # Matches "WW1"
+        r'WWI|'  # Matches "WWI"
+        r'\b1\b|'  # Matches standalone "1"
+        r'W\.?W\.?\s?(1|I|i|l|L|T)|'  # Matches "WW 1", "WW I", with optional periods and space
+        r'WORLD\s*WAR\s*(1|I|ONE|i|l|L|T)',  # Matches "World War 1", "World War I", with optional spaces
+        re.IGNORECASE
+    ) 
+    ww2_pattern = re.compile(
+        r'WW2|'  # Matches "WW2"
+        r'WWII|'  # Matches "WWII"
+        r'WW[2]|'  # Matches "WW2"
+        r'\b2\b|'  # Matches "2"
+        r'W\.?W\.?\s?(2|II|ii|ll|LL|TT)|'  # Matches "WW 2", "WW II", with optional periods and space
+        r'WORLDWAR(2|II|ii|ll|LL|TT)',  # Matches "World War 2", "World War II"
+        re.IGNORECASE
+    )
+    ww1_and_ww2_pattern = re.compile(
+        r'(WW|WORLD\s*WAR|WORLD\s*WARS)\s*'  # Starts with "WW" or "World War" with optional spaces
+        r'(1|I|ONE|l|i|T|L)'  # First part of the pattern for World War 1
+        r'(\s*(and|&)\s*|\sand\s*|\s*&\s*|)'  # Optional connector: "and", "&", with or without spaces
+        r'(2|II|TWO|11|ll|ii|TT|LL|WW2|WWII)'  # Second part of the pattern for World War 2, optional to allow single mentions
+        , re.IGNORECASE
+    )
     korean_war_pattern = re.compile(r'Korea', re.IGNORECASE)
     vietnam_war_pattern = re.compile(r'Vietnam', re.IGNORECASE)
     simple_world_war_pattern = re.compile(r'\bWorld\s*War\b', re.IGNORECASE) 
@@ -1417,36 +1440,31 @@ def warRule(value, world):
         identified_wars.append("Korean War")
     if vietnam_war_pattern.search(war):
         identified_wars.append("Vietnam War")
+    war = war.replace(".", "").replace("Calv", "").replace("Vols", "")
+    if "Civil" in war or "Citil" in war or "Gettysburg" in war \
+        or "Fredericksburg" in war or "bull" in war:
+        identified_wars.append("Civil War")
+    if "Spanish" in war or "Amer" in war or "American" in war or "SpAm" in war:
+        identified_wars.append("Spanish American War")
+    if "Mexican" in war:
+        identified_wars.append("Mexican Border War")
+    if "Rebellion" in war:
+        identified_wars.append("War of the Rebellion")
+    if "Revolution" in war:
+        identified_wars.append("Revolutionary War")
+    if "1812" in war:
+        identified_wars.append("War of 1812")
+    words = war.split()
+    for x in words:
+        if x in ww1years:
+            war = "World War 1"
+            break
     if identified_wars:
         war = ' and '.join(identified_wars)
-    if war and not identified_wars:
-        war = war.replace(".", "").replace("Calv", "").replace("Vols", "")
-        if "Korea" in war:
-            war = "Korean War"
-        elif "Vietnam" in war:
-            war = "Vietnam War"
-        elif "Civil" in war or "Citil" in war or "Gettysburg" in war \
-            or "Fredericksburg" in war or "bull" in war:
-            war = "Civil War"
-        elif "Spanish" in war or "Amer" in war or "American" in war or "SpAm" in war:
-            war = "Spanish American War"
-        elif "Mexican" in war:
-            war = "Mexican Border War"
-        elif "Rebellion" in war:
-            war = "War of the Rebellion"
-        elif "Revolution" in war:
-            war = "Revolutionary War"
-        elif "1812" in war:
-            war = "War of 1812"
-        else:
-            war = ""
-        words = war.split()
-        for x in words:
-            if x in ww1years:
-                war = "World War 1"
-                break
-    if not war and world:
-        war = world
+    else:
+        war = ""
+    if world != "" and war != "World War 1":
+        war = "World War 1"
     if "Army" in war or "US" in war:
         war = ""
     return war
@@ -1465,6 +1483,7 @@ abbreviations and naming conventions.
 
 '''
 def branchRule(finalVals, value, war):
+    value = value.replace("\n", " ")
     armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", "cav", "div", \
              "sig", "art", "corps", "corp", "artillery", "army"]
     navys = ["hospital", "navy", "naval", "usn", "avy", "usnr"]
@@ -1612,8 +1631,8 @@ def createRecord(file_name, id, cemetery):
         elif x == "19":
             if value:
                 try:
-                    tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace("/", "").replace(" ", "")\
-                        .replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
+                    tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace(";", "").replace("/", "")\
+                        .replace(" ", "").replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
                     if tempCent.count("19") == 2:
                         tempCent = tempCent.split("19")
                         if all(item == "" for item in tempCent):
@@ -1727,8 +1746,8 @@ def tempRecord(file_name, val, id, cemetery):
         elif x == "19":
             if value:
                 try:
-                    tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace("/", "").replace(" ", "")\
-                        .replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
+                    tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace(";", "").replace("/", "")\
+                        .replace(" ", "").replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
                     if tempCent.count("19") == 2:
                         tempCent = tempCent.split("19")
                         if all(item == "" for item in tempCent):
@@ -1792,9 +1811,10 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
         if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
             required_colors.append(highlight_colors["badDate"])
     if worksheet[f'{"I"}{rowIndex}'].value:
-        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" and \
-          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "2" and \
-           str(worksheet[f'{"I"}{rowIndex}'].value)[1] != "0"):
+        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" or \
+          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2" and \
+           str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0" and 
+           str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "24"):
                 required_colors.append(highlight_colors["badDate"]) 
     if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
         required_colors.append(highlight_colors["mergedCemeteryMismatch"])
@@ -1826,7 +1846,7 @@ Finds the next empty row in the worksheet to begin processing at that index.
 @author Mike
 '''  
 def find_next_empty_row(worksheet):
-    for row in worksheet.iter_rows(min_row=2, min_col=1, max_col=1):
+    for row in worksheet.iter_rows(min_row=2900, min_col=1, max_col=1):
         if row[0].value is None:
             return row[0].row
     return worksheet.max_row + 1 
@@ -1882,7 +1902,7 @@ def main():
     cemetery = "Evergreen" #Change this to continue running through cemeteries
     cem_path = os.path.join(network_folder, fr"Cemetery\{cemetery}")
     global letter
-    letter = "L" #Change this to continue running through the current cemetery
+    letter = "M" #Change this to continue running through the current cemetery
     name_path = letter 
     name_path = os.path.join(cem_path, name_path)
     pathA = ""
@@ -1943,9 +1963,10 @@ def main():
                         if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
                             required_colors.append(highlight_colors["badDate"])
                     if worksheet[f'{"I"}{rowIndex}'].value:
-                        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" and \
-                          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "2" and 
-                           str(worksheet[f'{"I"}{rowIndex}'].value)[1] != "0"):
+                        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" or \
+                          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2" and 
+                           str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0" and 
+                           str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "24"):
                                 required_colors.append(highlight_colors["badDate"]) 
                     if (worksheet[f'{"J"}{rowIndex}'].value) != "" and (worksheet[f'{"K"}{rowIndex}'].value) == ""\
                     or (worksheet[f'{"L"}{rowIndex}'].value) != "" and (worksheet[f'{"M"}{rowIndex}'].value) == "":

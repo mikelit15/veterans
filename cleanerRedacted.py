@@ -15,7 +15,7 @@ def decrement_file_numbers(base_path, start_index):
 
 def main():
     base_cem_path = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
-    start_index = 2638 # this file gets decremented
+    start_index = 3016 # this file gets decremented
     decrement_file_numbers(base_cem_path, start_index)
 
 if __name__ == "__main__":

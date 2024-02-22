@@ -19,5 +19,5 @@ def decrement_hyperlinks_in_excel(file_path, column_letter, start_index):
 
 excel_file_path = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
 column_with_hyperlinks = 'O'  
-start_index = 2637 # ID number
+start_index = 3015 # ID number
 decrement_hyperlinks_in_excel(excel_file_path, column_with_hyperlinks, start_index)
