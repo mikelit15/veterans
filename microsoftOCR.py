@@ -344,6 +344,9 @@ def nameRule(finalVals, value):
         firstName = firstName.replace(".", "")
     if title and not suffix:
         suffix = title
+    if middleName in suffi:
+        suffi = middleName
+        middleName = ""
     suffix = re.sub(r"[^a-zA-Z']", '', suffix)
     if suffix:
         if not "." in suffix:
@@ -356,6 +359,8 @@ def nameRule(finalVals, value):
     middleName = re.sub(r"[^a-zA-Z']", '', middleName)
     if len(middleName) == 1:
         middleName += "."
+    if firstName.replace(".", "").lower() == "wm":
+        firstName = "William"
     finalVals.append(re.sub(r"[^a-zA-Z']", '', lastName))
     finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName))
     finalVals.append(middleName.replace("0", "O"))
@@ -739,9 +744,10 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
         if len(tempYear) == 4:
             appYear = tempYear
     elif app:
-        tempYear = app.split(" ")[-1]
+        tempYear = app
         while tempYear and not tempYear[-1].isnumeric():
             tempYear = tempYear[:-1]
+        tempYear = tempYear.split(" ")[-1]
         if len(tempYear) == 4:
             appYear = tempYear
     birth = dob
@@ -790,7 +796,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
             death = death[1:]
         death = death.replace("Found", "").replace("on", "")
         if len(death.replace(" ", "")) == 4:
-            dYear = death
+            dYear = death.replace(" ", "")
             death = ""
         if "death" in death.lower():
             death = death.lower().split("death")[1]
@@ -1392,36 +1398,33 @@ extraction through the 'world' parameter taken from get_kv_map().
 @author Mike
 '''
 def warRule(value, world):
-    value = value.replace("\n", " ")
+    value = value.replace("\n", " ").replace("7", "1").replace("T", "1").replace("J", "1")
     ww1years = ["1914", "1915", "1916", "1917", "1918"]
     war = value.strip()
     identified_wars = []  
     war = war.replace("N.", "W").replace("N", "W").replace(" ", "").replace("-", " ")\
-             .replace(".", "").replace("#", "").replace(",", "")
-    war = re.sub(r'\bT\b', '2', war)  
-    war = re.sub(r'\bTT\b', '2', war)  
+        .replace(".", "").replace("#", "").replace(",", "").replace("L", "1").replace("I", "1")
     ww1_pattern = re.compile(
         r'WW1|'  # Matches "WW1"
         r'WWI|'  # Matches "WWI"
         r'\b1\b|'  # Matches standalone "1"
-        r'W\.?W\.?\s?(1|I|i|l|L|T)|'  # Matches "WW 1", "WW I", with optional periods and space
-        r'WORLD\s*WAR\s*(1|I|ONE|i|l|L|T)',  # Matches "World War 1", "World War I", with optional spaces
+        r'W\.?W\.?\s?(1|I|i|l|L|T|ONE)|'  # Matches "WW 1", "WW I", with optional periods and space
+        r'WORLD\s*WAR\s*(1|I|i|l|L|T|ONE)',  # Matches "World War 1", "World War I", with optional spaces
         re.IGNORECASE
     ) 
     ww2_pattern = re.compile(
         r'WW2|'  # Matches "WW2"
         r'WWII|'  # Matches "WWII"
-        r'WW[2]|'  # Matches "WW2"
-        r'\b2\b|'  # Matches "2"
-        r'W\.?W\.?\s?(2|II|ii|ll|LL|TT)|'  # Matches "WW 2", "WW II", with optional periods and space
-        r'WORLDWAR(2|II|ii|ll|LL|TT)',  # Matches "World War 2", "World War II"
+        r'\b2\b|'  # Matches standalone "2"
+        r'W\.?W\.?\s?(2|II|ii|ll|LL|TT|TWO|11)|'  # Matches "WW 2", "WW II", with optional periods and space
+        r'WORLD\s*WAR\s*(2|II|ii|ll|LL|TT|TWO|11)',  # Matches "World War 2", "World War II", with optional spaces
         re.IGNORECASE
     )
     ww1_and_ww2_pattern = re.compile(
         r'(WW|WORLD\s*WAR|WORLD\s*WARS)\s*'  # Starts with "WW" or "World War" with optional spaces
-        r'(1|I|ONE|l|i|T|L)'  # First part of the pattern for World War 1
+        r'(1|I|i|l|L|T|ONE)'  # First part of the pattern for World War 1
         r'(\s*(and|&)\s*|\sand\s*|\s*&\s*|)'  # Optional connector: "and", "&", with or without spaces
-        r'(2|II|TWO|11|ll|ii|TT|LL|WW2|WWII)'  # Second part of the pattern for World War 2, optional to allow single mentions
+        r'(2|II|ii|ll|LL|TT|TWO|11|WW2|WWII)'  # Second part of the pattern for World War 2, optional to allow single mentions
         , re.IGNORECASE
     )
     korean_war_pattern = re.compile(r'Korea', re.IGNORECASE)
@@ -1811,10 +1814,14 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
         if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
             required_colors.append(highlight_colors["badDate"])
     if worksheet[f'{"I"}{rowIndex}'].value:
-        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" or \
-          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2" and \
-           str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0" and 
-           str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "24"):
+        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1":
+            if str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2":
+                if str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0":
+                    if str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "23":
+                        required_colors.append(highlight_colors["badDate"]) 
+                else:
+                    required_colors.append(highlight_colors["badDate"]) 
+            else:
                 required_colors.append(highlight_colors["badDate"]) 
     if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
         required_colors.append(highlight_colors["mergedCemeteryMismatch"])
@@ -1846,7 +1853,7 @@ Finds the next empty row in the worksheet to begin processing at that index.
 @author Mike
 '''  
 def find_next_empty_row(worksheet):
-    for row in worksheet.iter_rows(min_row=2900, min_col=1, max_col=1):
+    for row in worksheet.iter_rows(min_row=1500, min_col=1, max_col=1):
         if row[0].value is None:
             return row[0].row
     return worksheet.max_row + 1 
@@ -1899,10 +1906,10 @@ def main():
     jewishSet = set(jewishs)
     workbook = openpyxl.load_workbook('Veterans.xlsx')
     global cemetery
-    cemetery = "Evergreen" #Change this to continue running through cemeteries
+    cemetery = "Evergreen" # Change this to continue running through cemeteries
     cem_path = os.path.join(network_folder, fr"Cemetery\{cemetery}")
     global letter
-    letter = "M" #Change this to continue running through the current cemetery
+    letter = "N" # Change this to continue running through the current cemetery
     name_path = letter 
     name_path = os.path.join(cem_path, name_path)
     pathA = ""
@@ -1963,10 +1970,14 @@ def main():
                         if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
                             required_colors.append(highlight_colors["badDate"])
                     if worksheet[f'{"I"}{rowIndex}'].value:
-                        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1" or \
-                          (str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2" and 
-                           str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0" and 
-                           str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "24"):
+                        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1":
+                            if str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2":
+                                if str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0":
+                                    if str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "23":
+                                        required_colors.append(highlight_colors["badDate"]) 
+                                else:
+                                    required_colors.append(highlight_colors["badDate"]) 
+                            else:
                                 required_colors.append(highlight_colors["badDate"]) 
                     if (worksheet[f'{"J"}{rowIndex}'].value) != "" and (worksheet[f'{"K"}{rowIndex}'].value) == ""\
                     or (worksheet[f'{"L"}{rowIndex}'].value) != "" and (worksheet[f'{"M"}{rowIndex}'].value) == "":

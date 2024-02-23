@@ -2,36 +2,33 @@ import re
 
 
 def warRule(value, world):
-    value = value.replace("\n", " ")
+    value = value.replace("\n", " ").replace("7", "1").replace("T", "1").replace("J", "1")
     ww1years = ["1914", "1915", "1916", "1917", "1918"]
     war = value.strip()
     identified_wars = []  
     war = war.replace("N.", "W").replace("N", "W").replace(" ", "").replace("-", " ")\
-             .replace(".", "").replace("#", "").replace(",", "")
-    war = re.sub(r'\bT\b', '2', war)  
-    war = re.sub(r'\bTT\b', '2', war)  
+             .replace(".", "").replace("#", "").replace(",", "").replace("L", "1").replace("I", "1")
     ww1_pattern = re.compile(
         r'WW1|'  # Matches "WW1"
         r'WWI|'  # Matches "WWI"
         r'\b1\b|'  # Matches standalone "1"
-        r'W\.?W\.?\s?(1|I|i|l|L|T)|'  # Matches "WW 1", "WW I", with optional periods and space
-        r'WORLD\s*WAR\s*(1|I|ONE|i|l|L|T)',  # Matches "World War 1", "World War I", with optional spaces
+        r'W\.?W\.?\s?(1|I|i|l|L|T|ONE)|'  # Matches "WW 1", "WW I", with optional periods and space
+        r'WORLD\s*WAR\s*(1|I|i|l|L|T|ONE)',  # Matches "World War 1", "World War I", with optional spaces
         re.IGNORECASE
     ) 
     ww2_pattern = re.compile(
         r'WW2|'  # Matches "WW2"
         r'WWII|'  # Matches "WWII"
-        r'WW[2]|'  # Matches "WW2"
-        r'\b2\b|'  # Matches "2"
-        r'W\.?W\.?\s?(2|II|ii|ll|LL|TT)|'  # Matches "WW 2", "WW II", with optional periods and space
-        r'WORLDWAR(2|II|ii|ll|LL|TT)',  # Matches "World War 2", "World War II"
+        r'\b2\b|'  # Matches standalone "2"
+        r'W\.?W\.?\s?(2|II|ii|ll|LL|TT|TWO|11)|'  # Matches "WW 2", "WW II", with optional periods and space
+        r'WORLD\s*WAR\s*(2|II|ii|ll|LL|TT|TWO|11)',  # Matches "World War 2", "World War II", with optional spaces
         re.IGNORECASE
     )
     ww1_and_ww2_pattern = re.compile(
         r'(WW|WORLD\s*WAR|WORLD\s*WARS)\s*'  # Starts with "WW" or "World War" with optional spaces
-        r'(1|I|ONE|l|i|T|L)'  # First part of the pattern for World War 1
+        r'(1|I|i|l|L|T|ONE)'  # First part of the pattern for World War 1
         r'(\s*(and|&)\s*|\sand\s*|\s*&\s*|)'  # Optional connector: "and", "&", with or without spaces
-        r'(2|II|TWO|11|ll|ii|TT|LL|WW2|WWII)'  # Second part of the pattern for World War 2, optional to allow single mentions
+        r'(2|II|ii|ll|LL|TT|TWO|11|WW2|WWII)'  # Second part of the pattern for World War 2, optional to allow single mentions
         , re.IGNORECASE
     )
     korean_war_pattern = re.compile(r'Korea', re.IGNORECASE)
@@ -79,4 +76,4 @@ def warRule(value, world):
         war = ""
     return war
 
-print(warRule("WW2", ""))
+print(warRule("WWTI", ""))
