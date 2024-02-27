@@ -2,7 +2,7 @@ import re
 
 
 def warRule(value, world):
-    value = value.replace("\n", " ").replace("7", "1").replace("T", "1").replace("J", "1")
+    value = value.replace("\n", " ").replace("7", "1").replace("J", "1")
     ww1years = ["1914", "1915", "1916", "1917", "1918"]
     war = value.strip()
     identified_wars = []  
@@ -36,12 +36,12 @@ def warRule(value, world):
     simple_world_war_pattern = re.compile(r'\bWorld\s*War\b', re.IGNORECASE) 
     if ww1_and_ww2_pattern.search(war):
         identified_wars.extend(["World War 1", "World War 2"])
-    elif simple_world_war_pattern.search(war):
-        identified_wars.append("World War 1")
     else:
         if ww2_pattern.search(war):
             identified_wars.append("World War 2")
-        if not identified_wars and ww1_pattern.search(war):
+        elif simple_world_war_pattern.search(war):
+            identified_wars.append("World War 1")
+        elif not identified_wars and ww1_pattern.search(war):
             identified_wars.append("World War 1")
     if korean_war_pattern.search(war):
         identified_wars.append("Korean War")
@@ -76,4 +76,4 @@ def warRule(value, world):
         war = ""
     return war
 
-print(warRule("WWTI", ""))
+print(warRule("World War Two", ""))

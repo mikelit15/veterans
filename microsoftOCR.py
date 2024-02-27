@@ -132,7 +132,7 @@ def analyzeDocument(filePath, id):
         imgTest = file.read()
         bytesTest = bytearray(imgTest)
         print('Image loaded', id)
-    poller = document_analysis_client.begin_analyze_document("Test19n", document=bytesTest)
+    poller = document_analysis_client.begin_analyze_document("Test20n", document=bytesTest)
     result = poller.result()
     return result
 
@@ -808,6 +808,19 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     # death = temp2 + death[3:]
     try:
         buried4Year, buried2Year = buriedRule(buried.replace("_", ""), cent, warsFlag)
+        if buried4Year.count("19") == 2:
+            buried4Year = buried4Year.split("19")
+            if all(item == "" for item in buried4Year):
+                buried4Year = "1919"
+            else:
+                for x in buried4Year:
+                    if x != "":
+                        buried4Year = "19" + x
+        else:
+            if buried4Year[2:] == "19":
+                buried4Year = buried4Year[2:] + buried4Year[:2]
+            else:
+                buried4Year = buried4Year
     except Exception:
         print("Buried didn't parse")
     if birth != "" and death != "":
@@ -1264,8 +1277,12 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     elif birth != "" and death == "":
         birth, bYear, birthYYFlag = parseBirth(birth, bYear, birthYYFlag)
         if not birthYYFlag:
-            finalVals.append(birth)
-            finalVals.append(int(bYear))
+            if bYear:
+                finalVals.append(birth)
+                finalVals.append(int(bYear))
+            else:
+                finalVals.append("")
+                finalVals.append("") 
             if dYear != "":
                 finalVals.append("")
                 finalVals.append(int(dYear))
@@ -1291,6 +1308,11 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                 finalVals.append("")
                 finalVals.append(int(dYear))
                 return warFlag
+            elif cent:
+                finalVals.append("")
+                finalVals.append("") 
+                finalVals.append("") 
+                finalVals.append(int(cent))
             else:
                 finalVals.append("")
                 finalVals.append("") 
@@ -1398,12 +1420,14 @@ extraction through the 'world' parameter taken from get_kv_map().
 @author Mike
 '''
 def warRule(value, world):
-    value = value.replace("\n", " ").replace("7", "1").replace("T", "1").replace("J", "1")
+    value = value.replace("\n", " ").replace("7", "1").replace("J", "1")
+    if value == "" and world != "":
+        value = world
     ww1years = ["1914", "1915", "1916", "1917", "1918"]
     war = value.strip()
     identifiedWars = []  
-    war = war.replace("N.", "W").replace("N", "W").replace(" ", "").replace("-", " ")\
-        .replace(".", "").replace("#", "").replace(",", "").replace("L", "1").replace("I", "1")
+    war = war.replace(".", "").replace("N", "W").replace(" ", "").replace("-", " ")\
+             .replace("#", "").replace(",", "").replace("L", "1").replace("I", "1")
     ww1Pattern = re.compile(
         r'WW1|'  # Matches "WW1"
         r'WWI|'  # Matches "WWI"
@@ -1432,12 +1456,12 @@ def warRule(value, world):
     simple_world_war_pattern = re.compile(r'\bWorld\s*War\b', re.IGNORECASE) 
     if ww1_and_ww2_pattern.search(war):
         identifiedWars.extend(["World War 1", "World War 2"])
-    elif simple_world_war_pattern.search(war):
-        identifiedWars.append("World War 1")
     else:
         if ww2Pattern.search(war):
             identifiedWars.append("World War 2")
-        if not identifiedWars and ww1Pattern.search(war):
+        elif simple_world_war_pattern.search(war):
+            identifiedWars.append("World War 1")
+        elif not identifiedWars and ww1Pattern.search(war):
             identifiedWars.append("World War 1")
     if korean_war_pattern.search(war):
         identifiedWars.append("Korean War")
@@ -1466,8 +1490,8 @@ def warRule(value, world):
         war = ' and '.join(identifiedWars)
     else:
         war = ""
-    if world != "" and war != "World War 1":
-        war = "World War 1"
+    if world != "" and war == "":
+        war = world
     if "Army" in war or "US" in war:
         war = ""
     return war
@@ -1489,7 +1513,7 @@ def branchRule(finalVals, value, war):
     value = value.replace("\n", " ")
     armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", "cav", "div", \
              "sig", "art", "corps", "corp", "artillery", "army"]
-    navys = ["hospital", "navy", "naval", "usn", "avy", "usnr"]
+    navys = ["hospital", "navy", "naval", "u s n ", "avy", "u s n r ", "u s s "]
     guards = ["113", "102d", "114", "44", "181", "250", "112", "national"]
     branch = value
     branch = branch.replace("/", " ").replace(".", " ").replace("th", "").replace("-", "")\
@@ -1498,47 +1522,54 @@ def branchRule(finalVals, value, war):
     if war in value and war != "":
         branch = ""
         value = ""
-    for word in words:
-        word = word.lower()
-        if "air force" in branch.lower():
-            branch = "Air Force"
-            break
-        elif "marine" in branch.lower():
-            branch = "Marine Corps"
-            break
-        elif "air" in word:
-            branch = "Air Force"
-            break
-        elif word in armys:
-            branch = "Army"
-            break
-        elif word in navys:
-            branch = "Navy"
-            break
-        elif "coast" in word or "USCG" in word:
-            branch = "Coast Guard"
-            break
-        elif word in guards:
-            branch = "National Guard"
-            break
-        else:
-            flag1 = False
-            flag2 = False
-            for x in armys:
-                if x in word:
-                    branch = "Army"
-                    flag1 = True
-                    break
-            if flag1:
+    if "air force" in branch.lower():
+        branch = "Air Force"
+    elif "marine" in branch.lower():
+        branch = "Marine Corps"
+    elif branch.lower() in armys:
+        branch = "Army"
+    elif branch.lower() in navys:
+        branch = "Navy"
+    elif branch.lower() in guards:
+        branch = "National Guard"
+    elif "u s c g " in branch.lower():
+        branch = "Coast Guard"
+    else:
+        for word in words:
+            word = word.lower()
+            if word in armys:
+                branch = "Army"
                 break
-            for x in navys:
-                if x in word:
-                    branch = "Navy"
-                    flag2 = True
-                    break
-            if flag2:
+            elif "air" in word:
+                branch = "Air Force"
                 break
-            branch = ""
+            elif word in navys:
+                branch = "Navy"
+                break
+            elif "coast" in word or "USCG" in word:
+                branch = "Coast Guard"
+                break
+            elif word in guards:
+                branch = "National Guard"
+                break
+            else:
+                flag1 = False
+                flag2 = False
+                for x in armys:
+                    if x in word:
+                        branch = "Army"
+                        flag1 = True
+                        break
+                if flag1:
+                    break
+                for x in navys:
+                    if x in word:
+                        branch = "Navy"
+                        flag2 = True
+                        break
+                if flag2:
+                    break
+                branch = ""
     finalVals.append(value)   
     finalVals.append(branch)   
 
@@ -1853,7 +1884,7 @@ Finds the next empty row in the worksheet to begin processing at that index.
 @author Mike
 '''  
 def find_next_empty_row(worksheet):
-    for row in worksheet.iter_rows(minRow=1500, minCol=1, maxCol=1):
+    for row in worksheet.iter_rows(min_row=3000, min_col=1, max_col=1):
         if row[0].value is None:
             return row[0].row
     return worksheet.max_row + 1 
@@ -1909,7 +1940,7 @@ def main():
     cemetery = "Evergreen" # Change this to continue running through cemeteries
     cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
     global letter
-    letter = "N" # Change this to continue running through the current cemetery
+    letter = "R" # Change this to continue running through the current cemetery
     namePath = letter 
     namePath = os.path.join(cemPath, namePath)
     pathA = ""
