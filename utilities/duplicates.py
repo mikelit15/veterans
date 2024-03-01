@@ -1,6 +1,6 @@
 import pandas as pd
 
-df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", usecols="A:L")
+df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", usecols="A:K")
 potential_duplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
 confirmed_duplicates = pd.DataFrame()
 for _, group in potential_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):

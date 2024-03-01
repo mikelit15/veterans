@@ -1448,8 +1448,9 @@ def warRule(value, world):
         r'(WW|WORLD\s*WAR|WORLD\s*WARS)\s*'  # Starts with "WW" or "World War" with optional spaces
         r'(1|I|i|l|L|T|ONE)'  # First part of the pattern for World War 1
         r'(\s*(and|&)\s*|\sand\s*|\s*&\s*|)'  # Optional connector: "and", "&", with or without spaces
-        r'(2|II|ii|ll|LL|TT|TWO|11|WW2|WWII)'  # Second part of the pattern for World War 2, optional to allow single mentions
-        , re.IGNORECASE
+        r'(2|II|ii|ll|LL|TT|TWO|11|WW2|WWII)|'  # Second part of the pattern for World War 2, optional to allow single mentions
+        r'WW1andWW11',  # Explicitly matches "WW1andWW11"
+        re.IGNORECASE
     )
     korean_war_pattern = re.compile(r'Korea', re.IGNORECASE)
     vietnam_war_pattern = re.compile(r'Vietnam', re.IGNORECASE)
@@ -1477,7 +1478,7 @@ def warRule(value, world):
         identifiedWars.append("Mexican Border War")
     if "Rebellion" in war:
         identifiedWars.append("War of the Rebellion")
-    if "Revolution" in war:
+    if "Revolution" in war or "Rev" in war:
         identifiedWars.append("Revolutionary War")
     if "1812" in war:
         identifiedWars.append("War of 1812")
@@ -1512,8 +1513,8 @@ abbreviations and naming conventions.
 def branchRule(finalVals, value, war):
     value = value.replace("\n", " ")
     armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", "cav", "div", \
-             "sig", "art", "corps", "corp", "artillery", "army"]
-    navys = ["hospital", "navy", "naval", "u s n ", "avy", "u s n r ", "u s s "]
+             "sig", "art", "corps", "corp", "artillery", "army", "q m c "]
+    navys = ["hospital", "navy", "naval", "u s n ", "avy", "u s n r ", "u s s ", "usnr", "uss", "usn"]
     guards = ["113", "102d", "114", "44", "181", "250", "112", "national"]
     branch = value
     branch = branch.replace("/", " ").replace(".", " ").replace("th", "").replace("-", "")\
@@ -1530,6 +1531,8 @@ def branchRule(finalVals, value, war):
         branch = "Army"
     elif branch.lower() in navys:
         branch = "Navy"
+    elif "u s m c " in branch.lower():
+        branch = "Marine Corps" 
     elif branch.lower() in guards:
         branch = "National Guard"
     elif "u s c g " in branch.lower():
@@ -1540,7 +1543,7 @@ def branchRule(finalVals, value, war):
             if word in armys:
                 branch = "Army"
                 break
-            elif "air" in word:
+            elif "air" in word or "aero" in word:
                 branch = "Air Force"
                 break
             elif word in navys:
@@ -1570,6 +1573,8 @@ def branchRule(finalVals, value, war):
                 if flag2:
                     break
                 branch = ""
+    if value == "N/A":
+        value = ""
     finalVals.append(value)   
     finalVals.append(branch)   
 
@@ -1602,6 +1607,7 @@ def createRecord(fileName, id, cemetery):
     cent = ""
     app = ""
     dob = ""
+    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt"]
     nameCoords = None
     serialCoords = None
     warFlag = False
@@ -1643,6 +1649,8 @@ def createRecord(fileName, id, cemetery):
                 while len(finalVals) < 8:
                     finalVals.append("")
         elif x == "WAR RECORD" and flag3:
+            if value.lower() in badWar:
+                value = ""
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
@@ -1667,6 +1675,8 @@ def createRecord(fileName, id, cemetery):
                 try:
                     tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace(";", "").replace("/", "")\
                         .replace(" ", "").replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
+                    while tempCent and not tempCent[-1].isnumeric():
+                        tempCent = tempCent[:-1]
                     if tempCent.count("19") == 2:
                         tempCent = tempCent.split("19")
                         if all(item == "" for item in tempCent):
@@ -1717,6 +1727,7 @@ def tempRecord(fileName, val, id, cemetery):
     cent = ""
     app = ""
     dob = ""
+    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt"]
     nameCoords = None
     serialCoords = None
     warFlag = False
@@ -1758,6 +1769,8 @@ def tempRecord(fileName, val, id, cemetery):
                 while len(finalVals) < 8:
                     finalVals.append("")
         elif x == "WAR RECORD" and flag3:
+            if value.lower() in badWar:
+                value = ""
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
@@ -1782,6 +1795,8 @@ def tempRecord(fileName, val, id, cemetery):
                 try:
                     tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace(";", "").replace("/", "")\
                         .replace(" ", "").replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
+                    while tempCent and not tempCent[-1].isnumeric():
+                        tempCent = tempCent[:-1]
                     if tempCent.count("19") == 2:
                         tempCent = tempCent.split("19")
                         if all(item == "" for item in tempCent):
@@ -1917,7 +1932,7 @@ that are caught by the program.
 
 @author Mike
 '''
-def main():
+def main(singleFlag):
     global cemSet
     global miscSet
     global jewishSet
@@ -1940,7 +1955,7 @@ def main():
     cemetery = "Evergreen" # Change this to continue running through cemeteries
     cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
     global letter
-    letter = "R" # Change this to continue running through the current cemetery
+    letter = "V" # Change this to continue running through the current cemetery
     namePath = letter 
     namePath = os.path.join(cemPath, namePath)
     pathA = ""
@@ -1950,6 +1965,7 @@ def main():
     warFlag = False
     pdfFiles = sorted(os.listdir(namePath))
     initialID = 1
+    breakFlag = False
     for y in range(len(pdfFiles)):
         try:
             warFlag = False
@@ -1972,8 +1988,7 @@ def main():
                         continue
                     vals, warFlag, nameCoords, serialCoords, kvs = createRecord(filePath, id, cemetery)
                     redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                    linkText = "PDF Image"
-                    worksheet.cell(row=rowIndex, column=15).value = linkText
+                    worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
                     worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
                     worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
                     counter = 1
@@ -2012,7 +2027,9 @@ def main():
                                 requiredColors.append(highlightColors["badDate"]) 
                     if (worksheet[f'{"J"}{rowIndex}'].value) != "" and (worksheet[f'{"K"}{rowIndex}'].value) == ""\
                     or (worksheet[f'{"L"}{rowIndex}'].value) != "" and (worksheet[f'{"M"}{rowIndex}'].value) == "":
-                        requiredColors.append(highlightColors["badWarName"])
+                        if worksheet[f'{"J"}{rowIndex}'].value != "Regular Service" or\
+                           worksheet[f'{"J"}{rowIndex}'].value != "Peacetime":
+                               requiredColors.append(highlightColors["badWarName"])
                     try:
                         if (worksheet[f'B{rowIndex}'].value)[0] != letter:
                             if (worksheet[f'C{rowIndex}'].value)[0] == letter:
@@ -2040,6 +2057,9 @@ def main():
                             worksheet[f'D{rowIndex}'].value = worksheet[f'C{rowIndex}'].value[-1] + "."
                             worksheet[f'C{rowIndex}'].value = worksheet[f'C{rowIndex}'].value[:-1]
                     except IndexError:
+                        requiredColors.append(highlightColors["lastNameMismatch"])
+                    two_uppercase_pattern = re.compile(r'.*[A-Z].*[A-Z].*')
+                    if two_uppercase_pattern.match(worksheet[f'C{rowIndex}'].value):
                         requiredColors.append(highlightColors["lastNameMismatch"])
                     if requiredColors:
                         numColors = len(requiredColors)
@@ -2082,6 +2102,8 @@ def main():
                             worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                             id += 1
                             rowIndex += 1
+                            if singleFlag:
+                                breakFlag = True
         except Exception as e:
             errorTraceback = traceback.format_exc()
             print(errorTraceback)
@@ -2114,6 +2136,8 @@ def main():
                     logFile.write(f'{key}: {value}\n')
             logFile.write("\n")
         workbook.save('Veterans.xlsx')
+        if breakFlag:
+            break
 
 if __name__ == "__main__":
-    main()
+    main(False)

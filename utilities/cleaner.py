@@ -1,6 +1,11 @@
 import os
 import re
 import openpyxl
+import subprocess
+import time
+import sys
+sys.path.append(r'C:\workspace\veterans')
+import microsoftOCR
 
 
 '''
@@ -130,8 +135,10 @@ their number decremented by 1.
 
 @author Mike
 '''      
-def decrementFileNumbers(basePath, startIndex):
-    for root, dirs, files in os.walk(basePath):
+def cleanRedacted(id):
+    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+    startIndex = id + 1 # The image file name gets decremented starting at this ID number
+    for root, dirs, files in os.walk(baseCemPath):
         for file in sorted(files):
             match = re.search(r'(\d+)', file)
             if match:
@@ -141,23 +148,6 @@ def decrementFileNumbers(basePath, startIndex):
                     newFileName = re.sub(r'\d+', f"{newIndex:05}", file, 1)  
                     os.rename(os.path.join(root, file), os.path.join(root, newFileName))
                     print(f"Renamed '{file}' to '{newFileName}'")
-
-
-'''
-Initiates the file renaming process for redacted documents within a specific directory,
-starting from a given file ID. This is part of managing file sequences after some documents 
-are removed or redacted. Files in the directory and subdirectories with ID numbers greater 
-than this will be decremented.
-
-@param id (int) - The ID from which to start the cleaning process, affecting files with ID 
-                  numbers greater by adjusting their names to maintain sequence.
-
-@author Mike
-'''
-def cleanRedacted(id):
-    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
-    startIndex = id + 1 # The image file name gets decremented starting at this ID number
-    decrementFileNumbers(baseCemPath, startIndex)
   
        
 '''
@@ -172,11 +162,14 @@ equal to start_index will have their ID decremented by 1.
 
 @author Mike
 '''     
-def decrement_hyperlinks_in_excel(filePath, columnLetter, startIndex):
-    workbook = openpyxl.load_workbook(filePath)
-    sheet = workbook.active
-    for row in sheet.iter_rows(min_col=openpyxl.utils.column_index_from_string(columnLetter),
-                               max_col=openpyxl.utils.column_index_from_string(columnLetter),
+def cleanHyperlink(id, cemetery):
+    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
+    columnWithHyperlinks = 'O'  
+    startIndex = id # The hyperlink gets decremented by 1 at this cell ID number
+    workbook = openpyxl.load_workbook(excelFilePath)
+    sheet = workbook[cemetery]
+    for row in sheet.iter_rows(min_col=openpyxl.utils.column_index_from_string(columnWithHyperlinks),
+                               max_col=openpyxl.utils.column_index_from_string(columnWithHyperlinks),
                                min_row=startIndex): 
         cell = row[0] 
         if cell.hyperlink: 
@@ -184,30 +177,71 @@ def decrement_hyperlinks_in_excel(filePath, columnLetter, startIndex):
             new_url = re.sub(r'(\d+)', lambda x: f"{int(x.group())-1:05d}" if int(x.group()) >= startIndex else x.group(), url)
             if new_url != url:
                 cell.hyperlink.target = new_url
-                print(f"Updated hyperlink: {url} to {new_url}")
-    workbook.save(filePath)
+                print(f"Updated hyperlink: {os.path.basename(url)} to {os.path.basename(new_url)}")
+    workbook.save(excelFilePath)
     print(f"Hyperlinks updated.")
 
 
-'''
-Initiates the process of decrementing hyperlink IDs in an Excel document, starting from a 
-specified ID. This is particularly useful in maintaining accurate references after modifications 
-to the document IDs they point to. Hyperlinks in the specified column that contain an ID greater 
-than or equal to the specified start ID will be adjusted to reflect decremented ID values.
+def cleanDelete(id):
+    # baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+    # for dirpath, dirnames, filenames in os.walk(baseCemPath):
+    #     for filename in filenames:
+    #         if f"{id:05d}" in filename:
+    #             file_path = os.path.join(dirpath, filename)
+    #             os.remove(file_path)
+    #             print(f"{filename} deleted successfully.")
+    baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+    for dirpath, dirnames, filenames in os.walk(baseRedacPath):
+        for filename in filenames:
+            if f"{id:05d}" in filename:
+                file_path = os.path.join(dirpath, filename)
+                os.remove(file_path)
+                print(f"{filename} deleted successfully.")
 
-@param id (int) - The ID at which to start decrementing hyperlink references in the document.
 
-@author Mike
-'''
-def cleanHyperlink(id):
-    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
-    columnWithHyperlinks = 'O'  
-    startIndex = id # The hyperlink gets decremented by 1 at this cell ID number
-    decrement_hyperlinks_in_excel(excelFilePath, columnWithHyperlinks, startIndex)
+def open_excel_and_wait():
+    filePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
+    try:
+        os.startfile(filePath)
+    except Exception as e:
+        print(f"Error opening file: {e}")
+        return
+    print("Excel file opened.")
+    while True:
+        tasklist = subprocess.Popen('tasklist', stdout=subprocess.PIPE)
+        output = tasklist.communicate()[0].decode('utf-8')
+        if 'EXCEL.EXE' not in output.upper():
+            print("Excel file closed.")
+            break
+        time.sleep(2)
        
+       
+def adjustImageName(goodID, badID):
+    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+    for dirpath, dirnames, filenames in os.walk(baseCemPath):
+        for filename in filenames:
+            if f"{goodID:05d}" in filename:
+                file_path = os.path.join(dirpath, filename)
+                os.rename(file_path, file_path.replace(".pdf", "a.pdf"))
+                print(f"{filename} renamed to {filename.replace(".pdf", "a.pdf")}")
+            if f"{badID:05d}" in filename:
+                file_path = os.path.join(dirpath, filename)
+                os.rename(file_path, file_path.replace(f"{badID:05d}.pdf", f"{goodID:05d}b.pdf"))
+                print(f"{filename} renamed to {filename.replace(".pdf", "b.pdf")}")
+                
+
        
 if __name__ == "__main__":
-    id = 61 # Proper ID number
-    cleanRedacted(id)
-    cleanHyperlink(id)
-    cleanImages(id)
+    cemetery = "Evergreen"
+    goodIDs = []
+    badIDs = []
+    count = 0
+    for id in badIDs:
+        cleanDelete(id)
+        adjustImageName(goodIDs[count], id)
+        open_excel_and_wait()
+        microsoftOCR.main(True)
+        cleanRedacted(id)
+        cleanHyperlink(id, cemetery)
+        count += 1
+    cleanImages(goodIDs[0]-200)

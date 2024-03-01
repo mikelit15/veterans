@@ -104,7 +104,7 @@ def cleanImages(id):
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
     start = id
-    startFlag = False
+    startFlag = True
     for cemetery in cemeterys:
         if cemetery in ["Jewish", "Misc"]:
             subCemPath = os.path.join(baseCemPath, cemetery)
@@ -118,5 +118,5 @@ def cleanImages(id):
             
             
 if __name__ == "__main__":
-    id = 50 # Proper ID number
+    id = 3500 # Proper ID number
     cleanImages(id)
