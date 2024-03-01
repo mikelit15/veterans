@@ -6,6 +6,10 @@ import time
 import sys
 sys.path.append(r'C:\workspace\veterans')
 import microsoftOCR
+from openpyxl.styles import Font
+from openpyxl.worksheet.hyperlink import Hyperlink
+
+
 
 
 '''
@@ -163,9 +167,9 @@ equal to start_index will have their ID decremented by 1.
 @author Mike
 '''     
 def cleanHyperlink(id, cemetery):
-    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
+    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     columnWithHyperlinks = 'O'  
-    startIndex = id # The hyperlink gets decremented by 1 at this cell ID number
+    startIndex = id + 1 # The hyperlink gets decremented by 1 at this cell ID number
     workbook = openpyxl.load_workbook(excelFilePath)
     sheet = workbook[cemetery]
     for row in sheet.iter_rows(min_col=openpyxl.utils.column_index_from_string(columnWithHyperlinks),
@@ -174,7 +178,7 @@ def cleanHyperlink(id, cemetery):
         cell = row[0] 
         if cell.hyperlink: 
             url = cell.hyperlink.target
-            new_url = re.sub(r'(\d+)', lambda x: f"{int(x.group())-1:05d}" if int(x.group()) >= startIndex else x.group(), url)
+            new_url = re.sub(r'(\d+)', lambda x: f"{int(x.group())-2:05d}" if int(x.group()) >= startIndex else x.group(), url)
             if new_url != url:
                 cell.hyperlink.target = new_url
                 print(f"Updated hyperlink: {os.path.basename(url)} to {os.path.basename(new_url)}")
@@ -182,14 +186,7 @@ def cleanHyperlink(id, cemetery):
     print(f"Hyperlinks updated.")
 
 
-def cleanDelete(id):
-    # baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
-    # for dirpath, dirnames, filenames in os.walk(baseCemPath):
-    #     for filename in filenames:
-    #         if f"{id:05d}" in filename:
-    #             file_path = os.path.join(dirpath, filename)
-    #             os.remove(file_path)
-    #             print(f"{filename} deleted successfully.")
+def cleanDelete(cemetery, goodID, badID):
     baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     for dirpath, dirnames, filenames in os.walk(baseRedacPath):
         for filename in filenames:
@@ -197,23 +194,39 @@ def cleanDelete(id):
                 file_path = os.path.join(dirpath, filename)
                 os.remove(file_path)
                 print(f"{filename} deleted successfully.")
-
-
-def open_excel_and_wait():
-    filePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
-    try:
-        os.startfile(filePath)
-    except Exception as e:
-        print(f"Error opening file: {e}")
-        return
-    print("Excel file opened.")
-    while True:
-        tasklist = subprocess.Popen('tasklist', stdout=subprocess.PIPE)
-        output = tasklist.communicate()[0].decode('utf-8')
-        if 'EXCEL.EXE' not in output.upper():
-            print("Excel file closed.")
-            break
-        time.sleep(2)
+    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
+    workbook = openpyxl.load_workbook(excelFilePath)
+    worksheet = workbook[cemetery]
+    row_to_delete = badID + 1
+    worksheet.delete_rows(row_to_delete)
+    print(f"Deleted row: {row_to_delete} successfully.")
+    for row in range(row_to_delete, worksheet.max_row + 1):
+        worksheet[f'A{row}'].value = worksheet[f'A{row}'].value - 1
+        print(f"{worksheet[f'A{row}'].value + 1} changed to {worksheet[f'A{row}'].value}")
+        next_row = row + 1
+        cell_ref = f'O{row}'
+        next_cell_ref = f'O{next_row}'
+        if next_row <= worksheet.max_row and worksheet[next_cell_ref].hyperlink:
+            temp_hyperlink = worksheet[next_cell_ref].hyperlink
+            worksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=temp_hyperlink.target, display=temp_hyperlink.display)
+            worksheet[cell_ref].value = worksheet[next_cell_ref].value
+            print(f"Hyperlink and value from row {next_row} moved to row {row}.")
+    if worksheet[f'O{worksheet.max_row - 1}'].hyperlink:
+        last_row = worksheet.max_row
+        print(f"Adjusting the last hyperlink in row {last_row}.")
+        second_last_hyperlink = worksheet[f'O{last_row - 1}'].hyperlink
+        new_target = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", second_last_hyperlink.target)
+        worksheet[f'O{last_row}'].hyperlink = Hyperlink(ref=f'O{last_row}', target=new_target, display=second_last_hyperlink.display)
+        print(f"Updated hyperlink in row {last_row} to {new_target}.")
+    start_column = 'A'
+    end_column = 'O'
+    start_column_index = openpyxl.utils.column_index_from_string(start_column)
+    end_column_index = openpyxl.utils.column_index_from_string(end_column)
+    for col_index in range(start_column_index, end_column_index + 1):
+        worksheet.cell(row=goodID + 1, column=col_index).value = None
+    worksheet[f'O{goodID + 1}'].hyperlink = None
+    print(f"Record {goodID} data cleared successfully.")
+    workbook.save(excelFilePath)
        
        
 def adjustImageName(goodID, badID):
@@ -227,21 +240,22 @@ def adjustImageName(goodID, badID):
             if f"{badID:05d}" in filename:
                 file_path = os.path.join(dirpath, filename)
                 os.rename(file_path, file_path.replace(f"{badID:05d}.pdf", f"{goodID:05d}b.pdf"))
-                print(f"{filename} renamed to {filename.replace(".pdf", "b.pdf")}")
+                print(f"{filename} renamed to {filename.replace(f"{badID:05d}.pdf", f"{goodID:05d}b.pdf")}")
                 
 
        
 if __name__ == "__main__":
     cemetery = "Evergreen"
-    goodIDs = []
-    badIDs = []
+    goodIDs = [3859]
+    badIDs = [4009]
     count = 0
+    # cleanDelete(cemetery, 3859, 4009)
+    # cleanHyperlink(4009, cemetery)
     for id in badIDs:
-        cleanDelete(id)
-        adjustImageName(goodIDs[count], id)
-        open_excel_and_wait()
-        microsoftOCR.main(True)
-        cleanRedacted(id)
-        cleanHyperlink(id, cemetery)
+        # cleanDelete(cemetery, goodIDs[count], id)
+        # cleanHyperlink(id, cemetery)
+        # adjustImageName(goodIDs[count], id)
+        microsoftOCR.main(True, "S")
+        # cleanRedacted(id)
         count += 1
     cleanImages(goodIDs[0]-200)

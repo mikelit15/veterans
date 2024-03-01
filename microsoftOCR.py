@@ -1932,7 +1932,7 @@ that are caught by the program.
 
 @author Mike
 '''
-def main(singleFlag):
+def main(singleFlag, singleLetter):
     global cemSet
     global miscSet
     global jewishSet
@@ -1954,8 +1954,7 @@ def main(singleFlag):
     global cemetery
     cemetery = "Evergreen" # Change this to continue running through cemeteries
     cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
-    global letter
-    letter = "V" # Change this to continue running through the current cemetery
+    letter = singleLetter # Change this to continue running through the current cemetery
     namePath = letter 
     namePath = os.path.join(cemPath, namePath)
     pathA = ""
@@ -2140,4 +2139,6 @@ def main(singleFlag):
             break
 
 if __name__ == "__main__":
-    main(False)
+    global letter
+    letter = "V"
+    main(False, letter)

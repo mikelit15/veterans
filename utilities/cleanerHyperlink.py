@@ -22,7 +22,7 @@ def decrement_hyperlinks_in_excel(filePath, columnLetter, startIndex):
         cell = row[0] 
         if cell.hyperlink: 
             url = cell.hyperlink.target
-            new_url = re.sub(r'(\d+)', lambda x: f"{int(x.group()):05d}" if int(x.group()) >= startIndex else x.group(), url)
+            new_url = re.sub(r'(\d+)', lambda x: f"{int(x.group()) - 1:05d}" if int(x.group()) >= startIndex else x.group(), url)
             if new_url != url:
                 cell.hyperlink.target = new_url
                 print(f"Updated hyperlink: {url} to {new_url}")
@@ -43,10 +43,10 @@ than or equal to the specified start ID will be adjusted to reflect decremented 
 def cleanHyperlink(id):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
     columnWithHyperlinks = 'O'  
-    startIndex = id # The hyperlink gets decremented by 1 at this cell ID number
+    startIndex = id
     decrement_hyperlinks_in_excel(excelFilePath, columnWithHyperlinks, startIndex)
 
 
 if __name__ == "__main__":
-    id = 52 # The hyperlink gets decremented by 1 at this cell ID number
+    id = 58 # The hyperlink gets decremented by 1 at this cell ID number
     cleanHyperlink(id)
