@@ -3,9 +3,11 @@ import re
 import openpyxl
 import subprocess
 import time
+import shutil
 import sys
 sys.path.append(r'C:\workspace\veterans')
 import microsoftOCR
+import duplicates
 from openpyxl.styles import Font
 from openpyxl.worksheet.hyperlink import Hyperlink
 
@@ -190,7 +192,7 @@ def cleanDelete(cemetery, goodID, badID):
     baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     for dirpath, dirnames, filenames in os.walk(baseRedacPath):
         for filename in filenames:
-            if f"{id:05d}" in filename:
+            if f"{badID:05d}" in filename:
                 file_path = os.path.join(dirpath, filename)
                 os.remove(file_path)
                 print(f"{filename} deleted successfully.")
@@ -218,6 +220,44 @@ def cleanDelete(cemetery, goodID, badID):
         new_target = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", second_last_hyperlink.target)
         worksheet[f'O{last_row}'].hyperlink = Hyperlink(ref=f'O{last_row}', target=new_target, display=second_last_hyperlink.display)
         print(f"Updated hyperlink in row {last_row} to {new_target}.")
+    workbook.save(excelFilePath)
+       
+       
+def adjustImageName(cemetery, goodID, badID):
+    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+    goodIDFound = False
+    badIDFound = False
+    goodIDFilePath = ""
+    badIDFilePath = ""
+    for dirpath, dirnames, filenames in os.walk(baseCemPath):
+        for filename in filenames:
+            if f"{goodID:05d}" in filename:
+                goodIDFilePath = os.path.join(dirpath, filename)
+                goodIDFound = True
+            elif f"{badID:05d}" in filename:
+                badIDFilePath = os.path.join(dirpath, filename)
+                badIDFound = True
+            if goodIDFound and badIDFound:
+                break
+        if goodIDFound and badIDFound:
+            break
+    if goodIDFound and badIDFound:
+        goodIDPrefix = os.path.basename(os.path.dirname(goodIDFilePath))
+        badIDPrefix = os.path.basename(os.path.dirname(badIDFilePath))
+        newBadIDFilename = os.path.basename(badIDFilePath).replace(f"{badID:05d}", f"{goodID:05d}b").replace(badIDPrefix, goodIDPrefix)
+        newBadIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newBadIDFilename)
+        if not "a.pdf" in os.path.basename(goodIDFilePath):
+            newGoodIDFilename = os.path.basename(goodIDFilePath).replace(".pdf", "a.pdf")
+            newGoodIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newGoodIDFilename)
+            os.rename(goodIDFilePath, newGoodIDFilePath)
+            print(f"{os.path.basename(goodIDFilePath)} renamed to {newGoodIDFilename}")
+        shutil.move(badIDFilePath, newBadIDFilePath)
+        print(f"{os.path.basename(badIDFilePath)} moved and renamed to {newBadIDFilename}")
+    else:
+        print("GoodID or BadID file not found. Please check the IDs and directories.")
+    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
+    workbook = openpyxl.load_workbook(excelFilePath)
+    worksheet = workbook[cemetery]
     start_column = 'A'
     end_column = 'O'
     start_column_index = openpyxl.utils.column_index_from_string(start_column)
@@ -225,37 +265,19 @@ def cleanDelete(cemetery, goodID, badID):
     for col_index in range(start_column_index, end_column_index + 1):
         worksheet.cell(row=goodID + 1, column=col_index).value = None
     worksheet[f'O{goodID + 1}'].hyperlink = None
-    print(f"Record {goodID} data cleared successfully.")
     workbook.save(excelFilePath)
-       
-       
-def adjustImageName(goodID, badID):
-    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
-    for dirpath, dirnames, filenames in os.walk(baseCemPath):
-        for filename in filenames:
-            if f"{goodID:05d}" in filename:
-                file_path = os.path.join(dirpath, filename)
-                os.rename(file_path, file_path.replace(".pdf", "a.pdf"))
-                print(f"{filename} renamed to {filename.replace(".pdf", "a.pdf")}")
-            if f"{badID:05d}" in filename:
-                file_path = os.path.join(dirpath, filename)
-                os.rename(file_path, file_path.replace(f"{badID:05d}.pdf", f"{goodID:05d}b.pdf"))
-                print(f"{filename} renamed to {filename.replace(f"{badID:05d}.pdf", f"{goodID:05d}b.pdf")}")
-                
+    print(f"Record {goodID} data from row {goodID + 1} cleared successfully.")
+
 
        
 if __name__ == "__main__":
     cemetery = "Evergreen"
-    goodIDs = [3859]
-    badIDs = [4009]
-    count = 0
-    # cleanDelete(cemetery, 3859, 4009)
-    # cleanHyperlink(4009, cemetery)
-    for id in badIDs:
-        # cleanDelete(cemetery, goodIDs[count], id)
-        # cleanHyperlink(id, cemetery)
-        # adjustImageName(goodIDs[count], id)
-        microsoftOCR.main(True, "S")
-        # cleanRedacted(id)
-        count += 1
-    cleanImages(goodIDs[0]-200)
+    goodID = 4789
+    badID = 4792
+    adjustImageName(cemetery, goodID, badID)
+    microsoftOCR.main(True, "W")
+    cleanDelete(cemetery, goodID, badID)
+    cleanHyperlink(badID, cemetery)
+    cleanRedacted(badID)
+    cleanImages(goodID - 200)
+    duplicates.main()

@@ -132,7 +132,7 @@ def analyzeDocument(filePath, id):
         imgTest = file.read()
         bytesTest = bytearray(imgTest)
         print('Image loaded', id)
-    poller = document_analysis_client.begin_analyze_document("Test20n", document=bytesTest)
+    poller = document_analysis_client.begin_analyze_document("Test21n", document=bytesTest)
     result = poller.result()
     return result
 
@@ -687,6 +687,8 @@ def buriedRule(value, cent, warsFlag):
                     else:
                         buried2Year = year5
             elif " " in buried:
+                if buried.count('.') == 1:
+                    buried = buried.replace(".", " ")
                 year5 = buried.split(' ')
                 if year5[-1] == " ":
                     year5 = year5[-2]
@@ -1493,6 +1495,8 @@ def warRule(value, world):
         war = ""
     if world != "" and war == "":
         war = world
+    if war == "World War":
+        war = "World War 1"
     if "Army" in war or "US" in war:
         war = ""
     return war
@@ -1832,7 +1836,7 @@ field and handles row highlighting in the output based on specific conditions.
 
 @author Mike
 '''
-def mergeRecords(vals1, vals2, rowIndex, id, warFlag):
+def mergeRecords(vals1, vals2, rowIndex, id, warFlag, letter):
     counter = 1
     def length(item):
         return len(str(item))
@@ -1952,7 +1956,7 @@ def main(singleFlag, singleLetter):
     jewishSet = set(jewishs)
     workbook = openpyxl.load_workbook('Veterans.xlsx')
     global cemetery
-    cemetery = "Evergreen" # Change this to continue running through cemeteries
+    cemetery = "Extra" # Change this to continue running through cemeteries
     cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
     letter = singleLetter # Change this to continue running through the current cemetery
     namePath = letter 
@@ -2093,7 +2097,7 @@ def main(singleFlag, singleLetter):
                             else:
                                 warFlag = True
                             redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                            mergeRecords(vals1, vals2, rowIndex, id, warFlag)
+                            mergeRecords(vals1, vals2, rowIndex, id, warFlag, letter)
                             mergeImages(pathA, filePath, cemetery, letter)
                             link_text = "PDF Image"
                             worksheet.cell(row=rowIndex, column=15).value = link_text
@@ -2140,5 +2144,5 @@ def main(singleFlag, singleLetter):
 
 if __name__ == "__main__":
     global letter
-    letter = "V"
+    letter = "A"
     main(False, letter)

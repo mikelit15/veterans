@@ -43,10 +43,10 @@ than or equal to the specified start ID will be adjusted to reflect decremented 
 def cleanHyperlink(id):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
     columnWithHyperlinks = 'O'  
-    startIndex = id
+    startIndex = id + 1
     decrement_hyperlinks_in_excel(excelFilePath, columnWithHyperlinks, startIndex)
 
 
 if __name__ == "__main__":
-    id = 58 # The hyperlink gets decremented by 1 at this cell ID number
+    id = 2349 # The hyperlink gets decremented by 1 at this cell ID number
     cleanHyperlink(id)

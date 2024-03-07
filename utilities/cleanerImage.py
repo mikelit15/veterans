@@ -118,5 +118,5 @@ def cleanImages(id):
             
             
 if __name__ == "__main__":
-    id = 1 # Proper ID number
+    id = 4585 # Proper ID number
     cleanImages(id)
