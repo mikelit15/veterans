@@ -1,5 +1,7 @@
 import openpyxl
 import re
+import os
+
 
 '''
 Adjusts hyperlinks in an Excel file that contain numerical IDs, decrementing those IDs by 1
@@ -13,40 +15,38 @@ equal to start_index will have their ID decremented by 1.
 
 @author Mike
 '''     
-def decrement_hyperlinks_in_excel(filePath, columnLetter, startIndex):
-    workbook = openpyxl.load_workbook(filePath)
-    sheet = workbook.active
-    for row in sheet.iter_rows(min_col=openpyxl.utils.column_index_from_string(columnLetter),
-                               max_col=openpyxl.utils.column_index_from_string(columnLetter),
-                               min_row=startIndex): 
-        cell = row[0] 
-        if cell.hyperlink: 
+def cleanHyperlink(id, cemetery):
+    def decrement_with_rollover(path):
+        pattern = re.compile(fr"({cemetery})([A-Z])(\d+)(\s*redacted\.pdf)")
+        def handle_decrement(match):
+            prefix, letter, num, suffix = match.groups()
+            new_num = int(num) - 1
+            if new_num < 0:
+                new_num = 9999  
+            new_number_formatted = f"{new_num:0{len(num)}d}"
+            return f"{prefix}{letter}{new_number_formatted}{suffix}"
+        return pattern.sub(handle_decrement, path)
+    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
+    columnWithHyperlinks = 'O'
+    startIndex = id 
+    workbook = openpyxl.load_workbook(excelFilePath)
+    sheet = workbook[cemetery]
+    for row in sheet.iter_rows(min_col=openpyxl.utils.column_index_from_string(columnWithHyperlinks),
+                               max_col=openpyxl.utils.column_index_from_string(columnWithHyperlinks),
+                               min_row=startIndex):
+        cell = row[0]
+        if cell.hyperlink:
             url = cell.hyperlink.target
-            new_url = re.sub(r'(\d+)', lambda x: f"{int(x.group()) - 1:05d}" if int(x.group()) >= startIndex else x.group(), url)
+            url = url.replace("%20", " ")
+            new_url = decrement_with_rollover(url)
             if new_url != url:
                 cell.hyperlink.target = new_url
-                print(f"Updated hyperlink: {url} to {new_url}")
-    workbook.save(filePath)
-    print(f"Hyperlinks updated.")
-
-
-'''
-Initiates the process of decrementing hyperlink IDs in an Excel document, starting from a 
-specified ID. This is particularly useful in maintaining accurate references after modifications 
-to the document IDs they point to. Hyperlinks in the specified column that contain an ID greater 
-than or equal to the specified start ID will be adjusted to reflect decremented ID values.
-
-@param id (int) - The ID at which to start decrementing hyperlink references in the document.
-
-@author Mike
-'''
-def cleanHyperlink(id):
-    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx" 
-    columnWithHyperlinks = 'O'  
-    startIndex = id + 1
-    decrement_hyperlinks_in_excel(excelFilePath, columnWithHyperlinks, startIndex)
+                print(f"Updated hyperlink from {os.path.basename(url)} to {os.path.basename(new_url)}")
+    workbook.save(excelFilePath)
+    print("Hyperlinks updated.")
 
 
 if __name__ == "__main__":
-    id = 2349 # The hyperlink gets decremented by 1 at this cell ID number
-    cleanHyperlink(id)
+    id = 178 # The hyperlink gets decremented by 1 at this row #
+    cemetery = "Fairview"
+    cleanHyperlink(id, cemetery)

@@ -38,10 +38,10 @@ than this will be decremented.
 '''
 def cleanRedacted(id):
     baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
-    startIndex = id + 1 # The image file name gets decremented starting at this ID number
+    startIndex = id 
     decrementFileNumbers(baseCemPath, startIndex)
     
     
 if __name__ == "__main__":
-    id = 4815 # Proper ID number
+    id = 5628 # The image file name gets decremented starting at this ID number
     cleanRedacted(id)

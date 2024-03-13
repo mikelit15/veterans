@@ -1,22 +1,17 @@
 import os
 import re
 import openpyxl
-import subprocess
-import time
 import shutil
 import sys
 sys.path.append(r'C:\workspace\veterans')
 import microsoftOCR
 import duplicates
-from openpyxl.styles import Font
 from openpyxl.worksheet.hyperlink import Hyperlink
 
-
-
-
 '''
-Processes each cemetery by iterating through alphabetically named subdirectories and renaming PDF files within.
-It starts renaming files from a specified point, controlled by 'start' and 'startFlag'.
+Processes each cemetery by iterating through alphabetically named subdirectories and 
+renaming PDF files within. It starts renaming files from a specified point, controlled 
+by 'start' and 'startFlag'.
 
 @param cemeteryName (str) - The name of the cemetery being processed.
 @param basePath (str) - The base directory path where cemeteries are located.
@@ -25,7 +20,8 @@ It starts renaming files from a specified point, controlled by 'start' and 'star
 @param startFlag (bool) - A flag indicating whether the start point has been reached.
 
 @return initialCount (int) - Updated counter after processing.
-@return startFlag (bool) - Updated flag indicating if the start point was reached and surpassed.
+@return startFlag (bool) - Updated flag indicating if the start point was reached and 
+                           surpassed.
 
 @author Mike
 '''
@@ -45,7 +41,8 @@ def process_cemetery(cemeteryName, basePath, initialCount, start, startFlag):
 
 
 '''
-Renames PDF files within a specified directory, starting from a given file number. It skips renaming until the start condition is met.
+Renames PDF files within a specified directory, starting from a given file number. It 
+skips renaming until the start condition is met.
 
 @param cemetery (str) - The cemetery name.
 @param letter (str) - The letter indicating the subdirectory within the cemetery directory.
@@ -61,7 +58,7 @@ Renames PDF files within a specified directory, starting from a given file numbe
 
 @author Mike
 '''
-def clean(cemetery, letter, namePath, cemPath, counterA, isFirstFile, start, startFlag):
+def clean(cemetery, letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag):
     pdfFiles = sorted(os.listdir(namePath))
     letters = sorted([folder for folder in os.listdir(cemPath) if os.path.isdir(os.path.join(cemPath, folder))])
     try:
@@ -88,7 +85,7 @@ def clean(cemetery, letter, namePath, cemPath, counterA, isFirstFile, start, sta
             continue
         startFlag = False
         if isFirstFile:
-            counter = counterA 
+            counter = initialCount 
         if "a.pdf" in x:
             newName = f"{cemetery}{letter}{counter:05d}a.pdf"
             os.rename(os.path.join(namePath, x), os.path.join(namePath, newName))
@@ -105,18 +102,22 @@ def clean(cemetery, letter, namePath, cemPath, counterA, isFirstFile, start, sta
 
 
 '''
-Initiates the cleaning process for image files in all cemeteries, starting from a specific file ID.
-Adjusts the starting point for renaming based on the given ID and processes each cemetery found in the base path.
+Initiates the cleaning process for image files in all cemeteries, starting from a specific 
+file ID. Adjusts the starting point for renaming based on the given ID and processes each 
+cemetery found in the base path.
 
-@param id (int) - The file ID from which to start the cleaning process.
+@param goodID (int) - The file ID from which to start the cleaning process.
+
+- Adjusts image file names by filling in the gap when found, ID is decremented by 1
+  for every file name after the gap
 
 @author Mike
 '''
-def cleanImages(id):
+def cleanImages(goodID):
     baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
-    start = id - 200
+    start = goodID - 200
     startFlag = True
     for cemetery in cemeterys:
         if cemetery in ["Jewish", "Misc"]:
@@ -133,17 +134,18 @@ def cleanImages(id):
 '''
 Decrements the numerical part of file names in a directory and its subdirectories, 
 starting from a specified index. This is used to maintain a sequential order after 
-removing files. Files with a number greater than or equal to start_index will have 
+removing files. Files with a number greater than or equal to badID will have 
 their number decremented by 1.
 
-@param base_path (str) - The path to the directory containing the files to be renamed.
-@param start_index (int) - The file number from which to start decrementing.
+@param badID (str) - The path to the directory containing the files to be renamed.
+
+- Decrements ID in redacted file name by 1, starting from specified ID
 
 @author Mike
 '''      
-def cleanRedacted(id):
+def cleanRedacted(badID):
     baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
-    startIndex = id + 1 # The image file name gets decremented starting at this ID number
+    startIndex = badID + 1 # The image file name gets decremented starting at this ID number
     for root, dirs, files in os.walk(baseCemPath):
         for file in sorted(files):
             match = re.search(r'(\d+)', file)
@@ -162,33 +164,63 @@ starting from a specified index. This function is used when IDs in a series are 
 corresponding hyperlinks need to reflect these changes. Hyperlinks with IDs greater than or 
 equal to start_index will have their ID decremented by 1.
 
-@param filePath (str) - The path to the Excel file to be modified.
-@param columnLetter (str) - The letter of the column containing hyperlinks to be adjusted.
-@param startIndex (int) - The row number from which to start adjusting hyperlinks.
+@param badRow (int) - The row number from which to start adjusting hyperlinks.
+@param cemetery (str) - The name of current cemetery, for file pathing
+
+- Decrements ID in hyperlink address by 1 starting from specified row
 
 @author Mike
 '''     
-def cleanHyperlink(id, cemetery):
+def cleanHyperlink(badRow, cemetery):
+    def decrement_with_rollover(path):
+        pattern = re.compile(fr"({cemetery})([A-Z])(\d+)(\s*redacted\.pdf)")
+        def handle_decrement(match):
+            prefix, letter, num, suffix = match.groups()
+            new_num = int(num) - 2
+            if new_num < 0:
+                new_num = 9999  
+            new_number_formatted = f"{new_num:0{len(num)}d}"
+            return f"{prefix}{letter}{new_number_formatted}{suffix}"
+        return pattern.sub(handle_decrement, path)
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
-    columnWithHyperlinks = 'O'  
-    startIndex = id + 1 # The hyperlink gets decremented by 1 at this cell ID number
+    columnWithHyperlinks = 'O'
+    startIndex = badRow 
     workbook = openpyxl.load_workbook(excelFilePath)
     sheet = workbook[cemetery]
     for row in sheet.iter_rows(min_col=openpyxl.utils.column_index_from_string(columnWithHyperlinks),
                                max_col=openpyxl.utils.column_index_from_string(columnWithHyperlinks),
-                               min_row=startIndex): 
-        cell = row[0] 
-        if cell.hyperlink: 
+                               min_row=startIndex):
+        cell = row[0]
+        if cell.hyperlink:
             url = cell.hyperlink.target
-            new_url = re.sub(r'(\d+)', lambda x: f"{int(x.group())-2:05d}" if int(x.group()) >= startIndex else x.group(), url)
+            url = url.replace("%20", " ")
+            new_url = decrement_with_rollover(url)
             if new_url != url:
                 cell.hyperlink.target = new_url
-                print(f"Updated hyperlink: {os.path.basename(url)} to {os.path.basename(new_url)}")
+                print(f"Updated hyperlink from {os.path.basename(url)} to {os.path.basename(new_url)}")
     workbook.save(excelFilePath)
-    print(f"Hyperlinks updated.")
+    print("Hyperlinks updated.")
 
 
-def cleanDelete(cemetery, goodID, badID):
+'''
+Performs deletion of specified files and updates records in an Excel spreadsheet accordingly. 
+This function is vital for keeping digital records accurate and up to date, especially after 
+removing redundant or incorrect files.
+
+@param cemetery (str) - The name of the cemetery where the deletion is to take place.
+@param badID (int) - The identifier of the file to be deleted.
+@param badRow (int) - The Excel row corresponding to the file to be deleted.
+
+- Deletes badID redacted file
+- Deletes badID row, shifting rows below up 1
+- Adjusts ID column to correct for gap
+- Openpyxl bug fixing:
+- Adjusts hyperlink ref and ID to coincide with new cell row and ID
+- Adjusts last row hyperlink and deletes empty link in unused row below final record
+
+@author Mike
+'''
+def cleanDelete(cemetery, badID, badRow):
     baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     for dirpath, dirnames, filenames in os.walk(baseRedacPath):
         for filename in filenames:
@@ -199,7 +231,7 @@ def cleanDelete(cemetery, goodID, badID):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     workbook = openpyxl.load_workbook(excelFilePath)
     worksheet = workbook[cemetery]
-    row_to_delete = badID + 1
+    row_to_delete = badRow
     worksheet.delete_rows(row_to_delete)
     print(f"Deleted row: {row_to_delete} successfully.")
     for row in range(row_to_delete, worksheet.max_row + 1):
@@ -222,8 +254,24 @@ def cleanDelete(cemetery, goodID, badID):
         print(f"Updated hyperlink in row {last_row} to {new_target}.")
     workbook.save(excelFilePath)
        
-       
-def adjustImageName(cemetery, goodID, badID):
+
+'''
+Adjusts the naming and organization of files when a duplicate or erroneous entry is found. 
+This involves renaming and moving files as necessary to correct any issues with the digital 
+records.
+
+@param cemetery (str) - The cemetery's name where the file adjustment will occur.
+@param goodID (int) - The identifier of the correct file.
+@param badID (int) - The identifier of the duplicate or erroneous file to adjust.
+@param goodRow (int) - The row in the Excel spreadsheet corresponding to the good file.
+
+- Adds "a" suffix to goodID
+- Changes badID to goodID, moves folders if necessary, adds "b" suffix
+- Clears data in goodID row
+
+@author Mike
+'''     
+def adjustImageName(cemetery, goodID, badID, goodRow):
     baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
     goodIDFound = False
     badIDFound = False
@@ -263,21 +311,22 @@ def adjustImageName(cemetery, goodID, badID):
     start_column_index = openpyxl.utils.column_index_from_string(start_column)
     end_column_index = openpyxl.utils.column_index_from_string(end_column)
     for col_index in range(start_column_index, end_column_index + 1):
-        worksheet.cell(row=goodID + 1, column=col_index).value = None
-    worksheet[f'O{goodID + 1}'].hyperlink = None
+        worksheet.cell(row=goodRow, column=col_index).value = None
+    worksheet[f'O{goodRow}'].hyperlink = None
     workbook.save(excelFilePath)
     print(f"Record {goodID} data from row {goodID + 1} cleared successfully.")
 
-
        
 if __name__ == "__main__":
-    cemetery = "Evergreen"
-    goodID = 4789
-    badID = 4792
-    adjustImageName(cemetery, goodID, badID)
-    microsoftOCR.main(True, "W")
-    cleanDelete(cemetery, goodID, badID)
-    cleanHyperlink(badID, cemetery)
+    cemetery = "Fairview"
+    goodID = 5812
+    goodRow = 722   
+    badID = 5839
+    badRow = 749
+    adjustImageName(cemetery, goodID, badID, goodRow)
+    cleanDelete(cemetery, badID, badRow)
+    microsoftOCR.main(True, cemetery, "D")
+    cleanHyperlink(badRow, cemetery)
     cleanRedacted(badID)
-    cleanImages(goodID - 200)
+    cleanImages(goodID)
     duplicates.main()
