@@ -4,7 +4,7 @@ import openpyxl
 import shutil
 import sys
 sys.path.append(r'C:\workspace\veterans')
-import microsoftOCR
+import microsoftOCR.microsoftOCR as microsoftOCR
 import duplicates
 from openpyxl.worksheet.hyperlink import Hyperlink
 
@@ -319,13 +319,13 @@ def adjustImageName(cemetery, goodID, badID, goodRow):
        
 if __name__ == "__main__":
     cemetery = "Fairview"
-    goodID = 5812
-    goodRow = 722   
-    badID = 5839
-    badRow = 749
+    goodID = 6040 
+    goodRow = 950    
+    badID = 6047
+    badRow = 957
     adjustImageName(cemetery, goodID, badID, goodRow)
     cleanDelete(cemetery, badID, badRow)
-    microsoftOCR.main(True, cemetery, "D")
+    microsoftOCR.main(True, cemetery, "F")
     cleanHyperlink(badRow, cemetery)
     cleanRedacted(badID)
     cleanImages(goodID)
