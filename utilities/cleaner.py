@@ -3,10 +3,10 @@ import re
 import openpyxl
 import shutil
 import sys
-sys.path.append(r'C:\workspace\veterans')
-import microsoftOCR.microsoftOCR as microsoftOCR
 import duplicates
 from openpyxl.worksheet.hyperlink import Hyperlink
+sys.path.append(r'C:\workspace\veterans\microsoftOCR')
+import microsoftOCR
 
 '''
 Processes each cemetery by iterating through alphabetically named subdirectories and 
@@ -215,8 +215,8 @@ removing redundant or incorrect files.
 - Deletes badID row, shifting rows below up 1
 - Adjusts ID column to correct for gap
 - Openpyxl bug fixing:
-- Adjusts hyperlink ref and ID to coincide with new cell row and ID
-- Adjusts last row hyperlink and deletes empty link in unused row below final record
+    - Adjusts hyperlink ref and ID to coincide with new cell row and ID
+    - Adjusts last row hyperlink and deletes empty link in unused row below final record
 
 @author Mike
 '''
@@ -231,10 +231,9 @@ def cleanDelete(cemetery, badID, badRow):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     workbook = openpyxl.load_workbook(excelFilePath)
     worksheet = workbook[cemetery]
-    row_to_delete = badRow
-    worksheet.delete_rows(row_to_delete)
-    print(f"Deleted row: {row_to_delete} successfully.")
-    for row in range(row_to_delete, worksheet.max_row + 1):
+    worksheet.delete_rows(badRow)
+    print(f"Deleted row: {badRow} successfully.")
+    for row in range(badRow, worksheet.max_row + 1):
         worksheet[f'A{row}'].value = worksheet[f'A{row}'].value - 1
         print(f"{worksheet[f'A{row}'].value + 1} changed to {worksheet[f'A{row}'].value}")
         next_row = row + 1
@@ -319,13 +318,19 @@ def adjustImageName(cemetery, goodID, badID, goodRow):
        
 if __name__ == "__main__":
     cemetery = "Fairview"
-    goodID = 6040 
-    goodRow = 950    
-    badID = 6047
-    badRow = 957
+    goodID = 6634   
+    badID = 6643
+    excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
+    workbook = openpyxl.load_workbook(excelFilePath)
+    worksheet = workbook[cemetery]
+    for row in range(1, worksheet.max_row + 1):
+        if worksheet[f'A{row}'].value == goodID:
+            goodRow = row
+        if worksheet[f'A{row}'].value == badID:
+            badRow = row
     adjustImageName(cemetery, goodID, badID, goodRow)
     cleanDelete(cemetery, badID, badRow)
-    microsoftOCR.main(True, cemetery, "F")
+    microsoftOCR.main(True, cemetery, "K") # Change this to match duplicate last name letter
     cleanHyperlink(badRow, cemetery)
     cleanRedacted(badID)
     cleanImages(goodID)

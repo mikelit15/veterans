@@ -348,6 +348,10 @@ def createRecord(fileName, id, cemetery):
                     lastName =  name.last.replace("' ", "'")
                     lastName = lastName[0].upper() + lastName[1:]
                     kinLast = re.sub(r"[^a-zA-Z' ]", '', lastName)
+                    kinLast = kinLast.replace("Mom" , "").replace("Daughter" , "")\
+                        .replace("Dad" , "").replace("Sister" , "").replace("Brother" , "")\
+                        .replace("Mother" , "").replace("Father" , "").replace("Son" , "")\
+                        .replace("Wife" , "").replace("Husband" , "")
                     print("KIN LAST: " + kinLast + "\n")
                 except Exception:
                     pass
@@ -494,6 +498,10 @@ def tempRecord(fileName, val, id, cemetery):
                     lastName =  name.last.replace("' ", "'")
                     lastName = lastName[0].upper() + lastName[1:]
                     kinLast = re.sub(r"[^a-zA-Z' ]", '', lastName)
+                    kinLast = kinLast.replace("Mom" , "").replace("Daughter" , "")\
+                        .replace("Dad" , "").replace("Sister" , "").replace("Brother" , "")\
+                        .replace("Mother" , "").replace("Father" , "").replace("Son" , "")\
+                        .replace("Wife" , "").replace("Husband" , "")
                     print("KIN LAST: " + kinLast + "\n")
                 except Exception:
                     pass
@@ -887,5 +895,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Fairview" # Change this to continue running through cemeteries
     global letter
-    letter = "H" # Change this to continue running through the current cemetery
+    letter = "L" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

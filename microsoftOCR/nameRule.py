@@ -68,7 +68,7 @@ def nameRule(finalVals, value):
         suffix = suffix.replace(middleName, "")
     elif len(suffix) > 0 and middleName:
         suffix = suffix.replace(", ", "")
-        suffix = suffix.replace(middleName, "")
+        # suffix = suffix.replace(middleName, "")
     if value in suffi and "." not in temp and "," not in temp:
         if len(middleName) > 0:
             firstName = name.middle
@@ -122,18 +122,25 @@ def nameRule(finalVals, value):
         firstName = "Thomas"
     lastName = lastName.replace("' ", "'")
     lastName = lastName[0].upper() + lastName[1:]
-    if not firstName[0].isalpha():
-        firstName = firstName[1:]
-    if not firstName[-1].isalpha():
-        firstName = firstName[:-1]
-    if not middleName[0].isalpha():
-        middleName = middleName[1:]
-    if not middleName[-1].isalpha():
-        middleName = middleName[:-1]
-    if not lastName[0].isalpha():
-        lastName = lastName[1:]
-    if not lastName[-1].isalpha():
-        lastName = lastName[:-1]
+    if len(lastName) == 1 and middleName:
+        temp = lastName
+        lastName = middleName
+        middleName = temp + "."
+    if firstName:
+        if not firstName[0].isalpha():
+            firstName = firstName[1:]
+        if not firstName[-1].isalpha():
+            firstName = firstName[:-1]
+    if middleName:
+        if not middleName[0].isalpha():
+            middleName = middleName[1:]
+        if not middleName[-1].isalpha() and middleName[-1] != ".":
+            middleName = middleName[:-1]
+    if lastName:
+        if not lastName[0].isalpha():
+            lastName = lastName[1:]
+        if not lastName[-1].isalpha():
+            lastName = lastName[:-1]
     finalVals.append(re.sub(r"[^a-zA-Z' ]", '', lastName))
     finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName))
     finalVals.append(middleName.replace("0", "O"))

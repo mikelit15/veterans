@@ -89,6 +89,6 @@ def warRule(value, world):
         war = world
     if war == "World War":
         war = "World War 1"
-    if "Army" in war or "US" in war:
+    if "army" in war.lower() or "u.s." in war.lower() or "honorable" in war.lower():
         war = ""
     return war
