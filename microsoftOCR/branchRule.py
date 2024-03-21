@@ -44,7 +44,7 @@ def branchRule(finalVals, value, war):
             if word in armys:
                 branch = "Army"
                 break
-            elif "air" in word or "aero" in word:
+            elif "air" in word or "aero" in word or "aaf" in word:
                 branch = "Air Force"
                 break
             elif word in navys:

@@ -4,8 +4,9 @@ import shutil
 import re
 import sys
 from openpyxl.worksheet.hyperlink import Hyperlink
+import duplicates
 sys.path.append(r'C:\workspace\veterans')
-from microsoftOCR import microsoftOCRTest
+from microsoftOCR import microsoftOCR
 
 
 def process_cemetery(cemeteryName, basePath, initialCount, start, startFlag, redac2):
@@ -80,11 +81,11 @@ def clean(letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag
 
 
 def cleanImages(goodID, redac, redac2):
-    baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\test{redac}"
+    baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
-    start = goodID - 200
-    startFlag = True
+    start = goodID - 500
+    startFlag = False
     for cemetery in cemeterys:
         if cemetery in ["Jewish", "Misc"]:
             subCemPath = os.path.join(baseCemPath, cemetery)
@@ -98,7 +99,7 @@ def cleanImages(goodID, redac, redac2):
       
 
 def adjustImageName(goodID, badID, goodRow):
-    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\test"
+    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
     goodIDFound = False
     badIDFound = False
     goodIDFilePath = ""
@@ -141,13 +142,13 @@ def adjustImageName(goodID, badID, goodRow):
 
 
 def cleanDelete(cemetery, badID, badRow):
-    baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\test - Redacted"
+    baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     for dirpath, dirnames, filenames in os.walk(baseRedacPath):
         for filename in filenames:
             if f"{badID:05d}" in filename:
                 file_path = os.path.join(dirpath, filename)
                 os.remove(file_path)
-                print(f"Redacted file, {filename}, deleted successfully.")
+                print(f"\nRedacted file, {filename}, deleted successfully.")
     worksheet = workbook[cemetery]
     worksheet.delete_rows(badRow)
     print(f"Row {badRow} deleted successfully.")
@@ -190,7 +191,7 @@ def cleanHyperlinks(startIndex):
 cemetery = "Fairview"
 goodIDs = [] 
 badIDs = []
-excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans2.xlsx"
+excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
 workbook = openpyxl.load_workbook(excelFilePath)
 worksheet = workbook[cemetery]
 for x in range(0, len(goodIDs)):
@@ -201,16 +202,16 @@ for x in range(0, len(goodIDs)):
             goodRow = row
         if worksheet[f'A{row}'].value == badIDs[x]:
             badRow = row
+    letter = worksheet[f'B{goodRow}'].value[0]
     adjustImageName(goodIDs[x], badIDs[x], goodRow)
     workbook.save(excelFilePath)
-    microsoftOCRTest.main(True, cemetery, "K")
+    microsoftOCR.main(True, cemetery, letter)
     workbook = openpyxl.load_workbook(excelFilePath)
     worksheet = workbook[cemetery]
     cleanDelete(cemetery, badIDs[x], badRow)
     workbook.save(excelFilePath)
-    break
-cleanImages(6600, "", "")
-cleanImages(6400, " - Redacted", " redacted")
+cleanImages(goodIDs[0], "", "")
+cleanImages(goodIDs[0], " - Redacted", " redacted")
 workbook = openpyxl.load_workbook(excelFilePath)
 worksheet = workbook[cemetery]
 for row in range(1, worksheet.max_row + 1):
@@ -218,3 +219,5 @@ for row in range(1, worksheet.max_row + 1):
         startIndex = row
 cleanHyperlinks(startIndex)
 workbook.save(excelFilePath)
+print("\n")
+duplicates.main()

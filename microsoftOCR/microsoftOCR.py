@@ -15,6 +15,8 @@ from nameparser import HumanName
 from nameparser.config import CONSTANTS
 from openpyxl.styles import PatternFill
 from fuzzywuzzy import fuzz
+import sys
+sys.path.append(r'C:\workspace\veterans\microsoftOCR')
 import nameRule
 import dateRule
 import warRule
@@ -127,14 +129,14 @@ field needed from extraction.
 
 @author Mike
 '''
-def analyzeDocument(filePath, id):
+def analyzeDocument(filePath, id, suffix):
     endpoint = os.environ["VISION_ENDPOINT"]
     key = os.environ["VISION_KEY"]
     document_analysis_client = DocumentAnalysisClient(endpoint=endpoint, credential=AzureKeyCredential(key))
     with open(filePath, "rb") as file:
         imgTest = file.read()
         bytesTest = bytearray(imgTest)
-        print('Image loaded', id)
+        print('\nImage loaded', f"{id} {suffix}")
     poller = document_analysis_client.begin_analyze_document("Test23n", document=bytesTest)
     result = poller.result()
     return result
@@ -227,7 +229,6 @@ def print_kvs(kvs):
     print("----Key-value pairs found in document----")
     for key, value in kvs.items():
         print(key, ":", value)
-    print("\n")
     
     
 '''
@@ -296,6 +297,7 @@ def createRecord(fileName, id, cemetery):
     app = ""
     dob = ""
     kinLast = ""
+    suffix = ""
     badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt"]
     nameCoords = None
     serialCoords = None
@@ -307,7 +309,7 @@ def createRecord(fileName, id, cemetery):
     pdfWriter.add_page(page)
     with open("temp.pdf", 'wb') as output_pdf:
         pdfWriter.write(output_pdf)
-    documentResult = analyzeDocument("temp.pdf", id)
+    documentResult = analyzeDocument("temp.pdf", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
     print_kvs(kvs)  
     keys = ["", "NAME", "KIN", "WAR RECORD", "BORN", "19", "BURIED", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
@@ -352,7 +354,7 @@ def createRecord(fileName, id, cemetery):
                         .replace("Dad" , "").replace("Sister" , "").replace("Brother" , "")\
                         .replace("Mother" , "").replace("Father" , "").replace("Son" , "")\
                         .replace("Wife" , "").replace("Husband" , "")
-                    print("KIN LAST: " + kinLast + "\n")
+                    print("KIN LAST: " + kinLast)
                 except Exception:
                     pass
         elif x == "BORN":
@@ -368,8 +370,9 @@ def createRecord(fileName, id, cemetery):
                 while len(finalVals) < 8:
                     finalVals.append("")
         elif x == "WAR RECORD" and flag3:
-            if value.lower() in badWar:
-                value = ""
+            for x in badWar:
+                if x in value.lower():
+                    value = ""
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
@@ -438,8 +441,7 @@ specific fields.
 
 @author Mike
 '''
-def tempRecord(fileName, val, id, cemetery):
-    print("Performing Temp", id, val.upper())
+def tempRecord(fileName, id, cemetery, suffix):
     world = ""
     war = ""
     buried = ""
@@ -447,7 +449,7 @@ def tempRecord(fileName, val, id, cemetery):
     app = ""
     dob = ""
     kinLast = ""
-    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt"]
+    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable"]
     nameCoords = None
     serialCoords = None
     warFlag = False
@@ -458,7 +460,7 @@ def tempRecord(fileName, val, id, cemetery):
     pdfWriter.add_page(page)
     with open("temp.pdf", 'wb') as output_pdf:
         pdfWriter.write(output_pdf)
-    documentResult  = analyzeDocument("temp.pdf", id)
+    documentResult  = analyzeDocument("temp.pdf", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
     print_kvs(kvs)
     keys = ["", "NAME", "KIN", "WAR RECORD", "BORN", "19", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
@@ -502,7 +504,7 @@ def tempRecord(fileName, val, id, cemetery):
                         .replace("Dad" , "").replace("Sister" , "").replace("Brother" , "")\
                         .replace("Mother" , "").replace("Father" , "").replace("Son" , "")\
                         .replace("Wife" , "").replace("Husband" , "")
-                    print("KIN LAST: " + kinLast + "\n")
+                    print("KIN LAST: " + kinLast)
                 except Exception:
                     pass
         elif x == "BORN":
@@ -518,8 +520,9 @@ def tempRecord(fileName, val, id, cemetery):
                 while len(finalVals) < 8:
                     finalVals.append("")
         elif x == "WAR RECORD" and flag3:
-            if value.lower() in badWar:
-                value = ""
+            for x in badWar:
+                if x in value.lower():
+                    value = ""
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
@@ -654,6 +657,91 @@ def find_next_empty_row(worksheet):
     return worksheet.max_row + 1 
 
 
+def highlightSingle(warFlag, rowIndex, kinLast):
+    tempFlag = False
+    tempFlag2 = False
+    highlightColors = {
+        "warFlag": PatternFill(start_color="899499", end_color="899499", fill_type="solid"),
+        "cemeteryMismatch": PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid"),
+        "noDOD": PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid"),
+        "lastNameMismatch": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
+        "shortFirstName": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
+        "badWarName": PatternFill(start_color="F5CBA7", end_color="F5CBA7", fill_type="solid"),
+        "badDate": PatternFill(start_color="99CC00", end_color="99CC00", fill_type="solid")}
+    requiredColors = []
+    if warFlag:
+        requiredColors.append(highlightColors["warFlag"])
+    if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
+        requiredColors.append(highlightColors["cemeteryMismatch"])
+    if (worksheet[f'{"I"}{rowIndex}'].value) == "":
+        requiredColors.append(highlightColors["noDOD"])
+    if worksheet[f'{"G"}{rowIndex}'].value:
+        if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
+            requiredColors.append(highlightColors["badDate"])
+    if worksheet[f'{"I"}{rowIndex}'].value:
+        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1":
+            if str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2":
+                if str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0":
+                    if str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "23":
+                        requiredColors.append(highlightColors["badDate"]) 
+                else:
+                    requiredColors.append(highlightColors["badDate"]) 
+            else:
+                requiredColors.append(highlightColors["badDate"]) 
+    if (worksheet[f'{"J"}{rowIndex}'].value) != "" and (worksheet[f'{"K"}{rowIndex}'].value) == ""\
+    or (worksheet[f'{"L"}{rowIndex}'].value) != "" and (worksheet[f'{"M"}{rowIndex}'].value) == "":
+        if worksheet[f'{"J"}{rowIndex}'].value != "Regular Service" or\
+            worksheet[f'{"J"}{rowIndex}'].value != "Peacetime":
+                requiredColors.append(highlightColors["badWarName"])
+    try:
+        if (worksheet[f'B{rowIndex}'].value)[0] != letter:
+            if (worksheet[f'C{rowIndex}'].value)[0] == letter:
+                tempLname = worksheet[f'B{rowIndex}'].value
+                tempFname = worksheet[f'C{rowIndex}'].value
+                worksheet[f'B{rowIndex}'].value = tempFname
+                worksheet[f'C{rowIndex}'].value = tempLname
+            else:
+                tempFlag = True
+        if len((worksheet[f'C{rowIndex}'].value)) < 3:
+            if len((worksheet[f'D{rowIndex}'].value)) >= 3:
+                tempLname = worksheet[f'C{rowIndex}'].value
+                tempSuffix = worksheet[f'D{rowIndex}'].value
+                worksheet[f'C{rowIndex}'].value = tempSuffix
+                worksheet[f'D{rowIndex}'].value = tempLname + "."
+                tempFlag2 = True
+        if tempFlag and tempFlag2:
+            tempLname = worksheet[f'B{rowIndex}'].value
+            tempFname = worksheet[f'C{rowIndex}'].value
+            worksheet[f'B{rowIndex}'].value = tempFname
+            worksheet[f'C{rowIndex}'].value = tempLname
+        if (worksheet[f'B{rowIndex}'].value)[0] != letter or len((worksheet[f'C{rowIndex}'].value)) < 3:
+            requiredColors.append(highlightColors["lastNameMismatch"])
+        if worksheet[f'C{rowIndex}'].value[-1].isupper():
+            worksheet[f'D{rowIndex}'].value = worksheet[f'C{rowIndex}'].value[-1] + "."
+            worksheet[f'C{rowIndex}'].value = worksheet[f'C{rowIndex}'].value[:-1]
+    except IndexError:
+        requiredColors.append(highlightColors["lastNameMismatch"])
+    two_uppercase_pattern = re.compile(r'.*[A-Z].*[A-Z].*')
+    if two_uppercase_pattern.match(worksheet[f'C{rowIndex}'].value):
+        requiredColors.append(highlightColors["lastNameMismatch"])
+    if kinLast:
+        if kinLast != worksheet[f'B{rowIndex}'].value and \
+        (kinLast == worksheet[f'C{rowIndex}'].value or
+            kinLast == worksheet[f'D{rowIndex}'].value):
+                requiredColors.append(highlightColors["lastNameMismatch"])
+    if requiredColors:
+        numColors = len(requiredColors)
+        cols_per_color = max(1, (14 - 2) // numColors)  
+        for colIndex in range(2, 16 + 1):
+            if colIndex == 15:
+                continue
+            colorIndex = (colIndex - 2) // cols_per_color
+            colorIndex = min(colorIndex, numColors - 1) 
+            cell = worksheet.cell(row=rowIndex, column=colIndex)
+            cell.fill = requiredColors[colorIndex]
+        cell = worksheet.cell(row=rowIndex, column=16)
+        cell.fill = requiredColors[-1]
+
 '''
 The main function that controls files sent to be processed as well as 
 the data that is put into the excel sheet. It sets up the current working 
@@ -716,8 +804,6 @@ def main(singleFlag, singleCem, singleLetter):
     for y in range(len(pdfFiles)):
         try:
             warFlag = False
-            tempFlag = False
-            tempFlag2 = False
             filePath = os.path.join(namePath, pdfFiles[y])
             rowIndex = find_next_empty_row(worksheet)
             try:
@@ -744,87 +830,7 @@ def main(singleFlag, singleCem, singleLetter):
                     for x in vals:
                         worksheet.cell(row=rowIndex, column=counter, value=x)
                         counter += 1
-                    highlightColors = {
-                        "warFlag": PatternFill(start_color="899499", end_color="899499", fill_type="solid"),
-                        "cemeteryMismatch": PatternFill(start_color="CF9FFF", end_color="CF9FFF", fill_type="solid"),
-                        "noDOD": PatternFill(start_color="A7C7E7", end_color="A7C7E7", fill_type="solid"),
-                        "lastNameMismatch": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
-                        "shortFirstName": PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid"),
-                        "badWarName": PatternFill(start_color="F5CBA7", end_color="F5CBA7", fill_type="solid"),
-                        "badDate": PatternFill(start_color="99CC00", end_color="99CC00", fill_type="solid")}
-                    requiredColors = []
-                    if warFlag:
-                        requiredColors.append(highlightColors["warFlag"])
-                    if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
-                        requiredColors.append(highlightColors["cemeteryMismatch"])
-                    if (worksheet[f'{"I"}{rowIndex}'].value) == "":
-                        requiredColors.append(highlightColors["noDOD"])
-                    if worksheet[f'{"G"}{rowIndex}'].value:
-                        if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
-                            requiredColors.append(highlightColors["badDate"])
-                    if worksheet[f'{"I"}{rowIndex}'].value:
-                        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1":
-                            if str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2":
-                                if str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0":
-                                    if str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "23":
-                                        requiredColors.append(highlightColors["badDate"]) 
-                                else:
-                                    requiredColors.append(highlightColors["badDate"]) 
-                            else:
-                                requiredColors.append(highlightColors["badDate"]) 
-                    if (worksheet[f'{"J"}{rowIndex}'].value) != "" and (worksheet[f'{"K"}{rowIndex}'].value) == ""\
-                    or (worksheet[f'{"L"}{rowIndex}'].value) != "" and (worksheet[f'{"M"}{rowIndex}'].value) == "":
-                        if worksheet[f'{"J"}{rowIndex}'].value != "Regular Service" or\
-                           worksheet[f'{"J"}{rowIndex}'].value != "Peacetime":
-                               requiredColors.append(highlightColors["badWarName"])
-                    try:
-                        if (worksheet[f'B{rowIndex}'].value)[0] != letter:
-                            if (worksheet[f'C{rowIndex}'].value)[0] == letter:
-                                tempLname = worksheet[f'B{rowIndex}'].value
-                                tempFname = worksheet[f'C{rowIndex}'].value
-                                worksheet[f'B{rowIndex}'].value = tempFname
-                                worksheet[f'C{rowIndex}'].value = tempLname
-                            else:
-                                tempFlag = True
-                        if len((worksheet[f'C{rowIndex}'].value)) < 3:
-                            if len((worksheet[f'D{rowIndex}'].value)) >= 3:
-                                tempLname = worksheet[f'C{rowIndex}'].value
-                                tempSuffix = worksheet[f'D{rowIndex}'].value
-                                worksheet[f'C{rowIndex}'].value = tempSuffix
-                                worksheet[f'D{rowIndex}'].value = tempLname + "."
-                                tempFlag2 = True
-                        if tempFlag and tempFlag2:
-                            tempLname = worksheet[f'B{rowIndex}'].value
-                            tempFname = worksheet[f'C{rowIndex}'].value
-                            worksheet[f'B{rowIndex}'].value = tempFname
-                            worksheet[f'C{rowIndex}'].value = tempLname
-                        if (worksheet[f'B{rowIndex}'].value)[0] != letter or len((worksheet[f'C{rowIndex}'].value)) < 3:
-                            requiredColors.append(highlightColors["lastNameMismatch"])
-                        if worksheet[f'C{rowIndex}'].value[-1].isupper():
-                            worksheet[f'D{rowIndex}'].value = worksheet[f'C{rowIndex}'].value[-1] + "."
-                            worksheet[f'C{rowIndex}'].value = worksheet[f'C{rowIndex}'].value[:-1]
-                    except IndexError:
-                        requiredColors.append(highlightColors["lastNameMismatch"])
-                    two_uppercase_pattern = re.compile(r'.*[A-Z].*[A-Z].*')
-                    if two_uppercase_pattern.match(worksheet[f'C{rowIndex}'].value):
-                        requiredColors.append(highlightColors["lastNameMismatch"])
-                    if kinLast:
-                        if kinLast != worksheet[f'B{rowIndex}'].value and \
-                        (kinLast == worksheet[f'C{rowIndex}'].value or
-                            kinLast == worksheet[f'D{rowIndex}'].value):
-                                requiredColors.append(highlightColors["lastNameMismatch"])
-                    if requiredColors:
-                        numColors = len(requiredColors)
-                        cols_per_color = max(1, (14 - 2) // numColors)  
-                        for colIndex in range(2, 16 + 1):
-                            if colIndex == 15:
-                                continue
-                            colorIndex = (colIndex - 2) // cols_per_color
-                            colorIndex = min(colorIndex, numColors - 1) 
-                            cell = worksheet.cell(row=rowIndex, column=colIndex)
-                            cell.fill = requiredColors[colorIndex]
-                        cell = worksheet.cell(row=rowIndex, column=16)
-                        cell.fill = requiredColors[-1]
+                    highlightSingle(warFlag, rowIndex, kinLast)
                     id += 1
                     rowIndex += 1
                 else:
@@ -835,12 +841,12 @@ def main(singleFlag, singleCem, singleLetter):
                             if (filePath.replace("a.pdf", "") in pdfFiles):
                                 continue
                             pathA = filePath
-                            vals1, warFlag, nameCoords, serialCoords, kvs, kinLast = tempRecord(filePath, "a", id, cemetery)
+                            vals1, warFlag, nameCoords, serialCoords, kvs, kinLast = tempRecord(filePath, id, cemetery, "A")
                             redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
                         if "b" in string:
                             if (filePath.replace("b.pdf", "") in pdfFiles):
                                 continue
-                            vals2, warFlagB, nameCoords, serialCoords, kvs, kinLast = tempRecord(filePath, "b", id, cemetery)
+                            vals2, warFlagB, nameCoords, serialCoords, kvs, kinLast = tempRecord(filePath, id, cemetery, "B")
                             if not warFlag or not warFlagB:
                                 warFlag = False
                             else:
@@ -895,5 +901,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Fairview" # Change this to continue running through cemeteries
     global letter
-    letter = "L" # Change this to continue running through the current cemetery
+    letter = "M" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)
