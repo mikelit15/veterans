@@ -6,7 +6,7 @@ import sys
 import duplicates
 from openpyxl.worksheet.hyperlink import Hyperlink
 sys.path.append(r'C:\workspace\veterans\microsoftOCR')
-import microsoftOCR
+from microsoftOCR import microsoftOCR
 
 '''
 Processes each cemetery by iterating through alphabetically named subdirectories and 
