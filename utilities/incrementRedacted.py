@@ -16,11 +16,11 @@ def get_sorted_files(directory):
     files.sort(key=lambda f: int(re.search(r"(\d+)", f).group()) if re.search(r"(\d+)", f) else 0, reverse=True)
     return files
 
-directory_path = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Fairview - Redacted\C"
+directory_path = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Fairview - Redacted\P"
 files = get_sorted_files(directory_path)
 
 start_index = 0 # 0 for the last file in the sorted list
-target_index = 27  # Example: stop after processing 10 files
+target_index = 149  # Example: stop after processing 10 files
 
 for i in range(start_index, min(target_index, len(files))):
     file = files[i]

@@ -120,6 +120,8 @@ def nameRule(finalVals, value):
         firstName = "George"
     elif firstName.replace(".", "").lower() == "thos":
         firstName = "Thomas"
+    elif firstName.replace(".", "").lower() == "jos":
+        firstName = "Joseph"
     lastName = lastName.replace("' ", "'")
     lastName = lastName[0].upper() + lastName[1:]
     if len(lastName) == 1 and middleName:
@@ -141,6 +143,8 @@ def nameRule(finalVals, value):
             lastName = lastName[1:]
         if not lastName[-1].isalpha():
             lastName = lastName[:-1]
+    if "Mc" in lastName:
+        lastName = lastName.replace(" ", "")
     finalVals.append(re.sub(r"[^a-zA-Z' ]", '', lastName))
     finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName))
     finalVals.append(middleName.replace("0", "O"))

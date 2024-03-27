@@ -62,18 +62,18 @@ def clean(letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag
                 os.remove(os.path.join(namePath, x))
                 print(f"Removed {x}")
             else:
-                newName = f"{cemetery}{letter}{counter:05d}{redac2}.pdf"
+                newName = re.sub(r'\d+', f"{counter:05d}", x)
                 os.rename(os.path.join(namePath, x), os.path.join(namePath, newName))
         else:
             if "a.pdf" in x:
-                newName = f"{cemetery}{letter}{counter:05d}a.pdf"
+                newName = re.sub(r'\d+', f"{counter:05d}", x)
                 os.rename(os.path.join(namePath, x), os.path.join(namePath, newName))
                 counter -= 1
             elif "b.pdf"  in x:
-                newName = f"{cemetery}{letter}{counter:05d}b.pdf"
+                newName = re.sub(r'\d+', f"{counter:05d}", x)
                 os.rename(os.path.join(namePath, x), os.path.join(namePath, newName))
-            else:    
-                newName = f"{cemetery}{letter}{counter:05d}.pdf"
+            else:   
+                newName = re.sub(r'\d+', f"{counter:05d}", x)
                 os.rename(os.path.join(namePath, x), os.path.join(namePath, newName))
         counter += 1
         isFirstFile = False
@@ -84,7 +84,7 @@ def cleanImages(goodID, redac, redac2):
     baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
-    start = goodID - 500
+    start = goodID - 400
     startFlag = False
     for cemetery in cemeterys:
         if cemetery in ["Jewish", "Misc"]:
@@ -167,7 +167,7 @@ def cleanDelete(cemetery, badID, badRow):
         second_last_hyperlink = worksheet[f'O{last_row - 1}'].hyperlink
         new_target = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", second_last_hyperlink.target)
         worksheet[f'O{last_row}'].hyperlink = Hyperlink(ref=f'O{last_row}', target=new_target, display=second_last_hyperlink.display)
-        print(f"Updated hyperlink in row {last_row} to new target, {new_target}.")
+        print(f"Updated hyperlink in row {last_row} to new target, {new_target}.\n")
 
 
 def cleanHyperlinks(startIndex):
@@ -189,35 +189,35 @@ def cleanHyperlinks(startIndex):
     
     
 cemetery = "Fairview"
-goodIDs = [] 
+goodIDs = [10] 
 badIDs = []
 excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
 workbook = openpyxl.load_workbook(excelFilePath)
 worksheet = workbook[cemetery]
-for x in range(0, len(goodIDs)):
-    workbook = openpyxl.load_workbook(excelFilePath)
-    worksheet = workbook[cemetery]
-    for row in range(1, worksheet.max_row + 1):
-        if worksheet[f'A{row}'].value == goodIDs[x]:
-            goodRow = row
-        if worksheet[f'A{row}'].value == badIDs[x]:
-            badRow = row
-    letter = worksheet[f'B{goodRow}'].value[0]
-    adjustImageName(goodIDs[x], badIDs[x], goodRow)
-    workbook.save(excelFilePath)
-    microsoftOCR.main(True, cemetery, letter)
-    workbook = openpyxl.load_workbook(excelFilePath)
-    worksheet = workbook[cemetery]
-    cleanDelete(cemetery, badIDs[x], badRow)
-    workbook.save(excelFilePath)
-cleanImages(goodIDs[0], "", "")
+# for x in range(0, len(goodIDs)):
+#     workbook = openpyxl.load_workbook(excelFilePath)
+#     worksheet = workbook[cemetery]
+#     for row in range(1, worksheet.max_row + 1):
+#         if worksheet[f'A{row}'].value == goodIDs[x]:
+#             goodRow = row
+#         if worksheet[f'A{row}'].value == badIDs[x]:
+#             badRow = row
+#     letter = worksheet[f'B{goodRow}'].value[0]
+#     adjustImageName(goodIDs[x], badIDs[x], goodRow)
+#     workbook.save(excelFilePath)
+#     microsoftOCR.main(True, cemetery, letter)
+#     workbook = openpyxl.load_workbook(excelFilePath)
+#     worksheet = workbook[cemetery]
+#     cleanDelete(cemetery, badIDs[x], badRow)
+#     workbook.save(excelFilePath)
+# cleanImages(goodIDs[0], "", "")
 cleanImages(goodIDs[0], " - Redacted", " redacted")
-workbook = openpyxl.load_workbook(excelFilePath)
-worksheet = workbook[cemetery]
-for row in range(1, worksheet.max_row + 1):
-    if worksheet[f'A{row}'].value == goodIDs[0]:
-        startIndex = row
-cleanHyperlinks(startIndex)
-workbook.save(excelFilePath)
-print("\n")
-duplicates.main()
+# workbook = openpyxl.load_workbook(excelFilePath)
+# worksheet = workbook[cemetery]
+# for row in range(1, worksheet.max_row + 1):
+#     if worksheet[f'A{row}'].value == goodIDs[0]:
+#         startIndex = row
+# cleanHyperlinks(startIndex)
+# workbook.save(excelFilePath)
+# print("\n")
+# duplicates.main()

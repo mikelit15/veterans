@@ -76,6 +76,10 @@ def warRule(value, world):
         identifiedWars.append("Revolutionary War")
     if "1812" in war:
         identifiedWars.append("War of 1812")
+    if "Persian" in war or "Gulf" in war:
+        identifiedWars.append("Gulf War")
+    if "Indian" in war:
+        identifiedWars.append("Indian Wars")
     words = war.split()
     for x in words:
         if x in ww1years:

@@ -137,7 +137,7 @@ def analyzeDocument(filePath, id, suffix):
         imgTest = file.read()
         bytesTest = bytearray(imgTest)
         print('\nImage loaded', f"{id} {suffix}")
-    poller = document_analysis_client.begin_analyze_document("Test23n", document=bytesTest)
+    poller = document_analysis_client.begin_analyze_document("Test2.2n", document=bytesTest)
     result = poller.result()
     return result
 
@@ -298,7 +298,8 @@ def createRecord(fileName, id, cemetery):
     dob = ""
     kinLast = ""
     suffix = ""
-    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt"]
+    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
+        "not shown"]
     nameCoords = None
     serialCoords = None
     warFlag = False
@@ -449,7 +450,8 @@ def tempRecord(fileName, id, cemetery, suffix):
     app = ""
     dob = ""
     kinLast = ""
-    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable"]
+    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
+        "not shown"]
     nameCoords = None
     serialCoords = None
     warFlag = False

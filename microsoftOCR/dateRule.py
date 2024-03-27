@@ -363,8 +363,10 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     warFlag = False
     warsFlag = False
     wars = ["World War 1", "World War 2", "Korean War", "Vietnam War", "Mexican Border War"]
-    if war in wars:
-        warsFlag = True
+    temp = war.split(" and ")
+    for x in temp:
+        if x in wars:
+            warsFlag = True
     birthYYFlag = False
     deathYYFlag = False
     bYear = ""
@@ -551,8 +553,8 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                         finalVals.append(int(bYear))
                         finalVals.append(death)
                         finalVals.append(int(dYear))
-                    elif war:
-                        if war in wars and dYear[0] == "0":
+                    elif warsFlag:
+                        if dYear[0] == "0":
                             bYear = "19" + bYear
                             birth = birth[:-2] + bYear
                             dYear = "20" + dYear
@@ -561,7 +563,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                             finalVals.append(int(bYear))
                             finalVals.append(death)
                             finalVals.append(int(dYear))
-                        elif war in wars and bYear > dYear:
+                        elif bYear > dYear:
                             bYear = "18" + bYear
                             birth = birth[:-2] + bYear
                             dYear = "19" + dYear
@@ -570,7 +572,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                             finalVals.append(int(bYear))
                             finalVals.append(death)
                             finalVals.append(int(dYear))
-                        elif (war in wars and bYear < dYear):
+                        elif bYear < dYear:
                             bYear = "19" + bYear
                             birth = birth[:-2] + bYear
                             dYear = "19" + dYear
@@ -579,7 +581,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                             finalVals.append(int(bYear))
                             finalVals.append(death)
                             finalVals.append(int(dYear))
-                        elif war in wars or (war == "Spanish American War" and dYear < "98"):
+                        elif war == "Spanish American War" and dYear < "98":
                             if bYear > dYear:
                                 bYear = "18" + bYear
                                 birth = birth[:-2] + bYear
@@ -770,94 +772,100 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                     finalVals.append("")
                     finalVals.append("")
                     return warFlag
-        elif dateparser.parse(death, settings={'STRICT_PARSING': True}) != None:
-            finalVals.append("")
-            finalVals.append("")
-            death = dateparser.parse(death)
-            finalVals.append(death.strftime("%m/%d/%Y"))
-            finalVals.append(int(death.strftime("%Y")))
-            return warFlag
         else:
-            birth, bYear, birthYYFlag = parseBirth(birth, bYear, birthYYFlag)
-            death, dYear, deathYYFlag = parseDeath(death, dYear, deathYYFlag)
-            if birthYYFlag and deathYYFlag:
-                if cent:
-                    if bYear > dYear:
-                        bYear = "18" + bYear
-                        dYear = "19" + dYear
-                    elif bYear < dYear:
-                        bYear = "19" + bYear
-                        dYear = "19" + dYear
-                    birth = birth[:-2] + bYear
-                    death = death[:-2] + dYear
-                    finalVals.append(birth)
-                    finalVals.append(int(bYear))
-                    finalVals.append(death)
-                    finalVals.append(int(dYear))
-                    return warFlag
-                elif dYear < bYear:
-                    finalVals.append("")
-                    finalVals.append(int("18" + bYear))
-                    finalVals.append("")
-                    finalVals.append(int("19" + dYear))
-                    warFlag = True
-                    return warFlag
-                elif dYear > bYear:
-                    finalVals.append("")
-                    finalVals.append(int("19" + bYear))
-                    finalVals.append("")
-                    finalVals.append(int("19" + dYear))
-                    warFlag = True
-                    return warFlag
-            elif birthYYFlag and not deathYYFlag:
-                if dYear[:2] == "19" and dYear[-2:] < bYear:
-                    bYear = "18" + bYear
-                elif dYear[:2] == "19" and dYear[-2:] > bYear:
-                    bYear = "19" + bYear
-                elif dYear[:2] == "18" and dYear[-2:] < bYear:
-                    bYear = "19" + bYear
-                elif dYear[:2] == "18" and dYear[-2:] > bYear: 
-                    bYear = "18" + bYear
-                elif dYear[:2] == "20":
-                    bYear = "19" + bYear
-                elif dYear[:2] == "17" and dYear[-2:] < bYear:
-                    bYear = "18" + bYear
-                elif dYear[:2] == "17" and dYear[-2:] > bYear:
-                    bYear = "17" + bYear
-                birth = birth[:-2] + bYear
-                finalVals.append(birth)
-                if bYear: 
-                    finalVals.append(int(bYear))
-                else:
-                    finalVals.append("")
-                finalVals.append(death)
-                finalVals.append(int(dYear))
-                return warFlag
-            elif not birthYYFlag and deathYYFlag:
-                if bYear[:2] == "19" and bYear[-2:] < dYear:
-                    dYear = "20" + dYear
-                elif bYear[:2] == "19" and bYear[-2:] > dYear:
-                    dYear = "19" + dYear
-                elif bYear[:2] == "18" and bYear[-2:] < dYear:
-                    dYear = "19" + dYear
-                elif bYear[:2] == "18" and bYear[-2:] > dYear: 
-                    dYear = "18" + dYear
-                elif bYear[:2] == "17" and bYear[-2:] < dYear:
-                    dYear = "18" + dYear
-                elif bYear[:2] == "17" and bYear[-2:] > dYear:
-                    dYear = "17" + dYear
-                death = death[:-2] + dYear
-                finalVals.append(birth)
-                finalVals.append(int(bYear))
-                finalVals.append(death)
-                finalVals.append(int(dYear))
-                return warFlag
-            else:
-                finalVals.append("")
-                finalVals.append("") 
-                finalVals.append("")
-                finalVals.append("") 
-                return warFlag
+            finalVals.append("")
+            finalVals.append("")
+            finalVals.append("")
+            finalVals.append("")
+            return warFlag
+        # elif dateparser.parse(death, settings={'STRICT_PARSING': True}) != None:
+        #     finalVals.append("")
+        #     finalVals.append("")
+        #     death = dateparser.parse(death)
+        #     finalVals.append(death.strftime("%m/%d/%Y"))
+        #     finalVals.append(int(death.strftime("%Y")))
+        #     return warFlag
+        # else:
+        #     birth, bYear, birthYYFlag = parseBirth(birth, bYear, birthYYFlag)
+        #     death, dYear, deathYYFlag = parseDeath(death, dYear, deathYYFlag)
+        #     if birthYYFlag and deathYYFlag:
+        #         if cent:
+        #             if bYear > dYear:
+        #                 bYear = "18" + bYear
+        #                 dYear = "19" + dYear
+        #             elif bYear < dYear:
+        #                 bYear = "19" + bYear
+        #                 dYear = "19" + dYear
+        #             birth = birth[:-2] + bYear
+        #             death = death[:-2] + dYear
+        #             finalVals.append(birth)
+        #             finalVals.append(int(bYear))
+        #             finalVals.append(death)
+        #             finalVals.append(int(dYear))
+        #             return warFlag
+        #         elif dYear < bYear:
+        #             finalVals.append("")
+        #             finalVals.append(int("18" + bYear))
+        #             finalVals.append("")
+        #             finalVals.append(int("19" + dYear))
+        #             warFlag = True
+        #             return warFlag
+        #         elif dYear > bYear:
+        #             finalVals.append("")
+        #             finalVals.append(int("19" + bYear))
+        #             finalVals.append("")
+        #             finalVals.append(int("19" + dYear))
+        #             warFlag = True
+        #             return warFlag
+        #     elif birthYYFlag and not deathYYFlag:
+        #         if dYear[:2] == "19" and dYear[-2:] < bYear:
+        #             bYear = "18" + bYear
+        #         elif dYear[:2] == "19" and dYear[-2:] > bYear:
+        #             bYear = "19" + bYear
+        #         elif dYear[:2] == "18" and dYear[-2:] < bYear:
+        #             bYear = "19" + bYear
+        #         elif dYear[:2] == "18" and dYear[-2:] > bYear: 
+        #             bYear = "18" + bYear
+        #         elif dYear[:2] == "20":
+        #             bYear = "19" + bYear
+        #         elif dYear[:2] == "17" and dYear[-2:] < bYear:
+        #             bYear = "18" + bYear
+        #         elif dYear[:2] == "17" and dYear[-2:] > bYear:
+        #             bYear = "17" + bYear
+        #         birth = birth[:-2] + bYear
+        #         finalVals.append(birth)
+        #         if bYear: 
+        #             finalVals.append(int(bYear))
+        #         else:
+        #             finalVals.append("")
+        #         finalVals.append(death)
+        #         finalVals.append(int(dYear))
+        #         return warFlag
+        #     elif not birthYYFlag and deathYYFlag:
+        #         if bYear[:2] == "19" and bYear[-2:] < dYear:
+        #             dYear = "20" + dYear
+        #         elif bYear[:2] == "19" and bYear[-2:] > dYear:
+        #             dYear = "19" + dYear
+        #         elif bYear[:2] == "18" and bYear[-2:] < dYear:
+        #             dYear = "19" + dYear
+        #         elif bYear[:2] == "18" and bYear[-2:] > dYear: 
+        #             dYear = "18" + dYear
+        #         elif bYear[:2] == "17" and bYear[-2:] < dYear:
+        #             dYear = "18" + dYear
+        #         elif bYear[:2] == "17" and bYear[-2:] > dYear:
+        #             dYear = "17" + dYear
+        #         death = death[:-2] + dYear
+        #         finalVals.append(birth)
+        #         finalVals.append(int(bYear))
+        #         finalVals.append(death)
+        #         finalVals.append(int(dYear))
+        #         return warFlag
+        #     else:
+        #         finalVals.append("")
+        #         finalVals.append("") 
+        #         finalVals.append("")
+        #         finalVals.append("") 
+        #         return warFlag
     elif birth == "" and death != "":
         death, dYear, deathYYFlag = parseDeath(death, dYear, deathYYFlag)
         if not deathYYFlag:
@@ -900,7 +908,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
                     dYear = "19" + dYear
                 finalVals.append(death[:-2] + dYear)
                 finalVals.append(int(dYear))
-            elif war in wars or (war == "Spanish American War" and dYear[:2] < "98"):
+            elif warsFlag or (war == "Spanish American War" and dYear[:2] < "98"):
                 finalVals.append("")
                 finalVals.append("") 
                 dYear = "19" + dYear
@@ -1015,7 +1023,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
         elif buried2Year:
             if war == "Spanish American War" and buried2Year < "98":
                 dYear = "19" + buried2Year
-            if war in wars:
+            if warsFlag:
                 if buried2Year > "14":
                     dYear = "19" + buried2Year
                 else:
