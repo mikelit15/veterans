@@ -1,5 +1,17 @@
 import pandas as pd
 
+
+'''
+Loads and processes an Excel spreadsheet containing information about veterans to identify 
+duplicate records. The process includes several key steps: 
+    - load data from a specified sheet and columns
+    - adjust index for alignment with Excel's row numbers
+    - identify potential duplicates based last name, first name, and date of death year 
+      fields
+    - organize and display the confirmed duplicates for review
+
+@author: Mike
+'''
 def main():
     try:
         df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", sheet_name="Fairview", usecols="A:K")

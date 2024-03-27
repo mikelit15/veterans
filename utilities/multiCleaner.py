@@ -9,6 +9,65 @@ sys.path.append(r'C:\workspace\veterans')
 from microsoftOCR import microsoftOCR
 
 
+'''
+Initiates the file name cleaning process. This function goes through each cemetery folder
+and then calls process_cemetery to handle the letter subfolders. The function starts calling 
+process_cemetery when the ID matches "start." This is used to significantly speed up
+the process of this function, especially for further cemeteries. Special handling is 
+required if a cemetery folder contains more cemetery subfolders. This is the case for 
+Jewish and Misc folders as they contain more, much smaller, cemeteries.
+
+@param goodID (int) - A file ID used to determine when to start processing
+@param redac (str) - The redacted folder name extension
+@param redac2 (str) - The redacted file name extension
+
+- Processes all cemeteries in the veternas cemetery folder, or the cemetery redacted
+  folder.
+- Starts processing file names at goodID - 400
+@author Mike
+'''
+def cleanImages(goodID, redac, redac2):
+    baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
+    cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
+    initialCount = 1
+    start = goodID - 400
+    startFlag = False
+    for cemetery in cemeterys:
+        if cemetery in ["Jewish", "Misc"]:
+            subCemPath = os.path.join(baseCemPath, cemetery)
+            subCemeteries = [d for d in os.listdir(subCemPath) if os.path.isdir(os.path.join(subCemPath, d))]
+            for subCemetery in subCemeteries:
+                print(f"Processing {cemetery} - {subCemetery}")
+                initialCount, startFlag = process_cemetery(subCemetery, subCemPath, initialCount, start, startFlag, redac2)
+        else:
+            print(f"Processing {cemetery}")
+            initialCount, startFlag = process_cemetery(cemetery, baseCemPath, initialCount, start, startFlag, redac2)
+      
+
+'''
+Iterates through alphabetically-based letter subfolders within a specified cemetery 
+directory, calling clean() to adjust image names for each letter subfolder.
+
+@param cemeteryName (str) - The name of the cemetery being processed.
+@param basePath (str) - The root directory path where cemetery folders are located.
+@param initialCount (int) - The starting point for file numbering within each alphabetical 
+                            folder.
+@param start (int) - A specific starting counter value used when deciding whether to process 
+                     a file.
+@param startFlag (bool) - A flag indicating whether the process should start renaming from 
+                          the 'start' parameter.
+@param redac2 (str) - The redacted file name extension
+
+@return initialCount (int) - The starting point for file numbering within each alphabetical 
+                             folder.
+@return startFlag (bool) - A flag indicating whether the process should start renaming from 
+                           the 'start' parameter.
+
+- Iterates through A-Z folder, calling clean() for each letter
+- Returns updated initialCount and startFlag
+
+@author Mike
+'''
 def process_cemetery(cemeteryName, basePath, initialCount, start, startFlag, redac2):
     uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
     isFirstFile = True
@@ -23,7 +82,36 @@ def process_cemetery(cemeteryName, basePath, initialCount, start, startFlag, red
             continue
     return initialCount, startFlag
 
+'''
+Iterates through every PDF file in the given letter subfolder, renaming them to ensure 
+sequential ordering and removes extra "a" and "b" redacted files. The function maintaines
+continuity and handles special cases, such as the redacted files should not increment the 
+count for the numbering sequence.
 
+@param letter (str) - The current letter folder being processed.
+@param namePath (str) - The path to the current folder where PDF files are located.
+@param cemPath (str) - The path to the cemetery's root directory containing alphabetical 
+                       folders.
+@param initialCount (int) - The starting numbering for files in the current alphabetical 
+                            sequence.
+@param isFirstFile (bool) - Indicates if the current file is the first in its alphabetical 
+                            sequence.
+@param start (int) - The numbering value at which to begin processing files, if startFlag 
+                     is True.
+@param startFlag (bool) - A flag that, if True, delays file processing until the 'start' 
+                          value is reached.
+@param redac2 (str) - The redacted file name extension
+
+@return counter (int) - The next starting count for continued processing.
+@return startFlag (bool) - State of startFlag for continued processing.
+
+- Creates a list for every PDF in the subfolder
+- Finds the index of the last PDF file, which is in the previous letter subfolder
+- Counter is set to that last index
+- Adjusts the image file name to match the current index
+
+@author Mike
+'''
 def clean(letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag, redac2):
     pdfFiles = sorted(os.listdir(namePath))
     letters = sorted([folder for folder in os.listdir(cemPath) if os.path.isdir(os.path.join(cemPath, folder))])
@@ -80,24 +168,25 @@ def clean(letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag
     return counter, startFlag
 
 
-def cleanImages(goodID, redac, redac2):
-    baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
-    cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
-    initialCount = 1
-    start = goodID - 400
-    startFlag = False
-    for cemetery in cemeterys:
-        if cemetery in ["Jewish", "Misc"]:
-            subCemPath = os.path.join(baseCemPath, cemetery)
-            subCemeteries = [d for d in os.listdir(subCemPath) if os.path.isdir(os.path.join(subCemPath, d))]
-            for subCemetery in subCemeteries:
-                print(f"Processing {cemetery} - {subCemetery}")
-                initialCount, startFlag = process_cemetery(subCemetery, subCemPath, initialCount, start, startFlag, redac2)
-        else:
-            print(f"Processing {cemetery}")
-            initialCount, startFlag = process_cemetery(cemetery, baseCemPath, initialCount, start, startFlag, redac2)
-      
+'''
+Adjusts the filenames and paths for image files associated with goodID and badID. GoodID 
+receives a "a.pdf" suffix and badID receives a "b.pdf" suffix. badID is also adjusted to 
+match the same letter and folder as the goodID if needed. The data in goodRow is then cleared
+and the hyperlink forcefully cleared to allow for microsoftOCR to locate and append the new
+merged data.
 
+@param goodID (int): The correct identifier associated with the proper record.
+@param badID (int): The incorrect identifier that needs to be adjusted to match the good ID.
+@param goodRow (int): The row in the Excel spreadsheet where the good ID is located.
+
+- Searches for files matching goodID and badID
+- Adds the suffix, "a.pdf", to goodID
+- Adds the suffix, "b.pdf", to badID. Changes letter in file name and moves to correct
+  letter subfolder is necessary.
+- Clears the data in Excel row associated with the goodID
+
+@author Mike
+'''
 def adjustImageName(goodID, badID, goodRow):
     baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
     goodIDFound = False
@@ -141,6 +230,23 @@ def adjustImageName(goodID, badID, goodRow):
     print(f"Record {goodID} data from row {goodRow} cleared successfully.")
 
 
+'''
+Deletes redacted image file associated with a badID and updates an Excel spreadsheet to 
+remove the corresponding row. Due to a bug with the openpyxl module, hyperlinks do not 
+move up a row with the rest of the cell data when calling .delete_rows(). So the hyperlinks 
+are forced up one row and the hyperlink id and ref are adjusted to make the hyperlinks 
+active in order to adjust them automatically later in the process. 
+
+@param cemetery (str): The name of the cemetery where the file is located.
+@param badID (int): The ID of the file to be deleted.
+@param badRow (int): The row in the Excel spreadsheet corresponding to badID.
+
+- Deletes the redacted file with badID ID number
+- Deletes the Excel row corresponding to the bad ID
+- Hyperlinks are adjusted starting from badRow
+
+@author Mike
+'''
 def cleanDelete(cemetery, badID, badRow):
     baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     for dirpath, dirnames, filenames in os.walk(baseRedacPath):
@@ -170,6 +276,21 @@ def cleanDelete(cemetery, badID, badRow):
         print(f"Updated hyperlink in row {last_row} to new target, {new_target}.\n")
 
 
+'''
+Updates the record ID numbers in column A to fix fill any gaps and continue going in 
+sequential order. Updates hyperlink references in an Excel spreadsheet starting from a 
+specified index. This function adjusts the numeric ID within each hyperlink to ensure 
+they accurately reflect the current record IDs following modifications.
+
+@param startIndex (int): The row index from which to start updating hyperlinks in the 
+                         spreadsheet.
+
+- Adjusts record ID in column A 
+- Takes the hyperlink in the cell and changes the ID portion of the file name to match 
+  the ID in column A for each row starting at startIndex
+
+@author Mike
+'''
 def cleanHyperlinks(startIndex):
     temp2 = worksheet[f'A{2}'].value
     for x in range(3, worksheet.max_row + 1):
@@ -187,37 +308,37 @@ def cleanHyperlinks(startIndex):
                 worksheet[cell_ref].value = "PDF Image"
                 print(f"Updated hyperlink from {orig_target} to {modified_string} in row {row}.")
     
-    
+
 cemetery = "Fairview"
-goodIDs = [10] 
+goodIDs = [] 
 badIDs = []
 excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
 workbook = openpyxl.load_workbook(excelFilePath)
 worksheet = workbook[cemetery]
-# for x in range(0, len(goodIDs)):
-#     workbook = openpyxl.load_workbook(excelFilePath)
-#     worksheet = workbook[cemetery]
-#     for row in range(1, worksheet.max_row + 1):
-#         if worksheet[f'A{row}'].value == goodIDs[x]:
-#             goodRow = row
-#         if worksheet[f'A{row}'].value == badIDs[x]:
-#             badRow = row
-#     letter = worksheet[f'B{goodRow}'].value[0]
-#     adjustImageName(goodIDs[x], badIDs[x], goodRow)
-#     workbook.save(excelFilePath)
-#     microsoftOCR.main(True, cemetery, letter)
-#     workbook = openpyxl.load_workbook(excelFilePath)
-#     worksheet = workbook[cemetery]
-#     cleanDelete(cemetery, badIDs[x], badRow)
-#     workbook.save(excelFilePath)
-# cleanImages(goodIDs[0], "", "")
+for x in range(0, len(goodIDs)):
+    workbook = openpyxl.load_workbook(excelFilePath)
+    worksheet = workbook[cemetery]
+    for row in range(1, worksheet.max_row + 1):
+        if worksheet[f'A{row}'].value == goodIDs[x]:
+            goodRow = row
+        if worksheet[f'A{row}'].value == badIDs[x]:
+            badRow = row
+    letter = worksheet[f'B{goodRow}'].value[0]
+    adjustImageName(goodIDs[x], badIDs[x], goodRow)
+    workbook.save(excelFilePath)
+    microsoftOCR.main(True, cemetery, letter)
+    workbook = openpyxl.load_workbook(excelFilePath)
+    worksheet = workbook[cemetery]
+    cleanDelete(cemetery, badIDs[x], badRow)
+    workbook.save(excelFilePath)
+cleanImages(goodIDs[0], "", "")
 cleanImages(goodIDs[0], " - Redacted", " redacted")
-# workbook = openpyxl.load_workbook(excelFilePath)
-# worksheet = workbook[cemetery]
-# for row in range(1, worksheet.max_row + 1):
-#     if worksheet[f'A{row}'].value == goodIDs[0]:
-#         startIndex = row
-# cleanHyperlinks(startIndex)
-# workbook.save(excelFilePath)
-# print("\n")
-# duplicates.main()
+workbook = openpyxl.load_workbook(excelFilePath)
+worksheet = workbook[cemetery]
+for row in range(1, worksheet.max_row + 1):
+    if worksheet[f'A{row}'].value == goodIDs[0]:
+        startIndex = row
+cleanHyperlinks(startIndex)
+workbook.save(excelFilePath)
+print("\n")
+duplicates.main()
