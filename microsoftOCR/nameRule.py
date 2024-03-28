@@ -14,7 +14,7 @@ the formatted name components to a list.
 ''' 
 def nameRule(finalVals, value):
     value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
-        .replace("\n", " ").replace(".", " ")
+        .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")
     CONSTANTS.force_mixed_case_capitalization = True
     name = HumanName(value)
     flag = True
@@ -122,6 +122,10 @@ def nameRule(finalVals, value):
         firstName = "Thomas"
     elif firstName.replace(".", "").lower() == "jos":
         firstName = "Joseph"
+    elif firstName.replace(".", "").lower() == "edw":
+        firstName = "Edward"
+    elif firstName.replace(".", "").lower() == "benj":
+        firstName = "Benjamin" 
     lastName = lastName.replace("' ", "'")
     lastName = lastName[0].upper() + lastName[1:]
     if len(lastName) == 1 and middleName:
