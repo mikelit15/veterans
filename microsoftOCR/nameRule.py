@@ -13,6 +13,7 @@ the formatted name components to a list.
 @author Mike
 ''' 
 def nameRule(finalVals, value):
+    suffiFlag = False
     value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
         .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")
     CONSTANTS.force_mixed_case_capitalization = True
@@ -63,13 +64,16 @@ def nameRule(finalVals, value):
             firstName = name.middle
     elif len(suffix) > 0 and not middleName:
         suffix = suffix.replace(", ", "")
-        middleName = suffix.replace("Sr", "").replace("Jr", "").replace("I", "").replace("II", "")\
-        .replace("III", "").replace("IV", "").replace("V", "")
+        middleName = suffix.replace("Sr.", "").replace("Jr.", "").replace("I.", "").replace("II.", "")\
+        .replace("III.", "").replace("IV.", "").replace("V.", "")
         suffix = suffix.replace(middleName, "")
     elif len(suffix) > 0 and middleName:
         suffix = suffix.replace(", ", "")
         # suffix = suffix.replace(middleName, "")
-    if value in suffi and "." not in temp and "," not in temp:
+    for x in suffi:
+        if x in value:
+            suffiFlag = True
+    if suffiFlag and "." not in temp and "," not in temp:
         if len(middleName) > 0:
             firstName = name.middle
             middleName = name.last
@@ -77,14 +81,14 @@ def nameRule(finalVals, value):
         else:
             firstName = name.last
             lastName = name.first
-    elif "." not in temp and "," not in temp:
-        if len(middleName) > 0:
-            firstName = name.middle
-            middleName = name.last
-            lastName = name.first
-        else:
-            lastName = name.first
-            firstName = name.last
+    # elif "." not in temp and "," not in temp:
+    #     if len(middleName) > 0:
+    #         firstName = name.middle
+    #         middleName = name.last
+    #         lastName = name.first
+    #     else:
+    #         lastName = name.first
+    #         firstName = name.last
     if len(middleName) > 2:
         middleName = middleName.replace(".", "")
     dots = 0
@@ -133,19 +137,19 @@ def nameRule(finalVals, value):
         lastName = middleName
         middleName = temp + "."
     if firstName:
-        if not firstName[0].isalpha():
+        if not firstName[0].isalpha() or firstName[0] == " ":
             firstName = firstName[1:]
-        if not firstName[-1].isalpha():
+        if not firstName[-1].isalpha() or firstName[0] == " ":
             firstName = firstName[:-1]
     if middleName:
-        if not middleName[0].isalpha():
+        if not middleName[0].isalpha() or middleName[0] == " ":
             middleName = middleName[1:]
-        if not middleName[-1].isalpha() and middleName[-1] != ".":
+        if (not middleName[-1].isalpha() and middleName[-1] != ".") or middleName[-1] == " ":
             middleName = middleName[:-1]
     if lastName:
-        if not lastName[0].isalpha():
+        if not lastName[0].isalpha() or lastName[0] == " ":
             lastName = lastName[1:]
-        if not lastName[-1].isalpha():
+        if not lastName[-1].isalpha() or lastName[-1] == " ":
             lastName = lastName[:-1]
     if "Mc" in lastName:
         lastName = lastName.replace(" ", "")

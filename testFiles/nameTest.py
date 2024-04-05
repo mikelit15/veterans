@@ -4,8 +4,9 @@ import re
 
 def parseName(value):
     finalVals = []
+    suffiFlag = False
     value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
-        .replace("\n", " ").replace(".", " ")
+        .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")
     CONSTANTS.force_mixed_case_capitalization = True
     name = HumanName(value)
     flag = True
@@ -26,6 +27,8 @@ def parseName(value):
     lastName = name.last
     suffix = name.suffix
     title = name.title
+    if title and not suffix:
+        suffix = title
     suffi = ["Jr", "Sr", "I", "II", "III", "IV", "V"]
     temp = value.replace("Jr", "").replace("Sr", "").replace("I", "").replace("II", "")\
         .replace("III", "").replace("IV", "").replace("V", "")
@@ -54,13 +57,16 @@ def parseName(value):
             firstName = name.middle
     elif len(suffix) > 0 and not middleName:
         suffix = suffix.replace(", ", "")
-        middleName = suffix.replace("Sr", "").replace("Jr", "").replace("I", "").replace("II", "")\
-        .replace("III", "").replace("IV", "").replace("V", "")
+        middleName = suffix.replace("Sr.", "").replace("Jr.", "").replace("I.", "").replace("II.", "")\
+        .replace("III.", "").replace("IV.", "").replace("V.", "")
         suffix = suffix.replace(middleName, "")
     elif len(suffix) > 0 and middleName:
         suffix = suffix.replace(", ", "")
-        suffix = suffix.replace(middleName, "")
-    if value in suffi and "." not in temp and "," not in temp:
+        # suffix = suffix.replace(middleName, "")
+    for x in suffi:
+        if x in value:
+            suffiFlag = True
+    if suffiFlag and "." not in temp and "," not in temp:
         if len(middleName) > 0:
             firstName = name.middle
             middleName = name.last
@@ -68,14 +74,14 @@ def parseName(value):
         else:
             firstName = name.last
             lastName = name.first
-    elif "." not in temp and "," not in temp:
-        if len(middleName) > 0:
-            firstName = name.middle
-            middleName = name.last
-            lastName = name.first
-        else:
-            lastName = name.first
-            firstName = name.last
+    # elif "." not in temp and "," not in temp:
+    #     if len(middleName) > 0:
+    #         firstName = name.middle
+    #         middleName = name.last
+    #         lastName = name.first
+    #     else:
+    #         lastName = name.first
+    #         firstName = name.last
     if len(middleName) > 2:
         middleName = middleName.replace(".", "")
     dots = 0
@@ -86,8 +92,6 @@ def parseName(value):
         firstName = firstName.upper()
     else:
         firstName = firstName.replace(".", "")
-    if title and not suffix:
-        suffix = title
     if middleName in suffi:
         suffi = middleName
         middleName = ""
@@ -105,29 +109,62 @@ def parseName(value):
         middleName += "."
     if firstName.replace(".", "").lower() == "wm":
         firstName = "William"
+    elif firstName.replace(".", "").lower() == "chas":
+        firstName = "Charles"
+    elif firstName.replace(".", "").lower() == "geo":
+        firstName = "George"
+    elif firstName.replace(".", "").lower() == "thos":
+        firstName = "Thomas"
+    elif firstName.replace(".", "").lower() == "jos":
+        firstName = "Joseph"
+    elif firstName.replace(".", "").lower() == "edw":
+        firstName = "Edward"
+    elif firstName.replace(".", "").lower() == "benj":
+        firstName = "Benjamin" 
     lastName = lastName.replace("' ", "'")
     lastName = lastName[0].upper() + lastName[1:]
+    if len(lastName) == 1 and middleName:
+        temp = lastName
+        lastName = middleName
+        middleName = temp + "."
+    if firstName:
+        if not firstName[0].isalpha():
+            firstName = firstName[1:]
+        if not firstName[-1].isalpha():
+            firstName = firstName[:-1]
+    if middleName:
+        if not middleName[0].isalpha():
+            middleName = middleName[1:]
+        if not middleName[-1].isalpha() and middleName[-1] != ".":
+            middleName = middleName[:-1]
+    if lastName:
+        if not lastName[0].isalpha():
+            lastName = lastName[1:]
+        if not lastName[-1].isalpha():
+            lastName = lastName[:-1]
+    if "Mc" in lastName:
+        lastName = lastName.replace(" ", "")
     finalVals.append(re.sub(r"[^a-zA-Z' ]", '', lastName))
     finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName))
     finalVals.append(middleName.replace("0", "O"))
     finalVals.append(suffix)
     return finalVals
 
-print(parseName("DuBUSC, John"))
+print(parseName("Bamberger, Judge Jr."))
 # Example usage
-print(parseName("Smith, John"))
-print(parseName("Smith, John D."))
-print(parseName("Smith, John, D."))
-print(parseName("Smith, John Doe"))
-print(parseName("Smith. John Doe"))
-print(parseName("Smith, John, D., Jr."))
-print(parseName("Smith. John D."))
-print(parseName("John D. Smith"))
-print(parseName("Smith. John"))
-print(parseName("Smith John"))
-print(parseName("Smith John D. Jr."))
-print(parseName("Smith John Jr."))
-print(parseName("Smith, John Doe Jr."))
-print(parseName("Smith, John, Sr."))
-print(parseName("Smith John D. Sr."))
+# print(parseName("Smith, John"))
+# print(parseName("Smith, John D."))
+# print(parseName("Smith, John, D."))
+# print(parseName("Smith, John Doe"))
+# print(parseName("Smith. John Doe"))
+# print(parseName("Smith, John, D., Jr."))
+# print(parseName("Smith. John D."))
+# print(parseName("John D. Smith"))
+# print(parseName("Smith. John"))
+# print(parseName("Smith John"))
+# print(parseName("Smith John D. Jr."))
+# print(parseName("Smith John Jr."))
+# print(parseName("Smith, John Doe Jr."))
+# print(parseName("Smith, John, Sr."))
+# print(parseName("Smith John D. Sr."))
 

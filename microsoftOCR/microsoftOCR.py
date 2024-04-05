@@ -42,12 +42,8 @@ the original second page.
 
 @author Mike
 '''
-def redact(file, cemetery, letter, nameCoords, serialCoords):
-    pdfDocument  = fitz.open(file)
-    firstPage  = pdfDocument.load_page(0)
-    first_page_image  = firstPage.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
+def redact(filePath, cemetery, letter, nameCoords, serialCoords):
     imageFile  = "temp.png"
-    first_page_image.save(imageFile)
     img = cv2.imread(imageFile)
     if serialCoords:
         pt1 = (serialCoords[0][0]-75, serialCoords[0][1]-350)
@@ -64,6 +60,7 @@ def redact(file, cemetery, letter, nameCoords, serialCoords):
     c.save()
     image.close()
 
+    pdfDocument = fitz.open(filePath)
     fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
@@ -72,10 +69,10 @@ def redact(file, cemetery, letter, nameCoords, serialCoords):
     new_pdf_document  = fitz.open()
     new_pdf_document.insert_pdf(redacted_pdf_document, from_page=0, to_page=0)
     new_pdf_document.insert_pdf(pdfDocument, from_page=1, to_page=1)
-    temp = file[-9:]
-    if "a" in temp or "b" in temp:
-        temp = file[-10:]
-    new_pdf_file = f'{fullLocation}\\{cemetery}{letter}{temp.replace(".pdf", "")} redacted.pdf'
+    tempName = filePath[-9:]
+    if "a" in tempName or "b" in tempName:
+        tempName = filePath[-10:]
+    new_pdf_file = f'{fullLocation}\\{cemetery}{letter}{tempName.replace(".pdf", "")} redacted.pdf'
     new_pdf_document.save(new_pdf_file)
     new_pdf_document.close()
     redacted_pdf_document.close()
@@ -174,14 +171,14 @@ def extract_key_value_pairs(result):
         if nameCoord.content != None:
             for region in nameCoord.bounding_regions:
                 polygon = region.polygon
-                nameCoords.append((int(polygon[0].x * 600), int(polygon[0].y * 600)))
-                nameCoords.append((int(polygon[2].x * 600), int(polygon[2].y * 600)))
+                nameCoords.append((int(polygon[0].x), int(polygon[0].y)))
+                nameCoords.append((int(polygon[2].x), int(polygon[2].y)))
         serial = invoice.fields.get("Serial No.")
         if serial:
             for region in serial.bounding_regions:
                 polygon = region.polygon
-                serialCoords.append((int(polygon[0].x * 600), int(polygon[0].y * 600)))
-                serialCoords.append((int(polygon[2].x * 600), int(polygon[2].y * 600)))
+                serialCoords.append((int(polygon[0].x), int(polygon[0].y)))
+                serialCoords.append((int(polygon[2].x), int(polygon[2].y)))
         born = invoice.fields.get("Born")
         if born.content != None:
             kvs["BORN"].append(born.content)
@@ -299,18 +296,22 @@ def createRecord(fileName, id, cemetery):
     kinLast = ""
     suffix = ""
     badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
-        "not shown"]
+        "not shown", "no date shown", "Peace time"]
     nameCoords = None
     serialCoords = None
     warFlag = False
     finalVals = []
-    pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
-    page = pageReader.pages[0]
-    pdfWriter = PyPDF2.PdfWriter()
-    pdfWriter.add_page(page)
-    with open("temp.pdf", 'wb') as output_pdf:
-        pdfWriter.write(output_pdf)
-    documentResult = analyzeDocument("temp.pdf", id, suffix)
+    # pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
+    # page = pageReader.pages[0]
+    # pdfWriter = PyPDF2.PdfWriter()
+    # pdfWriter.add_page(page)
+    # with open("temp.pdf", 'wb') as output_pdf:
+    #     pdfWriter.write(output_pdf)
+    doc = fitz.open(fileName)
+    page = doc.load_page(0)  
+    pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
+    pix.save('temp.png')
+    documentResult = analyzeDocument("temp.png", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
     print_kvs(kvs)  
     keys = ["", "NAME", "KIN", "WAR RECORD", "BORN", "19", "BURIED", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
@@ -451,18 +452,22 @@ def tempRecord(fileName, id, cemetery, suffix):
     dob = ""
     kinLast = ""
     badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
-        "not shown"]
+        "not shown", "no date shown", "Peace time"]
     nameCoords = None
     serialCoords = None
     warFlag = False
     finalVals = []
-    pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
-    page = pageReader.pages[0]
-    pdfWriter = PyPDF2.PdfWriter()
-    pdfWriter.add_page(page)
-    with open("temp.pdf", 'wb') as output_pdf:
-        pdfWriter.write(output_pdf)
-    documentResult  = analyzeDocument("temp.pdf", id, suffix)
+    # pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
+    # page = pageReader.pages[0]
+    # pdfWriter = PyPDF2.PdfWriter()
+    # pdfWriter.add_page(page)
+    # with open("temp.pdf", 'wb') as output_pdf:
+    #     pdfWriter.write(output_pdf)
+    doc = fitz.open(fileName)
+    page = doc.load_page(0)  
+    pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
+    pix.save('temp.png')
+    documentResult  = analyzeDocument("temp.png", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
     print_kvs(kvs)
     keys = ["", "NAME", "KIN", "WAR RECORD", "BORN", "19", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
@@ -801,7 +806,7 @@ def main(singleFlag, singleCem, singleLetter):
     worksheet = workbook[cemetery]
     warFlag = False
     pdfFiles = sorted(os.listdir(namePath))
-    initialID = 5093
+    initialID = 8240
     breakFlag = False
     for y in range(len(pdfFiles)):
         try:
@@ -901,7 +906,7 @@ def main(singleFlag, singleCem, singleLetter):
 
 if __name__ == "__main__":
     global cemetery
-    cemetery = "Fairview" # Change this to continue running through cemeteries
+    cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "S" # Change this to continue running through the current cemetery
+    letter = "C" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

@@ -341,6 +341,7 @@ possible wrong century.
 @author Mike
 ''' 
 def dateRule(finalVals, value, dob, buried, cent, war, app):
+    dob = dob.replace(" ", "")
     warFlag = False
     warsFlag = False
     wars = ["World War 1", "World War 2", "Korean War", "Vietnam War", "Mexican Border War"]
@@ -947,11 +948,11 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
     return warFlag
 
 finalVals = []
-birth = ""
-death = "10/15/45"
+birth = "December211923"
+death = "1/21/1989"
 cent = ""
-buried = "10/18/45"
-war = "Spanish American War"
+buried = ""
+war = ""
 app = ""
 dateRule(finalVals, death, birth, buried, cent, war, app)
 for x in finalVals:

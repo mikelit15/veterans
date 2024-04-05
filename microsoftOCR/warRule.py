@@ -34,15 +34,15 @@ def warRule(value, world):
         r'WW2|'  # Matches "WW2"
         r'WWII|'  # Matches "WWII"
         r'\b2\b|'  # Matches standalone "2"
-        r'W\.?W\.?\s?(2|II|ii|ll|LL|TT|TWO|11|TI|IT|IL|LI|LT|TL|T1|1T|1L|L1|1I|I1)|'  # Matches "WW 2", "WW II", with optional periods and space
-        r'WORLD\s*WAR\s*(2|II|ii|ll|LL|TT|TWO|11|TI|IT|IL|LI|LT|TL|T1|1T|1L|L1|1I|I1)',  # Matches "World War 2", "World War II", with optional spaces
+        r'W\.?W\.?\s?(2|II|ii|ll|LL|TT|TWO|11|TI|IT|IL|LI|LT|TL|T1|1T|1L|L1|1I|I1|H)|'  # Matches "WW 2", "WW II", with optional periods and space
+        r'WORLD\s*WAR\s*(2|II|ii|ll|LL|TT|TWO|11|TI|IT|IL|LI|LT|TL|T1|1T|1L|L1|1I|I1|H)',  # Matches "World War 2", "World War II", with optional spaces
         re.IGNORECASE
     )
     ww1_and_ww2_pattern = re.compile(
         r'(WW|WORLD\s*WAR|WORLD\s*WARS)\s*'  # Starts with "WW" or "World War" with optional spaces
         r'(1|I|i|l|L|T|ONE)'  # First part of the pattern for World War 1
         r'(\s*(and|&)\s*|\sand\s*|\s*&\s*|)'  # Optional connector: "and", "&", with or without spaces
-        r'(2|II|ii|ll|LL|TT|TWO|11|WW2|WWII)|'  # Second part of the pattern for World War 2, optional to allow single mentions
+        r'(2|II|ii|ll|LL|TT|TWO|11|H|WW2|WWII)|'  # Second part of the pattern for World War 2, optional to allow single mentions
         r'WW1andWW11',  # Explicitly matches "WW1andWW11"
         re.IGNORECASE
     )

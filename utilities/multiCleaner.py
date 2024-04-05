@@ -23,15 +23,15 @@ Jewish and Misc folders as they contain more, much smaller, cemeteries.
 
 - Processes all cemeteries in the veternas cemetery folder, or the cemetery redacted
   folder.
-- Starts processing file names at goodID - 400
+- Starts processing file names at goodID - 600
 @author Mike
 '''
 def cleanImages(goodID, redac, redac2):
     baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
-    start = goodID - 400
-    startFlag = False
+    start = goodID - 600
+    startFlag = True
     for cemetery in cemeterys:
         if cemetery in ["Jewish", "Misc"]:
             subCemPath = os.path.join(baseCemPath, cemetery)
@@ -309,7 +309,7 @@ def cleanHyperlinks(startIndex):
                 print(f"Updated hyperlink from {orig_target} to {modified_string} in row {row}.")
     
 
-cemetery = "Fairview"
+cemetery = "Graceland"
 goodIDs = [] 
 badIDs = []
 excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
@@ -331,12 +331,15 @@ for x in range(0, len(goodIDs)):
     worksheet = workbook[cemetery]
     cleanDelete(cemetery, badIDs[x], badRow)
     workbook.save(excelFilePath)
-cleanImages(goodIDs[0], "", "")
-cleanImages(goodIDs[0], " - Redacted", " redacted")
+mini = min(goodIDs)
+if min(badIDs) < mini:
+    mini = min(badIDs) - 1
+cleanImages(mini, "", "")
+cleanImages(mini, " - Redacted", " redacted")
 workbook = openpyxl.load_workbook(excelFilePath)
 worksheet = workbook[cemetery]
 for row in range(1, worksheet.max_row + 1):
-    if worksheet[f'A{row}'].value == goodIDs[0]:
+    if worksheet[f'A{row}'].value == mini:
         startIndex = row
 cleanHyperlinks(startIndex)
 workbook.save(excelFilePath)
