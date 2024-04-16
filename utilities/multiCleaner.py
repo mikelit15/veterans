@@ -2,6 +2,7 @@ import openpyxl
 import os
 import shutil
 import re
+import time
 import sys
 from openpyxl.worksheet.hyperlink import Hyperlink
 import duplicates
@@ -291,7 +292,7 @@ they accurately reflect the current record IDs following modifications.
 
 @author Mike
 '''
-def cleanHyperlinks(startIndex):
+def cleanHyperlinks(cemetery, startIndex):
     temp2 = worksheet[f'A{2}'].value
     for x in range(3, worksheet.max_row + 1):
         temp2 = temp2 + 1
@@ -299,17 +300,23 @@ def cleanHyperlinks(startIndex):
         worksheet[f'A{x}'].value = temp2
     for row in range(startIndex, worksheet.max_row + 1):
         current_id = worksheet[f'A{row}'].value 
+        if current_id == 7196:
+            pass
         if current_id is not None:
             orig_target = worksheet[f'O{row}'].hyperlink.target.replace("%20", " ")
             cell_ref = f'O{row}'
-            modified_string = re.sub(r'\d+', f"{current_id:05d}", orig_target)
+            letter = worksheet[f'B{row}'].value[0]
+            modified_string = re.sub(r'(/)([A-Z])(/)', f'\\1{letter}\\3', orig_target)
+            modified_string = re.sub(fr'{cemetery}[A-Z](\d{{5}})', f'{cemetery}{letter}\\1', modified_string)
             if worksheet[cell_ref].hyperlink:  
                 worksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=modified_string, display="PDF Image")
                 worksheet[cell_ref].value = "PDF Image"
                 print(f"Updated hyperlink from {orig_target} to {modified_string} in row {row}.")
     
 
-cemetery = "Graceland"
+cemetery = "Evergreen"
+# goodIDs = [9152, 9163, 9180, 9275, 9278, 9295, 9363, 9339, 9340] 
+# badIDs = [9158, 9173, 9188, 9281, 9282, 9301, 9364, 9382, 9468]
 goodIDs = [] 
 badIDs = []
 excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
@@ -326,6 +333,7 @@ for x in range(0, len(goodIDs)):
     letter = worksheet[f'B{goodRow}'].value[0]
     adjustImageName(goodIDs[x], badIDs[x], goodRow)
     workbook.save(excelFilePath)
+    time.sleep(3)
     microsoftOCR.main(True, cemetery, letter)
     workbook = openpyxl.load_workbook(excelFilePath)
     worksheet = workbook[cemetery]
@@ -341,7 +349,7 @@ worksheet = workbook[cemetery]
 for row in range(1, worksheet.max_row + 1):
     if worksheet[f'A{row}'].value == mini:
         startIndex = row
-cleanHyperlinks(startIndex)
+cleanHyperlinks(cemetery, startIndex)
 workbook.save(excelFilePath)
 print("\n")
 duplicates.main()

@@ -36,9 +36,9 @@ def nameRule(finalVals, value):
     lastName = name.last
     suffix = name.suffix
     title = name.title
-    suffi = ["Jr", "Sr", "I", "II", "III", "IV", "V"]
+    suffi = ["Jr", "Sr", "I", "II", "III", "IV"]
     temp = value.replace("Jr", "").replace("Sr", "").replace("I", "").replace("II", "")\
-        .replace("III", "").replace("IV", "").replace("V", "")
+        .replace("III", "").replace("IV", "")
     if ("," in value and "." in firstName):
         if len(middleName) > 0:
             middleName = name.first
@@ -65,7 +65,7 @@ def nameRule(finalVals, value):
     elif len(suffix) > 0 and not middleName:
         suffix = suffix.replace(", ", "")
         middleName = suffix.replace("Sr.", "").replace("Jr.", "").replace("I.", "").replace("II.", "")\
-        .replace("III.", "").replace("IV.", "").replace("V.", "")
+        .replace("III.", "").replace("IV.", "")
         suffix = suffix.replace(middleName, "")
     elif len(suffix) > 0 and middleName:
         suffix = suffix.replace(", ", "")

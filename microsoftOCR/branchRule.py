@@ -14,7 +14,7 @@ def branchRule(finalVals, value, war):
     value = value.replace("\n", " ")
     armys = ["co", "army", "inf", "infantry", "infan", "usa", "med", "cav", "div", \
              "sig", "art", "corps", "corp", "artillery", "army", "q m c "]
-    navys = ["hospital", "navy", "naval", "u s n ", "avy", "u s n r ", "u s s ", \
+    navys = ["hospital", "navy", "naval", "u s n ", "u s n", "avy", "u s n r ", "u s s ", \
              "usnr", "uss", "usn", "u s n r f" , "usnrf"]
     guards = ["113", "102d", "114", "44", "181", "250", "112", "national"]
     branch = value

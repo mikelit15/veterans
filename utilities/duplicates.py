@@ -28,7 +28,10 @@ def main():
         confirmed_duplicates['MaxVIDinPair'] = confirmed_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')
         confirmed_duplicates.sort_values(by=['MaxVIDinPair', 'VID'], inplace=True)
         confirmed_duplicates.drop(columns=['MaxVIDinPair'], inplace=True)
-        print(confirmed_duplicates)
+        if df.empty:
+            print("### No Duplicates ###")
+        else:
+            print(confirmed_duplicates)
     except Exception:
         print("### No Duplicates ###")
 

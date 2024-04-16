@@ -9,6 +9,7 @@ import os
 import PyPDF2
 import fitz
 import cv2
+import time
 from reportlab.pdfgen import canvas
 from PIL import Image
 from nameparser import HumanName
@@ -134,7 +135,7 @@ def analyzeDocument(filePath, id, suffix):
         imgTest = file.read()
         bytesTest = bytearray(imgTest)
         print('\nImage loaded', f"{id} {suffix}")
-    poller = document_analysis_client.begin_analyze_document("Test2.2n", document=bytesTest)
+    poller = document_analysis_client.begin_analyze_document("Test2.4n", document=bytesTest)
     result = poller.result()
     return result
 
@@ -296,21 +297,32 @@ def createRecord(fileName, id, cemetery):
     kinLast = ""
     suffix = ""
     badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
-        "not shown", "no date shown", "Peace time"]
+        "not shown", "no date shown", "Peace time", "none", "Peace Time"]
     nameCoords = None
     serialCoords = None
     warFlag = False
     finalVals = []
+    attempts = 10
     # pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
     # page = pageReader.pages[0]
     # pdfWriter = PyPDF2.PdfWriter()
     # pdfWriter.add_page(page)
     # with open("temp.pdf", 'wb') as output_pdf:
     #     pdfWriter.write(output_pdf)
-    doc = fitz.open(fileName)
-    page = doc.load_page(0)  
-    pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
-    pix.save('temp.png')
+    while attempts > 0:
+        try:
+            doc = fitz.open(fileName)
+            page = doc.load_page(0)
+            pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
+            pix.save('temp.png')
+            break
+        except Exception as e:
+            print(f"Failed to process document: {e}")
+            attempts -= 1
+            time.sleep(3)  
+            if attempts == 0:
+                print("Maximum retry attempts reached. Exiting.")
+                return None 
     documentResult = analyzeDocument("temp.png", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
     print_kvs(kvs)  
@@ -452,21 +464,32 @@ def tempRecord(fileName, id, cemetery, suffix):
     dob = ""
     kinLast = ""
     badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
-        "not shown", "no date shown", "Peace time"]
+        "not shown", "no date shown", "Peace time", "none", "Peace Time"]
     nameCoords = None
     serialCoords = None
     warFlag = False
     finalVals = []
+    attempts = 10
     # pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
     # page = pageReader.pages[0]
     # pdfWriter = PyPDF2.PdfWriter()
     # pdfWriter.add_page(page)
-    # with open("temp.pdf", 'wb') as output_pdf:
+    # with open("temp2.pdf", 'wb') as output_pdf:
     #     pdfWriter.write(output_pdf)
-    doc = fitz.open(fileName)
-    page = doc.load_page(0)  
-    pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
-    pix.save('temp.png')
+    while attempts > 0:
+        try:
+            doc = fitz.open(fileName)
+            page = doc.load_page(0)
+            pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
+            pix.save('temp.png')
+            break
+        except Exception as e:
+            print(f"Failed to process document: {e}")
+            attempts -= 1
+            time.sleep(3)  
+            if attempts == 0:
+                print("Maximum retry attempts reached. Exiting.")
+                return None 
     documentResult  = analyzeDocument("temp.png", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
     print_kvs(kvs)
@@ -630,8 +653,11 @@ def mergeRecords(vals1, vals2, rowIndex, id, warFlag, cemetery, letter):
                 requiredColors.append(highlightColors["badDate"]) 
     if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
         requiredColors.append(highlightColors["mergedCemeteryMismatch"])
-    if worksheet[f'{"B"}{rowIndex}'].value[0] != letter:
-        requiredColors.append(highlightColors["mergedLastNameMismatch"])
+    try:
+        if worksheet[f'{"B"}{rowIndex}'].value[0] != letter:
+            requiredColors.append(highlightColors["mergedLastNameMismatch"])
+    except Exception:
+        pass
     if (worksheet[f'{"B"}{rowIndex}'].value) == (worksheet[f'{"C"}{rowIndex}'].value):
         requiredColors.append(highlightColors["mergedNameBug"])
     if requiredColors:
@@ -908,5 +934,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "C" # Change this to continue running through the current cemetery
+    letter = "L" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)
