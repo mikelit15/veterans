@@ -302,27 +302,23 @@ def createRecord(fileName, id, cemetery):
     serialCoords = None
     warFlag = False
     finalVals = []
-    attempts = 10
+    attempt = False
     # pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
     # page = pageReader.pages[0]
     # pdfWriter = PyPDF2.PdfWriter()
     # pdfWriter.add_page(page)
     # with open("temp.pdf", 'wb') as output_pdf:
     #     pdfWriter.write(output_pdf)
-    while attempts > 0:
+    while attempt == False:
         try:
             doc = fitz.open(fileName)
             page = doc.load_page(0)
             pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
             pix.save('temp.png')
-            break
+            attempt = True
         except Exception as e:
             print(f"Failed to process document: {e}")
-            attempts -= 1
-            time.sleep(3)  
-            if attempts == 0:
-                print("Maximum retry attempts reached. Exiting.")
-                return None 
+            time.sleep(5)  
     documentResult = analyzeDocument("temp.png", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
     print_kvs(kvs)  
@@ -387,6 +383,10 @@ def createRecord(fileName, id, cemetery):
             for x in badWar:
                 if x in value.lower():
                     value = ""
+            pattern = re.compile(re.escape("recor"), re.IGNORECASE)
+            value = pattern.sub(lambda x: "", value)
+            pattern = re.compile(re.escape("record"), re.IGNORECASE)
+            value = pattern.sub(lambda x: "", value)
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
@@ -553,6 +553,10 @@ def tempRecord(fileName, id, cemetery, suffix):
             for x in badWar:
                 if x in value.lower():
                     value = ""
+            pattern = re.compile(re.escape("recor"), re.IGNORECASE)
+            value = pattern.sub(lambda x: "", value)
+            pattern = re.compile(re.escape("record"), re.IGNORECASE)
+            value = pattern.sub(lambda x: "", value)
             finalVals.append(value)
             finalVals.append(war)
             flag3 = False
@@ -782,23 +786,24 @@ directory, the current sheet in the spreadsheet, and loops through all the
 images in a set letter in a set cemetery. This function is the primary 
 controller for processing, saving, and handling of records.
 
-Main functions that controls files sent to be processed as well as 
-the data that is put into the excel sheet. Sets up the current working 
-directory as well as the current sheet in the excel spreadsheet. Loops
-through all the images in a set Letter in a set Cemetery, this is for 
-damage control. 
-
 The loop finds the last record recorded in the excel sheet
 and then starts indexing from there. Calls createRecord is normal card, 
 calls tempRecord and mergeRecord for A and B cards.
 
-calls redactImage for every card processed. Places the record ID and a 
+Calls redactImage for every card processed. Places the record ID and a 
 hyperlink to the redacted image in the excel sheet during processing.
 Saves worksheet after every image is done processing to reduce loss of 
 data upon errors.
 
 Controls highlighting of entire row of record upon different conditions 
 that are caught by the program. 
+
+@param singleFlag - flag that indicates if main function is being called 
+                    by the duplicates utility program
+@param singleCem - cemetery name variable for if main function is being 
+                   called by the duplicates utility program
+@param singleLetter - folder letter variable for if main function is being 
+                      called by the duplicates utility program
 
 @author Mike
 '''
@@ -934,5 +939,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "L" # Change this to continue running through the current cemetery
+    letter = "O" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

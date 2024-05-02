@@ -24,7 +24,7 @@ def branchRule(finalVals, value, war):
     if war in value and war != "":
         branch = ""
         value = ""
-    if "air force" in branch.lower():
+    if "air force" in branch.lower() or "air corp" in branch.lower() or "usaf" in branch.lower():
         branch = "Air Force"
     elif "marine" in branch.lower():
         branch = "Marine Corps"

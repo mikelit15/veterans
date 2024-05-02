@@ -14,7 +14,7 @@ extraction through the 'world' parameter taken from get_kv_map().
 @author Mike
 '''
 def warRule(value, world):
-    value = value.replace("\n", " ").replace("7", "1").replace("J", "1")
+    value = value.replace("\n", " ").replace("7", "1").replace("J", "1").replace("]", "1")
     if value == "" and world != "":
         value = world
     ww1years = ["1914", "1915", "1916", "1917", "1918"]
@@ -69,7 +69,7 @@ def warRule(value, world):
     if "Spanish" in war or "Amer" in war or "American" in war or "SpAm" in war:
         identifiedWars.append("Spanish American War")
     if "Mexican" in war:
-        identifiedWars.append("Mexican Border War")
+        identifiedWars.append("Mexican War")
     if "Rebellion" in war:
         identifiedWars.append("War of the Rebellion")
     if "Revolution" in war or "Rev" in war:
