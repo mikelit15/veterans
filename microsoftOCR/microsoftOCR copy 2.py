@@ -2,8 +2,11 @@ import re
 import openpyxl 
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.formrecognizer import DocumentAnalysisClient
-from openpyxl.styles import Font
 from collections import defaultdict
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, \
+     QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, QDialog
+from PyQt6.QtGui import QPixmap, QFont, QIcon
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import traceback
 import os
 import PyPDF2
@@ -14,7 +17,7 @@ from reportlab.pdfgen import canvas
 from PIL import Image
 from nameparser import HumanName
 from nameparser.config import CONSTANTS
-from openpyxl.styles import PatternFill
+from openpyxl.styles import PatternFill, Font
 from fuzzywuzzy import fuzz
 import sys
 sys.path.append(r'C:\workspace\veterans\microsoftOCR')
@@ -494,7 +497,7 @@ def tempRecord(fileName, id, cemetery, suffix):
                 return None 
     documentResult  = analyzeDocument("temp.png", id, suffix)
     kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
-    printedKVS = print_kvs(kvs)  
+    printedKVS = print_kvs(kvs)
     keys = ["", "NAME", "KIN", "WAR RECORD", "BORN", "19", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
     flag3 = False
     for x in keys:
@@ -620,7 +623,7 @@ field and handles row highlighting in the output based on specific conditions.
 
 @author Mike
 '''
-def mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter):
+def mergeRecords(vals1, vals2, rowIndex, id, warFlag, cemetery, letter):
     counter = 1
     def length(item):
         return len(str(item))
@@ -696,7 +699,7 @@ def find_next_empty_row(worksheet):
     return worksheet.max_row + 1 
 
 
-def highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast):
+def highlightSingle(warFlag, rowIndex, kinLast):
     tempFlag = False
     tempFlag2 = False
     highlightColors = {
@@ -835,10 +838,10 @@ def main(singleFlag, singleCem, singleLetter):
     namePath = os.path.join(cemPath, namePath)
     pathA = ""
     rowIndex = 2
+    global worksheet
     worksheet = workbook[cemetery]
     warFlag = False
     pdfFiles = sorted(os.listdir(namePath))
-    initialID = 8240
     breakFlag = False
     for y in range(len(pdfFiles)):
         try:
@@ -858,7 +861,7 @@ def main(singleFlag, singleCem, singleLetter):
                 if "a" not in string and "b" not in string:
                     if id != int(string.replace("a", "").replace("b", "")):
                         continue
-                    vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery)
+                    vals, warFlag, nameCoords, serialCoords, kvs, kinLast = createRecord(filePath, id, cemetery)
                     redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
                     worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
                     worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
@@ -869,7 +872,7 @@ def main(singleFlag, singleCem, singleLetter):
                     for x in vals:
                         worksheet.cell(row=rowIndex, column=counter, value=x)
                         counter += 1
-                    highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast)
+                    highlightSingle(warFlag, rowIndex, kinLast)
                     id += 1
                     rowIndex += 1
                 else:
@@ -891,7 +894,7 @@ def main(singleFlag, singleCem, singleLetter):
                             else:
                                 warFlag = True
                             redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                            mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
+                            mergeRecords(vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
                             mergeImages(pathA, filePath, cemetery, letter)
                             link_text = "PDF Image"
                             worksheet.cell(row=rowIndex, column=15).value = link_text
@@ -927,15 +930,21 @@ def main(singleFlag, singleCem, singleLetter):
             extension2 = "b"
         logFilePath = fr'Logs/{cemetery}{letter}{extension1}{extension2} Extracted.txt' 
         with open(logFilePath, 'w', encoding='utf-8') as logFile:
-            logFile.write(printedKVS)
+            logFile.write("----Key-value pairs found in document----\n")
+            for key, values in kvs.items():
+                for value in values:
+                    logFile.write(f'{key}: {value}\n')
             logFile.write("\n")
         workbook.save('Veterans.xlsx')
         if breakFlag:
             break
-
+        
 if __name__ == "__main__":
+    global initialID
+    initialID = 0
     global cemetery
     cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "L" # Change this to continue running through the current cemetery
-    main(False, cemetery, letter)
+    letter = "O" # Change this to continue running through the current cemetery
+    
+    # main(False, cemetery, letter)

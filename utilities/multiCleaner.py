@@ -309,44 +309,41 @@ def cleanHyperlinks(cemetery, startIndex):
             formatted_id = f"{new_id:05d}"
             folder_name = file_directory_map.get(formatted_id, "UnknownFolder")[-1]
             modified_string = re.sub(fr'(\\)([A-Z])(\\)', f'\\1{folder_name}\\3', orig_target)
-            modified_string = re.sub(fr'{cemetery}[A-Z](\d{{5}})', f'{cemetery}{folder_name}\\1', modified_string)
+            modified_string = re.sub(fr'({cemetery}[A-Z])\d{{5}}', f'{cemetery}{folder_name}{formatted_id}', modified_string)
             worksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=modified_string, display="PDF Image")
             worksheet[cell_ref].value = "PDF Image"
             print(f"Updated hyperlink from {orig_target} to {modified_string} in row {row}.")
         new_id += 1
         
-
-
-cemetery = "Evergreen"
-# goodIDs = [9152, 9163, 9180, 9275, 9278, 9295, 9363, 9339, 9340] 
-# badIDs = [9158, 9173, 9188, 9281, 9282, 9301, 9364, 9382, 9468]
-goodIDs = [1] 
-badIDs = [1]
+        
+cemetery = "Graceland"
+goodIDs = [9382, 9579, 9558, 9761, 9754, 9768, 10023, 10041, 9696] 
+badIDs = [9405, 9583, 9588, 9764, 9767, 9780, 10030, 10045, 10194]
 excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
-# workbook = openpyxl.load_workbook(excelFilePath)
-# worksheet = workbook[cemetery]
-# for x in range(0, len(goodIDs)):
-#     workbook = openpyxl.load_workbook(excelFilePath)
-#     worksheet = workbook[cemetery]
-#     for row in range(1, worksheet.max_row + 1):
-#         if worksheet[f'A{row}'].value == goodIDs[x]:
-#             goodRow = row
-#         if worksheet[f'A{row}'].value == badIDs[x]:
-#             badRow = row
-#     letter = worksheet[f'B{goodRow}'].value[0]
-#     adjustImageName(goodIDs[x], badIDs[x], goodRow)
-#     workbook.save(excelFilePath)
-#     time.sleep(3)
-#     microsoftOCR.main(True, cemetery, letter)
-#     workbook = openpyxl.load_workbook(excelFilePath)
-#     worksheet = workbook[cemetery]
-#     cleanDelete(cemetery, badIDs[x], badRow)
-#     workbook.save(excelFilePath)
+workbook = openpyxl.load_workbook(excelFilePath)
+worksheet = workbook[cemetery]
+for x in range(0, len(goodIDs)):
+    workbook = openpyxl.load_workbook(excelFilePath)
+    worksheet = workbook[cemetery]
+    for row in range(1, worksheet.max_row + 1):
+        if worksheet[f'A{row}'].value == goodIDs[x]:
+            goodRow = row
+        if worksheet[f'A{row}'].value == badIDs[x]:
+            badRow = row
+    letter = worksheet[f'B{goodRow}'].value[0]
+    adjustImageName(goodIDs[x], badIDs[x], goodRow)
+    workbook.save(excelFilePath)
+    time.sleep(3)
+    microsoftOCR.main(True, cemetery, letter)
+    workbook = openpyxl.load_workbook(excelFilePath)
+    worksheet = workbook[cemetery]
+    cleanDelete(cemetery, badIDs[x], badRow)
+    workbook.save(excelFilePath)
 mini = min(goodIDs)
 if min(badIDs) < mini:
     mini = min(badIDs) - 1
-# cleanImages(mini, "", "")
-# cleanImages(mini, " - Redacted", " redacted")
+cleanImages(mini, "", "")
+cleanImages(mini, " - Redacted", " redacted")
 workbook = openpyxl.load_workbook(excelFilePath)
 worksheet = workbook[cemetery]
 for row in range(1, worksheet.max_row + 1):
