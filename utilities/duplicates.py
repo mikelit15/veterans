@@ -12,9 +12,9 @@ duplicate records. The process includes several key steps:
 
 @author: Mike
 '''
-def main():
+def main(cemetery):
     try:
-        df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", sheet_name="Graceland", usecols="A:K")
+        df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", sheet_name= cemetery, usecols="A:K")
         df.reset_index(inplace=True, drop=True)  
         df.index = df.index + 2
         potential_duplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
@@ -34,7 +34,9 @@ def main():
             print(confirmed_duplicates)
     except Exception:
         print("### No Duplicates ###")
+    return confirmed_duplicates
 
 
 if __name__ == "__main__":
-    main()
+    cemetery = "Graceland"
+    main(cemetery)

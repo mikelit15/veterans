@@ -849,58 +849,54 @@ def main(singleFlag, singleCem, singleLetter):
                 id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
             except TypeError:
                 id = initialID
-            if "output" in pdfFiles[y] or "redacted" in pdfFiles[y]:
-                continue
-            else:
-                string = pdfFiles[y][:-4]
-                string = string.split(letter) 
-                string = string[-1].lstrip('0')
-                if "a" not in string and "b" not in string:
-                    if id != int(string.replace("a", "").replace("b", "")):
-                        continue
-                    vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery)
-                    redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                    worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
-                    worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-                    worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
-                    counter = 1
-                    worksheet.cell(row=rowIndex, column=counter, value=id)
+            string = pdfFiles[y][:-4]
+            string = string.split(letter) 
+            string = string[-1].lstrip('0')
+            if "a" not in string and "b" not in string:
+                if id != int(string.replace("a", "").replace("b", "")):
+                    continue
+                vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery)
+                redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
+                worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
+                counter = 1
+                worksheet.cell(row=rowIndex, column=counter, value=id)
+                counter += 1
+                for x in vals:
+                    worksheet.cell(row=rowIndex, column=counter, value=x)
                     counter += 1
-                    for x in vals:
-                        worksheet.cell(row=rowIndex, column=counter, value=x)
-                        counter += 1
-                    highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast)
+                highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast)
+                id += 1
+                rowIndex += 1
+            else:
+                if id != int(string.replace("a", "").replace("b", "")):
+                    continue
+                if "a" in string:
+                    if (filePath.replace("a.pdf", "") in pdfFiles):
+                        continue
+                    pathA = filePath
+                    vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = tempRecord(filePath, id, cemetery, "A")
+                    redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                if "b" in string:
+                    if (filePath.replace("b.pdf", "") in pdfFiles):
+                        continue
+                    vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = tempRecord(filePath, id, cemetery, "B")
+                    if not warFlag or not warFlagB:
+                        warFlag = False
+                    else:
+                        warFlag = True
+                    redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                    mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
+                    mergeImages(pathA, filePath, cemetery, letter)
+                    link_text = "PDF Image"
+                    worksheet.cell(row=rowIndex, column=15).value = link_text
+                    worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                    worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                     id += 1
                     rowIndex += 1
-                else:
-                    if id != int(string.replace("a", "").replace("b", "")):
-                        continue
-                    else:
-                        if "a" in string:
-                            if (filePath.replace("a.pdf", "") in pdfFiles):
-                                continue
-                            pathA = filePath
-                            vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = tempRecord(filePath, id, cemetery, "A")
-                            redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                        if "b" in string:
-                            if (filePath.replace("b.pdf", "") in pdfFiles):
-                                continue
-                            vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = tempRecord(filePath, id, cemetery, "B")
-                            if not warFlag or not warFlagB:
-                                warFlag = False
-                            else:
-                                warFlag = True
-                            redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                            mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
-                            mergeImages(pathA, filePath, cemetery, letter)
-                            link_text = "PDF Image"
-                            worksheet.cell(row=rowIndex, column=15).value = link_text
-                            worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-                            worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
-                            id += 1
-                            rowIndex += 1
-                            if singleFlag:
-                                breakFlag = True
+                    if singleFlag:
+                        breakFlag = True
         except Exception as e:
             errorTraceback = traceback.format_exc()
             print(errorTraceback)

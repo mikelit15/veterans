@@ -13,7 +13,10 @@ import microsoftOCR
 class Worker(QThread):
     id_signal = pyqtSignal(str)  # Signal to emit IDs
     kvs_signal = pyqtSignal(str) # Signal to emit KVS
-    popup_signal = pyqtSignal(str) # Signal to emit popup
+    error_signal = pyqtSignal(str) # Signal to emit Error Message
+    image_signal = pyqtSignal(str) # Signal to emit Image Path
+    popup_signal = pyqtSignal(str) # Signal to emit Popup
+    
     def __init__(self, singleFlag, singleCem, singleLetter, initialID):
         super().__init__()
         self.singleFlag = singleFlag
@@ -55,7 +58,6 @@ class Worker(QThread):
         warFlag = False
         pdfFiles = sorted(os.listdir(namePath))
         breakFlag = False
-        
         for y in range(len(pdfFiles)):
             try:
                 warFlag = False
@@ -67,69 +69,80 @@ class Worker(QThread):
                     id = initialID
                 while self.paused:
                     self.sleep(1)
-                if "output" in pdfFiles[y] or "redacted" in pdfFiles[y]:
-                    continue
-                else:
-                    string = pdfFiles[y][:-4]
-                    string = string.split(letter) 
-                    string = string[-1].lstrip('0')
-                    if "a" not in string and "b" not in string:
-                        if id != int(string.replace("a", "").replace("b", "")):
-                            if self.stopped:
-                                break
-                            continue
+                string = pdfFiles[y][:-4]
+                string = string.split(letter) 
+                string = string[-1].lstrip('0')
+                if "a" not in string and "b" not in string:
+                    if id != int(string.replace("a", "").replace("b", "")):
                         if self.stopped:
-                                break
-                        self.id_signal.emit(str(id))
-                        self.kvs_signal.emit("None")
-                        vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery)
-                        redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                        worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
-                        worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-                        worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
-                        counter = 1
-                        worksheet.cell(row=rowIndex, column=counter, value=id)
+                            break
+                        continue
+                    if self.stopped:
+                            break
+                    self.id_signal.emit(str(id))
+                    self.kvs_signal.emit("")
+                    self.error_signal.emit("")
+                    self.image_signal.emit("")
+                    vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery)
+                    self.kvs_signal.emit(printedKVS)
+                    redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                    self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                    worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
+                    worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                    worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
+                    counter = 1
+                    worksheet.cell(row=rowIndex, column=counter, value=id)
+                    counter += 1
+                    for x in vals:
+                        worksheet.cell(row=rowIndex, column=counter, value=x)
                         counter += 1
-                        for x in vals:
-                            worksheet.cell(row=rowIndex, column=counter, value=x)
-                            counter += 1
-                        microsoftOCR.highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast)
+                    microsoftOCR.highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast)
+                    id += 1
+                    rowIndex += 1
+                else:
+                    if id != int(string.replace("a", "").replace("b", "")):
+                        if self.stopped:
+                            break
+                        continue
+                    if self.stopped:
+                        break
+                    if "a" in string:
+                        if (filePath.replace("a.pdf", "") in pdfFiles):
+                            continue
+                        pathA = filePath
+                        self.id_signal.emit(f"{id} A")
+                        self.kvs_signal.emit("")
+                        self.error_signal.emit("")
+                        self.image_signal.emit("")
+                        vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.tempRecord(filePath, id, cemetery, "A")
+                        self.kvs_signal.emit(printedKVS)
+                        redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                        self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                    if "b" in string:
+                        if (filePath.replace("b.pdf", "") in pdfFiles):
+                            continue
+                        self.id_signal.emit(f"{id} B")
+                        self.kvs_signal.emit("")
+                        self.error_signal.emit("")
+                        self.image_signal.emit("")
+                        vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.tempRecord(filePath, id, cemetery, "B")
+                        self.kvs_signal.emit(printedKVS)
+                        if not warFlag or not warFlagB:
+                            warFlag = False
+                        else:
+                            warFlag = True
+                        redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                        self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                        microsoftOCR.mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
+                        microsoftOCR.mergeImages(pathA, filePath, cemetery, letter)
+                        link_text = "PDF Image"
+                        worksheet.cell(row=rowIndex, column=15).value = link_text
+                        worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
+                        worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                         id += 1
                         rowIndex += 1
-                    else:
-                        if id != int(string.replace("a", "").replace("b", "")):
-                            continue
-                        else:
-                            if "a" in string:
-                                if (filePath.replace("a.pdf", "") in pdfFiles):
-                                    continue
-                                pathA = filePath
-                                self.id_signal.emit(f"{id} A")
-                                self.kvs_signal.emit("None")
-                                vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.tempRecord(filePath, id, cemetery, "A")
-                                redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                            if "b" in string:
-                                if (filePath.replace("b.pdf", "") in pdfFiles):
-                                    continue
-                                self.id_signal.emit(f"{id} B")
-                                self.kvs_signal.emit("None")
-                                vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.tempRecord(filePath, id, cemetery, "B")
-                                if not warFlag or not warFlagB:
-                                    warFlag = False
-                                else:
-                                    warFlag = True
-                                redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                                microsoftOCR.mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
-                                microsoftOCR.mergeImages(pathA, filePath, cemetery, letter)
-                                link_text = "PDF Image"
-                                worksheet.cell(row=rowIndex, column=15).value = link_text
-                                worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-                                worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
-                                id += 1
-                                rowIndex += 1
-                                if self.singleFlag:
-                                    breakFlag = True
-                self.kvs_signal.emit(printedKVS)
+                        if self.singleFlag:
+                            breakFlag = True
             except Exception as e:
                 errorTraceback = traceback.format_exc()
                 print(errorTraceback)
@@ -144,6 +157,7 @@ class Worker(QThread):
                 error_file_path = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
                 with open(error_file_path, 'a') as error_file:
                     error_file.write(f'{printedKVS} \n\n {errorTraceback}')
+                    self.error_signal.emit(errorTraceback)
                 id += 1
                 rowIndex += 1
             extension1 = str(id-1).zfill(5)
@@ -167,8 +181,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Veteran Extraction")
-        self.resize(400, 200)
-        self.setGeometry(600, 200, 250, 150)
+        self.setGeometry(600, 40, 950, 150)
         self.worker = None  
         self.mainLayout()
 
@@ -178,6 +191,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(centralWidget)
         self.setStyleSheet("#mainCentralWidget { background-color: white; }")
         layout1 = QVBoxLayout(centralWidget)
+        
         # Create the top container
         topContainer = QWidget()
         topLayout = QHBoxLayout()
@@ -194,47 +208,68 @@ class MainWindow(QMainWindow):
         topLayout.addWidget(programName)
         topContainer.setLayout(topLayout)
 
-        # Create a group box for the middle left
-        middleLeftGroupBox = QGroupBox("Parameters")
-        middleLeftGroupBox.setFixedSize(375, 350)
-        middleLeftLayout = QFormLayout()
+        # Create a group box for the middle top left
+        middleTopLeftGroupBox = QGroupBox("Parameters")
+        middleTopLeftGroupBox.setFixedSize(375, 375)
+        middleTopLeftLayout = QFormLayout()
         self.cemeteryBox = QLineEdit()
         self.cemeteryBox.setFixedWidth(140)
         self.letterBox = QLineEdit()
         self.letterBox.setFixedWidth(30)
         self.initialIDBox = QLineEdit()
         self.initialIDBox.setFixedWidth(45)
-        middleLeftLayout.addRow(" ", None)
-        middleLeftLayout.addRow(" ", None)
-        middleLeftLayout.addRow("Cemetery :   ", self.cemeteryBox)
-        middleLeftLayout.addRow(" ", None)
-        middleLeftLayout.addRow(" ", None)
-        middleLeftLayout.addRow("Letter :", self.letterBox)
-        middleLeftLayout.addRow(None, QLabel("Note: This is the last name letter to start processing."))
-        middleLeftLayout.addRow(" ", None)
-        middleLeftLayout.addRow("Initial ID :", self.initialIDBox)
-        middleLeftLayout.addRow(None, QLabel("Note: This is the first ID for the cemetery."))
-        middleLeftLayout.addRow(" ", None)
-        middleLeftLayout.addRow(" ", None)
-        middleLeftGroupBox.setLayout(middleLeftLayout)
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow("Cemetery :   ", self.cemeteryBox)
+        middleTopLeftLayout.addRow(None, QLabel("Note: This is the cemetery name based on its folder."))
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow("Letter :", self.letterBox)
+        middleTopLeftLayout.addRow(None, QLabel("Note: This is the last name letter to start processing."))
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow("Initial ID :", self.initialIDBox)
+        middleTopLeftLayout.addRow(None, QLabel("Note: This is the first ID for the cemetery."))
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftGroupBox.setLayout(middleTopLeftLayout)
         
-        # Create a group box for the middle right
-        middleRightGroupBox = QGroupBox("Results")
-        middleRightGroupBox.setFixedSize(375, 350)
-        middleRightLayout = QFormLayout()
-        global displayLabel
-        self.displayLabel = QLabel("None")
-        global kvsLabel
-        self.kvsLabel = QLabel("None")
-        middleRightLayout.addRow(" ", None)
-        middleRightLayout.addRow(" ", None)
-        middleRightLayout.addRow("Current ID :", self.displayLabel)
-        middleRightLayout.addRow(" ", None)
-        middleRightLayout.addRow(" ", None)
-        middleRightLayout.addRow("Key-Value Pairs :", self.kvsLabel)
-        middleRightLayout.addRow(" ", None)
-        middleRightLayout.addRow(" ", None)
-        middleRightGroupBox.setLayout(middleRightLayout)
+        # Create a group box for the middle top right
+        middleTopRightGroupBox = QGroupBox("Results")
+        middleTopRightGroupBox.setFixedSize(535, 375)
+        middleTopRightLayout = QFormLayout()
+        self.idLabel = QLabel("")
+        self.kvsLabel = QLabel("")
+        self.errorLabel = QLabel("")
+        self.imageLabel = QLabel("")
+        middleTopRightLayout.addRow(" ", None)
+        middleTopRightLayout.addRow("Current ID :", self.idLabel)
+        middleTopRightLayout.addRow(" ", None)
+        middleTopRightLayout.addRow("Key-Value Pairs :", self.kvsLabel)
+        middleTopRightLayout.addRow(" ", None)
+        middleTopRightLayout.addRow("Error :", self.errorLabel)
+        middleTopRightLayout.addRow(" ", None)
+        middleTopRightGroupBox.setLayout(middleTopRightLayout)
+
+        # Create container for middle top left and top right group boxes
+        middleTopContainer = QWidget()
+        middleTopLayout = QHBoxLayout()
+        middleTopLayout.addWidget(middleTopLeftGroupBox)
+        middleTopLayout.addWidget(middleTopRightGroupBox)
+        middleTopContainer.setLayout(middleTopLayout)
+        
+        # Create a group box for the middle bottom
+        middleBottomGroupBox = QGroupBox("Image")
+        middleBottomGroupBox.setFixedSize(500, 287)
+        middleBottomLayout = QFormLayout()
+        self.imageLabel = QLabel("")
+        middleBottomLayout.addRow(None, self.imageLabel)
+        middleBottomGroupBox.setLayout(middleBottomLayout)
+        
+        # Create a container for the middle bottom group box
+        middleBottomContainer = QWidget()
+        middleBottomLayout = QHBoxLayout()
+        middleBottomLayout.addWidget(middleBottomGroupBox)
+        middleBottomContainer.setLayout(middleBottomLayout)
         
         # Create the bottom container with a button
         bottomContainer = QWidget()
@@ -245,24 +280,18 @@ class MainWindow(QMainWindow):
         self.pauseButton = QPushButton("Pause Code")
         self.pauseButton.clicked.connect(self.togglePauseResume)
         self.pauseButton.setFixedWidth(150)
-        self.status = QLabel("Status: Idle")
-        self.status.setFixedWidth(100)
+        self.status = QLabel("               Status: Idle")
+        self.status.setFixedWidth(150)
         bottomLayout.addWidget(self.runButton)
         bottomLayout.addWidget(self.status)
         bottomLayout.addWidget(self.pauseButton)
         bottomContainer.setLayout(bottomLayout)
-
-        middleContainer = QWidget()
-        middleLayout = QHBoxLayout()
-        middleLeftGroupBox.setFixedSize(375, 350)
-        middleLayout.addWidget(middleLeftGroupBox)
-        middleLayout.addWidget(middleRightGroupBox)
-        middleContainer.setLayout(middleLayout)
         
         # Create a main layout to arrange the containers
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(topContainer)
-        mainLayout.addWidget(middleContainer)
+        mainLayout.addWidget(middleTopContainer)
+        mainLayout.addWidget(middleBottomContainer)
         mainLayout.addWidget(bottomContainer)
         self.stopButton = QPushButton("Stop Code")
         self.stopButton.setFixedWidth(225)
@@ -286,21 +315,30 @@ class MainWindow(QMainWindow):
         popup.setLayout(layout)
         popup.exec()
         self.runButton.setDisabled(False)
-        self.status.setText("Status: Idle")
+        self.status.setText("               Status: Idle")
     
+    def updateImage(self, filePath):
+        pixmap = QPixmap(filePath)
+        self.imageLabel.setPixmap(pixmap.scaled(430, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)) 
+        
     def updateID(self, id):
-        self.displayLabel.setText(id)
+        self.idLabel.setText(id)
     
     def updateKVS(self, printedKVS):
         self.kvsLabel.setText(f"{printedKVS}")  
+    
+    def updateError(self, errorMsg):
+        self.errorLabel.setText(f"{errorMsg}")  
           
     def startProcessing(self):
         self.worker = Worker(False, self.cemeteryBox.text(), self.letterBox.text(), self.initialIDBox.text())
         self.worker.id_signal.connect(lambda id: self.updateID(id))
         self.worker.kvs_signal.connect(lambda printedKVS: self.updateKVS(printedKVS))
+        self.worker.error_signal.connect(lambda errorMsg: self.updateError(errorMsg))
+        self.worker.image_signal.connect(lambda imagePath: self.updateImage(imagePath))
         self.worker.popup_signal.connect(lambda text: self.popupWindow(text))
         self.worker.start()
-        self.status.setText("Status: Running...")
+        self.status.setText("               Status: Running...")
         self.runButton.setDisabled(True)
     
     def togglePauseResume(self):
@@ -308,15 +346,15 @@ class MainWindow(QMainWindow):
             if self.worker.paused:
                 self.worker.paused = False
                 self.pauseButton.setText("Pause")
-                self.status.setText("Status: Running...")
+                self.status.setText("               Status: Running...")
             else:
                 self.worker.paused = True
                 self.pauseButton.setText("Resume")
-                self.status.setText("Status: Paused" )
+                self.status.setText("               Status: Paused" )
     
     def stopProcessing(self):
         self.worker.stopped = True
-        self.status.setText("Status: Stopping...")
+        self.status.setText("               Status: Stopping...")
         self.runButton.setDisabled(False)
         
 if __name__ == "__main__":
