@@ -29,7 +29,7 @@ class Worker(QThread):
 
     def run(self):
         global excelFilePath
-        excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans2.xlsx"
+        excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
         global workbook
         workbook = openpyxl.load_workbook(excelFilePath)
         global worksheet 
@@ -275,7 +275,7 @@ class MainWindow(QMainWindow):
         self.switchToLayout2()
         
     def cleanImages(self, goodID, redac, redac2):
-            baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\test{redac}"
+            baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
             cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
             initialCount = 1
             start = goodID - 600
@@ -367,7 +367,7 @@ class MainWindow(QMainWindow):
 
     def adjustImageName(self, goodID, badID, goodRow):
         global excelFilePath
-        baseCemPath = r"\\ucclerk\pgmdoc\Veterans\test"
+        baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
         goodIDFound = False
         badIDFound = False
         goodIDFilePath = ""
@@ -414,18 +414,21 @@ class MainWindow(QMainWindow):
         print(f"Record {goodID} data from row {goodRow} cleared successfully.")
 
     def cleanDelete(self, cemetery, badID, badRow):
-        baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\test - Redacted"
+        baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+        text = ""
         for dirpath, dirnames, filenames in os.walk(baseRedacPath):
             for filename in filenames:
                 if f"{badID:05d}" in filename:
                     file_path = os.path.join(dirpath, filename)
                     os.remove(file_path)
-                    self.updateLabelSignal.emit(f"\nRedacted file, {filename}, deleted successfully.")
+                    text = f"\nRedacted file, {filename}, deleted successfully."
                     print(f"\nRedacted file, {filename}, deleted successfully.")
+        self.updateLabelSignal.emit(text)
         worksheet = workbook[cemetery]
         worksheet.delete_rows(badRow)
         self.updateLabelSignal.emit(f"Row {badRow} deleted successfully.")
         print(f"Row {badRow} deleted successfully.")
+        text = ""
         for row in range(badRow, worksheet.max_row + 1):
             next_row = row + 1
             cell_ref = f'O{row}'
@@ -434,8 +437,9 @@ class MainWindow(QMainWindow):
                 temp_hyperlink = worksheet[next_cell_ref].hyperlink
                 worksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=temp_hyperlink.target, display=temp_hyperlink.display)
                 worksheet[cell_ref].value = worksheet[next_cell_ref].value
-                self.updateLabelSignal.emit(f"Hyperlink and value from row {next_row} moved to row {row}.")
+                text = text + f"Hyperlink and value from row {next_row} moved to row {row}.\n"
                 print(f"Hyperlink and value from row {next_row} moved to row {row}.")
+        self.updateLabelSignal.emit(text)
         if worksheet[f'O{worksheet.max_row - 1}'].hyperlink:
             last_row = worksheet.max_row
             self.updateLabelSignal.emit(f"Adjusting the hyperlink in the last row, row {last_row}.")
@@ -447,7 +451,7 @@ class MainWindow(QMainWindow):
             print(f"Updated hyperlink in row {last_row} to new target, {new_target}.\n")
 
     def cleanHyperlinks(self, cemetery, startIndex):
-        base_path = fr'\\ucclerk\pgmdoc\Veterans\test\{cemetery}'
+        base_path = fr'\\ucclerk\pgmdoc\Veterans\Cemetery\{cemetery}'
         file_directory_map = {}
         for dirpath, dirnames, filenames in os.walk(base_path):
             for filename in filenames:
