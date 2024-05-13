@@ -289,7 +289,7 @@ extracted text from the veteran cards to be put into the excel sheet.
     
 @author Mike
 '''
-def createRecord(fileName, id, cemetery):
+def createRecord(fileName, id, cemetery, suffix):
     world = ""
     war = ""
     buried = ""
@@ -297,7 +297,6 @@ def createRecord(fileName, id, cemetery):
     app = ""
     dob = ""
     kinLast = ""
-    suffix = ""
     badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
         "not shown", "no date shown", "Peace time", "none", "Peace Time"]
     nameCoords = None
@@ -347,176 +346,6 @@ def createRecord(fileName, id, cemetery):
                     CONSTANTS.force_mixed_case_capitalization = True
                     name = HumanName(value)
                     flag = True
-                    if name.last.isupper():
-                        name.last = name.last[0] + name.last[1:].lower()
-                    tempLast = name.last[0]
-                    for letter in name.last[1:]:
-                        if letter.isupper() and flag:
-                            tempLast += " "
-                            flag = False
-                        elif letter == " ":
-                            flag = False
-                        tempLast += letter
-                    name.last = tempLast
-                    name.capitalize(force=True)
-                    lastName =  name.last.replace("' ", "'")
-                    lastName = lastName[0].upper() + lastName[1:]
-                    kinLast = re.sub(r"[^a-zA-Z' ]", '', lastName)
-                    kinLast = kinLast.replace("Mom" , "").replace("Daughter" , "")\
-                        .replace("Dad" , "").replace("Sister" , "").replace("Brother" , "")\
-                        .replace("Mother" , "").replace("Father" , "").replace("Son" , "")\
-                        .replace("Wife" , "").replace("Husband" , "")
-                    print("KIN LAST: " + kinLast)
-                except Exception:
-                    pass
-        elif x == "BORN":
-            dob = value
-        elif x == "DATE OF DEATH":
-            try:
-                app = search_value(kvs, "Application")[0]
-            except Exception:
-                pass
-            try:
-                warFlag = dateRule.dateRule(finalVals, value, dob, buried, cent, war, app)
-            except Exception:
-                while len(finalVals) < 8:
-                    finalVals.append("")
-        elif x == "WAR RECORD" and flag3:
-            for x in badWar:
-                if x in value.lower():
-                    value = ""
-            pattern = re.compile(re.escape("recor"), re.IGNORECASE)
-            value = pattern.sub(lambda x: "", value)
-            pattern = re.compile(re.escape("record"), re.IGNORECASE)
-            value = pattern.sub(lambda x: "", value)
-            finalVals.append(value)
-            finalVals.append(war)
-            flag3 = False
-        elif x == "WAR RECORD":
-            war = warRule.warRule(value, world)
-            war = war.strip().strip('and').strip()
-            flag3 = True
-        elif x == "BRANCH OF SERVICE":
-            try:
-                branchRule.branchRule(finalVals, value, war)
-            except Exception:
-                finalVals.append("")
-                finalVals.append("")
-        elif x == "IN":
-            if fuzz.partial_ratio(value.lower(), cemetery.lower()) > 80:
-                finalVals.append(cemetery)
-            else:
-                value = value.replace("The ", "").replace("Cemetery", "").replace(".", "")
-                finalVals.append(value)
-        elif x == "19":
-            if value:
-                try:
-                    tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace(";", "").replace("/", "")\
-                        .replace(" ", "").replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
-                    while tempCent and not tempCent[-1].isnumeric():
-                        tempCent = tempCent[:-1]
-                    if tempCent.count("19") == 2:
-                        tempCent = tempCent.split("19")
-                        if all(item == "" for item in tempCent):
-                            cent = "1919"
-                        else:
-                            for x in tempCent:
-                                if x != "":
-                                    cent = "19" + x
-                    else:
-                        if tempCent[2:] == "19":
-                            cent = tempCent[2:] + tempCent[:2]
-                        else:
-                            cent = tempCent
-                except IndexError:
-                    pass
-            else:
-                pass
-        elif x == "BURIED":
-            buried = value
-    return finalVals, warFlag, nameCoords, serialCoords, printedKVS, kinLast
-
-
-'''
-Creates a temporary record for processing 'A' and 'B' cards. It's similar to 
-'createRecord' but tailored for handling these specific card types. It extracts 
-and processes information from a document file and calls other functions for 
-specific fields.
-
-@param fileName (str) - The path to the document file
-@param val (str) - A value indicating the type of card ('A' or 'B')
-@param int (int) - The ID to be assigned to the record
-@param cemetery (str) - The name of the cemetery to associate with the record
-
-@return finalVals (list) - A list of processed values for different data fields 
-                           of the record
-@return flag (bool) - A flag indicating if a specific condition (e.g., special 
-                      handling or a specific record type) was encountered during processing
-@return warFlag (bool) - A flag indicating if war-related data was processed
-@return kvs (defaultdict(list)) - Dictionary containing key-value pairs
-
-@author Mike
-'''
-def tempRecord(fileName, id, cemetery, suffix):
-    world = ""
-    war = ""
-    buried = ""
-    cent = ""
-    app = ""
-    dob = ""
-    kinLast = ""
-    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
-        "not shown", "no date shown", "Peace time", "none", "Peace Time"]
-    nameCoords = None
-    serialCoords = None
-    warFlag = False
-    finalVals = []
-    attempts = 10
-    # pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
-    # page = pageReader.pages[0]
-    # pdfWriter = PyPDF2.PdfWriter()
-    # pdfWriter.add_page(page)
-    # with open("temp2.pdf", 'wb') as output_pdf:
-    #     pdfWriter.write(output_pdf)
-    while attempts > 0:
-        try:
-            doc = fitz.open(fileName)
-            page = doc.load_page(0)
-            pix = page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
-            pix.save('temp.png')
-            break
-        except Exception as e:
-            print(f"Failed to process document: {e}")
-            attempts -= 1
-            time.sleep(3)  
-            if attempts == 0:
-                print("Maximum retry attempts reached. Exiting.")
-                return None 
-    documentResult  = analyzeDocument("temp.png", id, suffix)
-    kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
-    printedKVS = print_kvs(kvs)  
-    keys = ["", "NAME", "KIN", "WAR RECORD", "BORN", "19", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
-    flag3 = False
-    for x in keys:
-        try:
-            value = search_value(kvs, x)[0]
-        except TypeError:
-            value = "" 
-        if x == "NAME":
-            try:
-                nameRule.nameRule(finalVals, value)
-            except Exception:
-                finalVals.append("")
-                finalVals.append("")
-                finalVals.append("")
-                finalVals.append("")
-        elif x == "KIN":
-            value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
-                .replace("\n", " ").replace(".", " ")
-            if value:
-                try:
-                    CONSTANTS.force_mixed_case_capitalization = True
-                    name = HumanName(value)
                     if name.last.isupper():
                         name.last = name.last[0] + name.last[1:].lower()
                     tempLast = name.last[0]
@@ -810,9 +639,7 @@ that are caught by the program.
 @author Mike
 '''
 def main(singleFlag, singleCem, singleLetter):
-    global cemSet
-    global miscSet
-    global jewishSet
+    global cemSet, miscSet, jewishSet
     networkFolder = r"\\ucclerk\pgmdoc\Veterans"
     os.chdir(networkFolder)
     cemeterys = []
@@ -824,9 +651,7 @@ def main(singleFlag, singleCem, singleLetter):
     jewishs = []
     for x in os.listdir(r"Cemetery\Jewish"):
         jewishs.append(x)
-    cemSet = set(cemeterys)
-    miscSet = set(miscs)
-    jewishSet = set(jewishs)
+    cemSet, miscSet, jewishSet = set(cemeterys), set(miscs), set(jewishs)
     workbook = openpyxl.load_workbook('Veterans.xlsx')
     cemetery = singleCem 
     cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
@@ -838,7 +663,6 @@ def main(singleFlag, singleCem, singleLetter):
     worksheet = workbook[cemetery]
     warFlag = False
     pdfFiles = sorted(os.listdir(namePath))
-    initialID = 8240
     breakFlag = False
     for y in range(len(pdfFiles)):
         try:
@@ -847,15 +671,13 @@ def main(singleFlag, singleCem, singleLetter):
             rowIndex = find_next_empty_row(worksheet)
             try:
                 id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
-            except TypeError:
-                id = initialID
-            string = pdfFiles[y][:-4]
-            string = string.split(letter) 
-            string = string[-1].lstrip('0')
+            except Exception:
+                id = int(pdfFiles[0][:-4].split(letter)[-1].lstrip('0'))
+            string = pdfFiles[y][:-4].split(letter)[-1].lstrip('0')
             if "a" not in string and "b" not in string:
                 if id != int(string.replace("a", "").replace("b", "")):
                     continue
-                vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery)
+                vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery, "")
                 redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
                 worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
                 worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
@@ -876,12 +698,12 @@ def main(singleFlag, singleCem, singleLetter):
                     if (filePath.replace("a.pdf", "") in pdfFiles):
                         continue
                     pathA = filePath
-                    vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = tempRecord(filePath, id, cemetery, "A")
+                    vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery, "A")
                     redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
                 if "b" in string:
                     if (filePath.replace("b.pdf", "") in pdfFiles):
                         continue
-                    vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = tempRecord(filePath, id, cemetery, "B")
+                    vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery, "B")
                     if not warFlag or not warFlagB:
                         warFlag = False
                     else:
@@ -931,7 +753,7 @@ def main(singleFlag, singleCem, singleLetter):
 
 if __name__ == "__main__":
     global cemetery
-    cemetery = "Graceland" # Change this to continue running through cemeteries
+    cemetery = "Hazelwood" # Change this to continue running through cemeteries
     global letter
-    letter = "L" # Change this to continue running through the current cemetery
+    letter = "A" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

@@ -15,14 +15,13 @@ class Worker(QThread):
     kvs_signal = pyqtSignal(str) # Signal to emit KVS
     error_signal = pyqtSignal(str) # Signal to emit Error Message
     image_signal = pyqtSignal(str) # Signal to emit Image Path
-    popup_signal = pyqtSignal(str) # Signal to emit Popup
+    popup_signal = pyqtSignal(str) # Signal to emit Pop up
     
-    def __init__(self, singleFlag, singleCem, singleLetter, initialID):
+    def __init__(self, singleFlag, singleCem, singleLetter):
         super().__init__()
         self.singleFlag = singleFlag
         self.singleCem = singleCem
-        self.singleLetter = singleLetter
-        self.initialID = initialID
+        self.singleLetter = singleLetter.upper()
         self.paused = False
         self.stopped = False
 
@@ -52,11 +51,18 @@ class Worker(QThread):
         namePath = os.path.join(cemPath, namePath)
         pathA = ""
         rowIndex = 2
-        initialID = self.initialID
         global worksheet
-        worksheet = workbook[cemetery]
+        try:
+            worksheet = workbook[cemetery]
+        except Exception:
+            self.popup_signal.emit("Cemetery not found in Veterans.xslx.")
+            return
         warFlag = False
-        pdfFiles = sorted(os.listdir(namePath))
+        try:
+            pdfFiles = sorted(os.listdir(namePath))
+        except Exception:
+            self.popup_signal.emit(f"Letter not found in {cemetery} folder.")
+            return
         breakFlag = False
         for y in range(len(pdfFiles)):
             try:
@@ -65,8 +71,8 @@ class Worker(QThread):
                 rowIndex = microsoftOCR.find_next_empty_row(worksheet)
                 try:
                     id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
-                except TypeError:
-                    id = initialID
+                except Exception:
+                    id = int(pdfFiles[0][:-4].split(letter)[-1].lstrip('0'))
                 while self.paused:
                     self.sleep(1)
                 string = pdfFiles[y][:-4]
@@ -83,7 +89,7 @@ class Worker(QThread):
                     self.kvs_signal.emit("")
                     self.error_signal.emit("")
                     self.image_signal.emit("")
-                    vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery)
+                    vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "")
                     self.kvs_signal.emit(printedKVS)
                     redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
                     self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
@@ -114,7 +120,7 @@ class Worker(QThread):
                         self.kvs_signal.emit("")
                         self.error_signal.emit("")
                         self.image_signal.emit("")
-                        vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.tempRecord(filePath, id, cemetery, "A")
+                        vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "A")
                         self.kvs_signal.emit(printedKVS)
                         redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
                         self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
@@ -125,7 +131,7 @@ class Worker(QThread):
                         self.kvs_signal.emit("")
                         self.error_signal.emit("")
                         self.image_signal.emit("")
-                        vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.tempRecord(filePath, id, cemetery, "B")
+                        vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "B")
                         self.kvs_signal.emit(printedKVS)
                         if not warFlag or not warFlagB:
                             warFlag = False
@@ -181,7 +187,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Veteran Extraction")
-        self.setGeometry(600, 40, 950, 150)
+        self.setGeometry(500, 40, 950, 150)
         self.worker = None  
         self.mainLayout()
 
@@ -216,19 +222,17 @@ class MainWindow(QMainWindow):
         self.cemeteryBox.setFixedWidth(140)
         self.letterBox = QLineEdit()
         self.letterBox.setFixedWidth(30)
-        self.initialIDBox = QLineEdit()
-        self.initialIDBox.setFixedWidth(45)
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Cemetery :   ", self.cemeteryBox)
         middleTopLeftLayout.addRow(None, QLabel("Note: This is the cemetery name based on its folder."))
         middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Letter :", self.letterBox)
         middleTopLeftLayout.addRow(None, QLabel("Note: This is the last name letter to start processing."))
-        middleTopLeftLayout.addRow(" ", None)
-        middleTopLeftLayout.addRow("Initial ID :", self.initialIDBox)
-        middleTopLeftLayout.addRow(None, QLabel("Note: This is the first ID for the cemetery."))
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftGroupBox.setLayout(middleTopLeftLayout)
@@ -280,8 +284,13 @@ class MainWindow(QMainWindow):
         self.pauseButton = QPushButton("Pause Code")
         self.pauseButton.clicked.connect(self.togglePauseResume)
         self.pauseButton.setFixedWidth(150)
-        self.status = QLabel("               Status: Idle")
+        self.stopButton = QPushButton("Stop Code")
+        self.stopButton.setFixedWidth(225)
+        self.stopButton.clicked.connect(self.stopProcessing)
+        self.status = QLabel("              Status :  Idle")
         self.status.setFixedWidth(150)
+        self.pauseButton.setDisabled(True)
+        self.stopButton.setDisabled(True)
         bottomLayout.addWidget(self.runButton)
         bottomLayout.addWidget(self.status)
         bottomLayout.addWidget(self.pauseButton)
@@ -293,9 +302,6 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(middleTopContainer)
         mainLayout.addWidget(middleBottomContainer)
         mainLayout.addWidget(bottomContainer)
-        self.stopButton = QPushButton("Stop Code")
-        self.stopButton.setFixedWidth(225)
-        self.stopButton.clicked.connect(self.stopProcessing)
         mainLayout.addWidget(self.stopButton, 0, alignment=Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
         
@@ -303,7 +309,7 @@ class MainWindow(QMainWindow):
         popup = QDialog()
         popup.setWindowTitle(" ")
         parent_path = os.path.dirname(os.getcwd())
-        popup.setWindowIcon(QIcon(f"{parent_path}/veteranData/vetIcon.png"))
+        popup.setWindowIcon(QIcon(f"{parent_path}/veteranData/veteranLogo.png"))
         popup.setGeometry(850, 500, 250, 150)
         layout = QVBoxLayout()
         message_label = QLabel(text)
@@ -315,7 +321,7 @@ class MainWindow(QMainWindow):
         popup.setLayout(layout)
         popup.exec()
         self.runButton.setDisabled(False)
-        self.status.setText("               Status: Idle")
+        self.status.setText("              Status :  Idle")
     
     def updateImage(self, filePath):
         pixmap = QPixmap(filePath)
@@ -331,30 +337,39 @@ class MainWindow(QMainWindow):
         self.errorLabel.setText(f"{errorMsg}")  
           
     def startProcessing(self):
-        self.worker = Worker(False, self.cemeteryBox.text(), self.letterBox.text(), self.initialIDBox.text())
+        if self.cemeteryBox.text() == "":
+            self.popupWindow("Cemetery field not filled out.")
+            return
+        if self.letterBox.text() == "":
+            self.popupWindow("Letter field not filled out.")
+            return
+        self.worker = Worker(False, self.cemeteryBox.text(), self.letterBox.text())
         self.worker.id_signal.connect(lambda id: self.updateID(id))
         self.worker.kvs_signal.connect(lambda printedKVS: self.updateKVS(printedKVS))
         self.worker.error_signal.connect(lambda errorMsg: self.updateError(errorMsg))
         self.worker.image_signal.connect(lambda imagePath: self.updateImage(imagePath))
         self.worker.popup_signal.connect(lambda text: self.popupWindow(text))
         self.worker.start()
-        self.status.setText("               Status: Running...")
+        self.status.setText("          Status :  Running...")
         self.runButton.setDisabled(True)
+        self.pauseButton.setDisabled(False)
+        self.stopButton.setDisabled(False)
     
     def togglePauseResume(self):
-        if self.worker:
-            if self.worker.paused:
-                self.worker.paused = False
-                self.pauseButton.setText("Pause")
-                self.status.setText("               Status: Running...")
-            else:
-                self.worker.paused = True
-                self.pauseButton.setText("Resume")
-                self.status.setText("               Status: Paused" )
+        if self.worker.paused:
+            self.stopButton.setDisabled(False)
+            self.worker.paused = False
+            self.pauseButton.setText("Pause")
+            self.status.setText("          Status :  Running...")
+        else:
+            self.stopButton.setDisabled(True)
+            self.worker.paused = True
+            self.pauseButton.setText("Resume")
+            self.status.setText("           Status :  Paused" )
     
     def stopProcessing(self):
         self.worker.stopped = True
-        self.status.setText("               Status: Stopping...")
+        self.status.setText("          Status :  Stopping...")
         self.runButton.setDisabled(False)
         
 if __name__ == "__main__":
@@ -364,4 +379,5 @@ if __name__ == "__main__":
     parent_path = os.path.dirname(os.getcwd())
     window.setWindowIcon(QIcon(f"{parent_path}/veteranData/veteranLogo.png"))
     window.show()
+    window.popupWindow("If code is running, please press \"Stop Code\"\nbefore closing the application.")
     sys.exit(app.exec())

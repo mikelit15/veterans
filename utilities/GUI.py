@@ -168,6 +168,7 @@ class MainWindow(QMainWindow):
         self.cleanButton = QPushButton("Clean Duplicates")
         self.cleanButton.clicked.connect(self.startProcessing)
         self.cleanButton.setFixedWidth(150)
+        self.pauseButton.setDisabled(True)
         self.cleanButton.setDisabled(True)
         bottomLayout.addWidget(self.checkButton)
         bottomLayout.addWidget(self.pauseButton)
@@ -179,7 +180,7 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(topContainer)
         mainLayout.addWidget(middleTopContainer)
         mainLayout.addWidget(bottomContainer)
-        self.status = QLabel("              Status: Idle\n")
+        self.status = QLabel("              Status :  Idle\n")
         self.status.setFixedWidth(150)
         mainLayout.addWidget(self.status, 0, alignment=Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
@@ -188,7 +189,7 @@ class MainWindow(QMainWindow):
         popup = QDialog()
         popup.setWindowTitle(" ")
         parent_path = os.path.dirname(os.getcwd())
-        popup.setWindowIcon(QIcon(f"{parent_path}/veteranData/vetIcon.png"))
+        popup.setWindowIcon(QIcon(f"{parent_path}/veteranData/veteranLogo.png"))
         popup.setGeometry(850, 500, 200, 100)
         layout = QVBoxLayout()
         message_label = QLabel(text)
@@ -200,18 +201,18 @@ class MainWindow(QMainWindow):
         popup.setLayout(layout)
         popup.exec()
         self.checkButton.setDisabled(False)
-        self.status.setText("              Status: Idle\n")
+        self.status.setText("              Status :  Idle\n")
     
     def togglePauseResume(self):
         if self.worker:
             if self.worker.paused:
                 self.worker.paused = False
                 self.pauseButton.setText("Pause")
-                self.status.setText("              Status: Running...\n")
+                self.status.setText("              Status : Running...\n")
             else:
                 self.worker.paused = True
                 self.pauseButton.setText("Resume")
-                self.status.setText("              Status: Paused\n" )
+                self.status.setText("              Status : Paused\n" )
     
     def clearLayout(self, layout):
         while layout.count():
@@ -262,15 +263,23 @@ class MainWindow(QMainWindow):
 
           
     def startProcessing(self):
-        self.goodIDBox = [int(numeric_string) for numeric_string in self.goodIDBox.toPlainText().split(", ")]
-        self.badIDBox = [int(numeric_string) for numeric_string in self.badIDBox.toPlainText().split(", ")]
+        try:
+            self.goodIDBox = [int(numeric_string) for numeric_string in self.goodIDBox.toPlainText().split(", ")]
+        except Exception:
+            self.popupWindow("Good ID field is empty.")
+            return
+        try:
+            self.badIDBox = [int(numeric_string) for numeric_string in self.badIDBox.toPlainText().split(", ")]
+        except Exception:
+            self.popupWindow("Bad ID field is empty.")
+            return
         self.worker = Worker(self.cemeteryBox.text(), self.goodIDBox, self.badIDBox)
         self.worker.adjustImageName_signal.connect(lambda goodID, badID, goodRow: self.adjustImageName(goodID, badID, goodRow))
         self.worker.cleanDelete_signal.connect(lambda cemetery, badID, badRow: self.cleanDelete(cemetery, badID, badRow))
         self.worker.cleanImages_signal.connect(lambda goodID, redac, redac2: self.cleanImages(goodID, redac, redac2))
         self.worker.cleanHyperlinks_signal.connect(lambda cemetery, startIndex: self.cleanHyperlinks(cemetery, startIndex))
         self.worker.start()
-        self.status.setText("              Status: Running...\n")
+        self.status.setText("              Status:  Running...\n")
         self.cleanButton.setDisabled(True)
         self.switchToLayout2()
         
