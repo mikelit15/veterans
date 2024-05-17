@@ -31,7 +31,14 @@ dark = qdarktheme.load_stylesheet(
                     "background>popup": "#303136",
                 }
             },
-        )
+        ) + """
+            QMessageBox {
+                background-color: #303135;
+            }
+            QMessageBox QLabel {
+                color: #E4E7EB;
+            }
+        """
 
 '''
 Light Mode Styling
@@ -50,7 +57,14 @@ light = qdarktheme.load_stylesheet(
                     "background>popup": "#cfcfd1",
                 }
             },
-        )
+        ) + """
+            QMessageBox {
+                background-color: #d4d4d4;
+            }
+            QMessageBox QLabel {
+                color: #111111;
+            }
+        """
 
 class Worker(QThread):
     adjustImageName_signal = pyqtSignal(int, int, int)  # Signal to emit IDs
@@ -152,17 +166,17 @@ class MainWindow(QMainWindow):
     Updates the display mode anytime the selection is changed within the app through
     the display mode selection box. Saves the mode selection to a local .txt file.
 
-    @param app - the main window that is getting the styling adjustment
+    @param window - the main window that is getting the styling adjustment
     @param bottomButton - the QPushButton widget that is getting adjusted 
     @param displayMode - the name of the display mode selected
 
     @author Mike
     '''
-    def changeDisplayStyle(self, app, checkButton, pauseButton, cleanButton, goodText, badText, details1, details2, displayMode):
+    def changeDisplayStyle(self, window, checkButton, pauseButton, cleanButton, goodText, badText, details1, details2, displayMode):
         if displayMode == "Dark":
-            app.setStyleSheet(dark)
+            window.setStyleSheet(dark)
         else:
-            app.setStyleSheet(light)
+            window.setStyleSheet(light)
         self.saveDisplayMode(displayMode)
         self.updateBottomButtonStyle(checkButton, pauseButton, cleanButton, displayMode)
         self.updateTextStyle(goodText, badText, details1, details2, displayMode)

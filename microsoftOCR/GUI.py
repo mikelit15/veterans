@@ -27,7 +27,14 @@ dark = qdarktheme.load_stylesheet(
                     "background>popup": "#303136",
                 }
             },
-        )
+        ) + """
+            QMessageBox {
+                background-color: #303135;
+            }
+            QMessageBox QLabel {
+                color: #E4E7EB;
+            }
+        """
 
 '''
 Light Mode Styling
@@ -46,7 +53,14 @@ light = qdarktheme.load_stylesheet(
                     "background>popup": "#cfcfd1",
                 }
             },
-        )
+        ) + """
+            QMessageBox {
+                background-color: #d4d4d4;
+            }
+            QMessageBox QLabel {
+                color: #111111;
+            }
+        """
 
 class Worker(QThread):
     id_signal = pyqtSignal(str)  # Signal to emit IDs
@@ -266,17 +280,17 @@ class MainWindow(QMainWindow):
     Updates the display mode anytime the selection is changed within the app through
     the display mode selection box. Saves the mode selection to a local .txt file.
 
-    @param app - the main window that is getting the styling adjustment
+    @param window - the main window that is getting the styling adjustment
     @param bottomButton - the QPushButton widget that is getting adjusted 
     @param displayMode - the name of the display mode selected
 
     @author Mike
     '''
-    def changeDisplayStyle(self, app, runButton, pauseButton, stopButton, displayMode):
+    def changeDisplayStyle(self, window, runButton, pauseButton, stopButton, displayMode):
         if displayMode == "Dark":
-            app.setStyleSheet(dark)
+            window.setStyleSheet(dark)
         else:
-            app.setStyleSheet(light)
+            window.setStyleSheet(light)
         self.saveDisplayMode(displayMode)
         self.updateBottomButtonStyle(runButton, pauseButton, stopButton, displayMode)
     
@@ -293,7 +307,7 @@ class MainWindow(QMainWindow):
                     background-color: #0078D4; 
                 }
                 QPushButton:disabled {
-                    background-color: #F0F0F0; 
+                    background-color: #DBDBDB; 
                     color: #686868; 
                     border: 1px solid #686868;
                 }
@@ -308,7 +322,7 @@ class MainWindow(QMainWindow):
                     background-color: #0078D4; 
                 }
                 QPushButton:disabled {
-                    background-color: #F0F0F0; 
+                    background-color: #DBDBDB; 
                     color: #686868; 
                     border: 1px solid #686868;
                 }
@@ -323,7 +337,7 @@ class MainWindow(QMainWindow):
                     background-color: #0078D4; 
                 }
                 QPushButton:disabled {
-                    background-color: #F0F0F0; 
+                    background-color: #DBDBDB; 
                     color: #686868; 
                     border: 1px solid #686868;
                 }
