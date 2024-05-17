@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, \
      QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, QDialog, \
-     QTextEdit, QScrollArea
+     QTextEdit, QScrollArea, QComboBox, QMessageBox
 from PyQt6.QtGui import QPixmap, QFont, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import os
@@ -13,6 +13,44 @@ import pandas as pd
 import duplicates
 sys.path.append(r'C:\workspace\veterans')
 from microsoftOCR import microsoftOCR
+import qdarktheme
+
+'''
+Dark Mode Styling
+'''
+dark = qdarktheme.load_stylesheet(
+            theme="dark",
+            custom_colors=
+            {
+                "[dark]": 
+                {
+                    "primary": "#0078D4",
+                    "border": "#8A8A8A",
+                    "primary>button.hoverBackground": "#2B456E",
+                    "background>list": "#3F4042",
+                    "background>popup": "#303136",
+                }
+            },
+        )
+
+'''
+Light Mode Styling
+'''
+light = qdarktheme.load_stylesheet(
+            theme="light",
+            custom_colors=
+            {
+                "[light]": 
+                {
+                    "foreground": "#111111",
+                    "border": "#111111",
+                    "background": "#f0f0f0",
+                    "primary>button.hoverBackground": "#adcaf7",
+                    "background>list": "#FFFFFF",
+                    "background>popup": "#cfcfd1",
+                }
+            },
+        )
 
 class Worker(QThread):
     adjustImageName_signal = pyqtSignal(int, int, int)  # Signal to emit IDs
@@ -65,6 +103,7 @@ class Worker(QThread):
         print("\n")
         duplicates.main(self.cemetery)
                 
+                
 class MainWindow(QMainWindow):
     updateLabelSignal = pyqtSignal(str)
     def __init__(self):
@@ -72,14 +111,258 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Veteran Duplicate Cleaner")
         self.setGeometry(400, 150, 1050, 150)
         self.worker = None  
+        if self.loadDisplayMode() == "Light":
+            app.setStyleSheet(light)
+        else:
+            app.setStyleSheet(dark)
         self.mainLayout()
         self.updateLabelSignal.connect(self.updateScroll) 
 
+
+    '''
+    Saves display mode to display_mode.txt
+
+    @param mode - the name of the display mode that is being used, and therefore saved
+
+    @author Mike
+    '''
+    def saveDisplayMode(self, mode):
+        parent_path = os.path.dirname(os.getcwd())
+        with open(f"{parent_path}/veteranData/display_mode.txt", "w") as file:
+            file.write(mode)
+
+
+    '''
+    Loads display mode name from display_mode.txt
+
+    @return string - the name of the display mode that was saved
+
+    @author Mike
+    '''
+    def loadDisplayMode(self):
+        parent_path = os.path.dirname(os.getcwd())
+        try:
+            with open(f"{parent_path}/veteranData/display_mode.txt", "r") as file:
+                return file.read().strip()
+        except FileNotFoundError:
+            return "Light"
+        
+        
+    '''
+    Updates the display mode anytime the selection is changed within the app through
+    the display mode selection box. Saves the mode selection to a local .txt file.
+
+    @param app - the main window that is getting the styling adjustment
+    @param bottomButton - the QPushButton widget that is getting adjusted 
+    @param displayMode - the name of the display mode selected
+
+    @author Mike
+    '''
+    def changeDisplayStyle(self, app, checkButton, pauseButton, cleanButton, goodText, badText, details1, details2, displayMode):
+        if displayMode == "Dark":
+            app.setStyleSheet(dark)
+        else:
+            app.setStyleSheet(light)
+        self.saveDisplayMode(displayMode)
+        self.updateBottomButtonStyle(checkButton, pauseButton, cleanButton, displayMode)
+        self.updateTextStyle(goodText, badText, details1, details2, displayMode)
+    
+    
+    def updateBottomButtonStyle(self, checkButton, pauseButton, cleanButton, displayMode):
+        if displayMode == "Light":
+            checkButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #669df2;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QPushButton:hover {
+                    background-color: #0078D4; 
+                }
+                QPushButton:disabled {
+                    background-color: #DBDBDB; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+            pauseButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #669df2;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QPushButton:hover {
+                    background-color: #0078D4; 
+                }
+                QPushButton:disabled {
+                    background-color: #DBDBDB; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+            cleanButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #669df2;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QPushButton:hover {
+                    background-color: #0078D4; 
+                }
+                QPushButton:disabled {
+                    background-color: #DBDBDB; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+        else:
+            checkButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078D4; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QPushButton:hover {
+                    background-color: #669DF2; 
+                }
+                QPushButton:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B;
+                    color: #3B3B3B;   
+                }
+                """)
+            pauseButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078D4; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QPushButton:hover {
+                    background-color: #669DF2; 
+                }
+                QPushButton:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B;
+                    color: #3B3B3B;   
+                }
+                """)
+            cleanButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078D4; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QPushButton:hover {
+                    background-color: #669DF2; 
+                }
+                QPushButton:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B;
+                    color: #3B3B3B;   
+                }
+                """)
+    
+    
+    def updateTextStyle(self, goodText, badText, details1, details2, displayMode):
+        if displayMode == "Light":
+            goodText.setStyleSheet("""
+                QTextEdit {
+                    background-color: #FFFFFF; 
+                    color: #111111; 
+                    border: 1px solid #111111;
+                }
+                QTextEdit:disabled {
+                    background-color: #DBDBDB; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+            badText.setStyleSheet("""
+                QTextEdit {
+                    background-color: #FFFFFF; 
+                    color: #111111; 
+                    border: 1px solid #111111;
+                }
+                QTextEdit:disabled {
+                    background-color: #DBDBDB; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+            details1.setStyleSheet("""
+                QScrollArea {
+                    background-color: #FFFFFF;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QScrollArea:disabled {
+                    background-color: #DBDBDB;  
+                    color: #686868;            
+                    border: 1px solid #363636; 
+                }
+                """)
+            details2.setStyleSheet("""
+                QScrollArea {
+                    background-color: #FFFFFF;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QScrollArea:disabled {
+                    background-color: #DBDBDB;  
+                    color: #686868;            
+                    border: 1px solid #363636; 
+                }
+                """)
+        else:
+            goodText.setStyleSheet("""
+                QTextEdit {
+                    background-color: #3F4042; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QTextEdit:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B; 
+                }
+                """)
+            badText.setStyleSheet("""
+                QTextEdit {
+                    background-color: #3F4042; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QTextEdit:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B; 
+                }
+                """)
+            details1.setStyleSheet("""
+                QScrollArea {
+                    background-color: #3F4042;  
+                    color: #FFFFFF;            
+                    border: 1px solid #8A8A8A; 
+                }
+                QScrollArea:disabled {
+                    background-color: #1A1A1C;  
+                    border: 1px solid #3B3B3B; 
+                }
+                """)
+            details2.setStyleSheet("""
+                QScrollArea {
+                    background-color: #3F4042;  
+                    color: #FFFFFF;            
+                    border: 1px solid #8A8A8A; 
+                }
+                QScrollArea:disabled {
+                    background-color: #1A1A1C;  
+                    border: 1px solid #3B3B3B; 
+                }
+                """)
+    
     def mainLayout(self):
         centralWidget = QWidget(self)
         centralWidget.setObjectName("mainCentralWidget")
         self.setCentralWidget(centralWidget)
-        self.setStyleSheet("#mainCentralWidget { background-color: white; }")
         layout1 = QVBoxLayout(centralWidget)
         
         # Create the top container
@@ -100,7 +383,7 @@ class MainWindow(QMainWindow):
 
         # Create a group box for the middle top left
         middleTopLeftGroupBox = QGroupBox("Parameters")
-        middleTopLeftGroupBox.setFixedSize(375, 375)
+        middleTopLeftGroupBox.setFixedSize(375, 425)
         middleTopLeftLayout = QFormLayout()
         self.cemeteryBox = QLineEdit()
         self.cemeteryBox.setFixedWidth(140)
@@ -112,22 +395,35 @@ class MainWindow(QMainWindow):
         self.badIDBox.setFixedWidth(250)
         self.badIDBox.setFixedHeight(75)
         self.badIDBox.setLineWrapColumnOrWidth(15)
+        font = QFont("Monterchi Sans Book", 8)
+        noteLabel1 = QLabel("Note: This is the cemetery name based on its folder.")
+        noteLabel2 = QLabel("Note: This is a list of all the original IDs.")
+        noteLabel3 = QLabel("Note: This is a list of all the duplicate IDs.")
+        noteLabel1.setFont(font)
+        noteLabel2.setFont(font)
+        noteLabel3.setFont(font)
+        self.displayModeBox = QComboBox()
+        self.displayModeBox.setFixedWidth(75)
+        modes = ["Light", "Dark"]
+        self.displayModeBox.addItems(modes)
+        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow("Display Mode: ", self.displayModeBox)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Cemetery :   ", self.cemeteryBox)
-        middleTopLeftLayout.addRow(None, QLabel("Note: This is the cemetery name based on its folder."))
+        middleTopLeftLayout.addRow(None, noteLabel1)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Good IDs :", self.goodIDBox)
-        middleTopLeftLayout.addRow(None, QLabel("Note: This is a list of all the original IDs."))
+        middleTopLeftLayout.addRow(None, noteLabel2)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Bad IDs :", self.badIDBox)
-        middleTopLeftLayout.addRow(None, QLabel("Note: This is a list of all the duplicate IDs."))
+        middleTopLeftLayout.addRow(None, noteLabel3)
         middleTopLeftGroupBox.setLayout(middleTopLeftLayout)
         self.goodIDBox.setDisabled(True)
         self.badIDBox.setDisabled(True)
         
         # Create a group box for the middle top right
         self.middleTopRightGroupBox = QGroupBox("Results")
-        self.middleTopRightGroupBox.setFixedSize(775, 375)
+        self.middleTopRightGroupBox.setFixedSize(775, 425)
         self.middleTopRightLayout1 = QFormLayout()
         self.middleTopRightLayout2 = QFormLayout()
         
@@ -170,9 +466,18 @@ class MainWindow(QMainWindow):
         self.cleanButton.setFixedWidth(150)
         self.pauseButton.setDisabled(True)
         self.cleanButton.setDisabled(True)
+        self.scroll_area1.setDisabled(True)
         bottomLayout.addWidget(self.checkButton)
         bottomLayout.addWidget(self.pauseButton)
         bottomLayout.addWidget(self.cleanButton)
+        self.displayModeBox.currentTextChanged.connect(\
+                    lambda: self.changeDisplayStyle(self, self.checkButton, \
+                        self.pauseButton, self.cleanButton, self.goodIDBox, \
+                        self.badIDBox, self.scroll_area1, self.scroll_area2, \
+                        self.displayModeBox.currentText()))
+        self.displayModeBox.setCurrentIndex(modes.index(self.loadDisplayMode()))
+        self.updateBottomButtonStyle(self.checkButton, self.pauseButton, self.cleanButton, self.loadDisplayMode())
+        self.updateTextStyle(self.goodIDBox, self.badIDBox, self.scroll_area1, self.scroll_area2, self.loadDisplayMode())
         bottomContainer.setLayout(bottomLayout)
         
         # Create a main layout to arrange the containers
@@ -180,39 +485,30 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(topContainer)
         mainLayout.addWidget(middleTopContainer)
         mainLayout.addWidget(bottomContainer)
-        self.status = QLabel("              Status :  Idle\n")
+        self.status = QLabel("             Status :  Idle\n")
         self.status.setFixedWidth(150)
         mainLayout.addWidget(self.status, 0, alignment=Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
         
-    def popupWindow(self, text):
-        popup = QDialog()
-        popup.setWindowTitle(" ")
-        parent_path = os.path.dirname(os.getcwd())
-        popup.setWindowIcon(QIcon(f"{parent_path}/veteranData/veteranLogo.png"))
-        popup.setGeometry(850, 500, 200, 100)
-        layout = QVBoxLayout()
-        message_label = QLabel(text)
-        message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(message_label)
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(popup.close)
-        layout.addWidget(close_button)
-        popup.setLayout(layout)
-        popup.exec()
-        self.checkButton.setDisabled(False)
-        self.status.setText("              Status :  Idle\n")
+    def updateStatus(self, type, text):
+        if type == "Critical":
+            QMessageBox.critical(window, 'Error', text)
+        elif type == "Info":
+            QMessageBox.information(window, 'Information', text)
+        elif type == "Warning":
+            QMessageBox.warning(window, 'Missing Info', text)
+        self.status.setText("             Status :  Idle\n")
     
     def togglePauseResume(self):
         if self.worker:
             if self.worker.paused:
                 self.worker.paused = False
                 self.pauseButton.setText("Pause")
-                self.status.setText("              Status : Running...\n")
+                self.status.setText("             Status : Running...\n")
             else:
                 self.worker.paused = True
                 self.pauseButton.setText("Resume")
-                self.status.setText("              Status : Paused\n" )
+                self.status.setText("             Status : Paused\n" )
     
     def clearLayout(self, layout):
         while layout.count():
@@ -248,12 +544,12 @@ class MainWindow(QMainWindow):
         try:
             df = duplicates.main(self.cemeteryBox.text())
         except Exception:
-            self.popupWindow("Cemetery field not filled \n out or mispelled.")
+            self.updateStatus("Warning", "Cemetery field not filled out or mispelled.")
             return
         # Apply fixed width formatting to each column
         for column, width in column_widths.items():
             df[column] = df[column].apply(lambda x: f"{x: <{width}}" if pd.notna(x) else " " * width)
-
+        self.scroll_area1.setDisabled(False)
         string = df.to_string(index=False, header=True, formatters={key: f'{{:>{width}}}'.format for key, width in column_widths.items()})
         self.duplicatesLabel.setText(string)
         self.scroll_area1.verticalScrollBar().setValue(self.scroll_area1.verticalScrollBar().maximum())
@@ -266,12 +562,12 @@ class MainWindow(QMainWindow):
         try:
             self.goodIDBox = [int(numeric_string) for numeric_string in self.goodIDBox.toPlainText().split(", ")]
         except Exception:
-            self.popupWindow("Good ID field is empty.")
+            self.updateStatus("Warning", "Good ID field is empty.")
             return
         try:
             self.badIDBox = [int(numeric_string) for numeric_string in self.badIDBox.toPlainText().split(", ")]
         except Exception:
-            self.popupWindow("Bad ID field is empty.")
+            self.updateStatus("Warning", "Bad ID field is empty.")
             return
         self.worker = Worker(self.cemeteryBox.text(), self.goodIDBox, self.badIDBox)
         self.worker.adjustImageName_signal.connect(lambda goodID, badID, goodRow: self.adjustImageName(goodID, badID, goodRow))

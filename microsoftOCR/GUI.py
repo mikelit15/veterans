@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, \
-     QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, QDialog
+     QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, \
+     QComboBox, QMessageBox
 from PyQt6.QtGui import QPixmap, QFont, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import os
@@ -8,14 +9,51 @@ from openpyxl.styles import PatternFill, Font
 import traceback
 import sys
 import microsoftOCR
+import qdarktheme
 
+'''
+Dark Mode Styling
+'''
+dark = qdarktheme.load_stylesheet(
+            theme="dark",
+            custom_colors=
+            {
+                "[dark]": 
+                {
+                    "primary": "#0078D4",
+                    "border": "#8A8A8A",
+                    "primary>button.hoverBackground": "#2B456E",
+                    "background>list": "#3F4042",
+                    "background>popup": "#303136",
+                }
+            },
+        )
+
+'''
+Light Mode Styling
+'''
+light = qdarktheme.load_stylesheet(
+            theme="light",
+            custom_colors=
+            {
+                "[light]": 
+                {
+                    "foreground": "#111111",
+                    "border": "#111111",
+                    "background": "#f0f0f0",
+                    "primary>button.hoverBackground": "#adcaf7",
+                    "background>list": "#FFFFFF",
+                    "background>popup": "#cfcfd1",
+                }
+            },
+        )
 
 class Worker(QThread):
     id_signal = pyqtSignal(str)  # Signal to emit IDs
     kvs_signal = pyqtSignal(str) # Signal to emit KVS
     error_signal = pyqtSignal(str) # Signal to emit Error Message
     image_signal = pyqtSignal(str) # Signal to emit Image Path
-    popup_signal = pyqtSignal(str) # Signal to emit Pop up
+    popup_signal = pyqtSignal(str, str) # Signal to update app status 
     
     def __init__(self, singleFlag, singleCem, singleLetter):
         super().__init__()
@@ -55,13 +93,13 @@ class Worker(QThread):
         try:
             worksheet = workbook[cemetery]
         except Exception:
-            self.popup_signal.emit("Cemetery not found in Veterans.xslx.")
+            self.popup_signal.emit('Critical', f"Cemetery '{cemetery}' not found in Veterans.xslx.")
             return
         warFlag = False
         try:
             pdfFiles = sorted(os.listdir(namePath))
         except Exception:
-            self.popup_signal.emit(f"Letter not found in {cemetery} folder.")
+            self.popup_signal.emit('Critical', f"Letter '{letter}' not found in '{cemetery}' folder.")
             return
         breakFlag = False
         for y in range(len(pdfFiles)):
@@ -180,22 +218,168 @@ class Worker(QThread):
             workbook.save('Veterans.xlsx')
             if breakFlag:
                 break
-        self.popup_signal.emit(f"{cemetery} letter {letter} has finished processing.\n Please enter the next letter.")
+        self.popup_signal.emit('Info', f"{cemetery} letter {letter} has finished processing.\n Please enter the next letter.")
         return
    
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Veteran Extraction")
-        self.setGeometry(500, 40, 950, 150)
+        self.setGeometry(500, 35, 950, 150)
         self.worker = None  
+        if self.loadDisplayMode() == "Light":
+            app.setStyleSheet(light)
+        else:
+            app.setStyleSheet(dark)
         self.mainLayout()
 
+    '''
+    Saves display mode to display_mode.txt
+
+    @param mode - the name of the display mode that is being used, and therefore saved
+
+    @author Mike
+    '''
+    def saveDisplayMode(self, mode):
+        parent_path = os.path.dirname(os.getcwd())
+        with open(f"{parent_path}/veteranData/display_mode.txt", "w") as file:
+            file.write(mode)
+
+
+    '''
+    Loads display mode name from display_mode.txt
+
+    @return string - the name of the display mode that was saved
+
+    @author Mike
+    '''
+    def loadDisplayMode(self):
+        parent_path = os.path.dirname(os.getcwd())
+        try:
+            with open(f"{parent_path}/veteranData/display_mode.txt", "r") as file:
+                return file.read().strip()
+        except FileNotFoundError:
+            return "Light"
+        
+        
+    '''
+    Updates the display mode anytime the selection is changed within the app through
+    the display mode selection box. Saves the mode selection to a local .txt file.
+
+    @param app - the main window that is getting the styling adjustment
+    @param bottomButton - the QPushButton widget that is getting adjusted 
+    @param displayMode - the name of the display mode selected
+
+    @author Mike
+    '''
+    def changeDisplayStyle(self, app, runButton, pauseButton, stopButton, displayMode):
+        if displayMode == "Dark":
+            app.setStyleSheet(dark)
+        else:
+            app.setStyleSheet(light)
+        self.saveDisplayMode(displayMode)
+        self.updateBottomButtonStyle(runButton, pauseButton, stopButton, displayMode)
+    
+    
+    def updateBottomButtonStyle(self, runButton, pauseButton, stopButton, displayMode):
+        if displayMode == "Light":
+            runButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #669df2;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QPushButton:hover {
+                    background-color: #0078D4; 
+                }
+                QPushButton:disabled {
+                    background-color: #F0F0F0; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+            pauseButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #669df2;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QPushButton:hover {
+                    background-color: #0078D4; 
+                }
+                QPushButton:disabled {
+                    background-color: #F0F0F0; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+            stopButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #669df2;  
+                    color: #111111;            
+                    border: 1px solid #111111; 
+                }
+                QPushButton:hover {
+                    background-color: #0078D4; 
+                }
+                QPushButton:disabled {
+                    background-color: #F0F0F0; 
+                    color: #686868; 
+                    border: 1px solid #686868;
+                }
+                """)
+        else:
+            runButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078D4; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QPushButton:hover {
+                    background-color: #669DF2; 
+                }
+                QPushButton:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B;
+                    color: #3B3B3B;   
+                }
+                """)
+            pauseButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078D4; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QPushButton:hover {
+                    background-color: #669DF2; 
+                }
+                QPushButton:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B;
+                    color: #3B3B3B;   
+                }
+                """)
+            stopButton.setStyleSheet("""
+                QPushButton {
+                    background-color: #0078D4; 
+                    color: #FFFFFF;           
+                    border: 1px solid #8A8A8A; 
+                }
+                QPushButton:hover {
+                    background-color: #669DF2; 
+                }
+                QPushButton:disabled {
+                    background-color: #1A1A1C; 
+                    border: 1px solid #3B3B3B;
+                    color: #3B3B3B;   
+                }
+                """)
+        
+        
     def mainLayout(self):
         centralWidget = QWidget(self)
         centralWidget.setObjectName("mainCentralWidget")
         self.setCentralWidget(centralWidget)
-        self.setStyleSheet("#mainCentralWidget { background-color: white; }")
         layout1 = QVBoxLayout(centralWidget)
         
         # Create the top container
@@ -222,17 +406,26 @@ class MainWindow(QMainWindow):
         self.cemeteryBox.setFixedWidth(140)
         self.letterBox = QLineEdit()
         self.letterBox.setFixedWidth(30)
+        font = QFont("Monterchi Sans Book", 8)
+        noteLabel1 = QLabel("Note: This is the cemetery name based on its folder.")
+        noteLabel2 = QLabel("Note: This is the last name letter to start processing.")
+        noteLabel1.setFont(font)
+        noteLabel2.setFont(font)
+        self.displayModeBox = QComboBox()
+        self.displayModeBox.setFixedWidth(75)
+        modes = ["Light", "Dark"]
+        self.displayModeBox.addItems(modes)
         middleTopLeftLayout.addRow(" ", None)
-        middleTopLeftLayout.addRow(" ", None)
+        middleTopLeftLayout.addRow("Display Mode: ", self.displayModeBox)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Cemetery :   ", self.cemeteryBox)
-        middleTopLeftLayout.addRow(None, QLabel("Note: This is the cemetery name based on its folder."))
+        middleTopLeftLayout.addRow(None, noteLabel1)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Letter :", self.letterBox)
-        middleTopLeftLayout.addRow(None, QLabel("Note: This is the last name letter to start processing."))
+        middleTopLeftLayout.addRow(None, noteLabel2)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftGroupBox.setLayout(middleTopLeftLayout)
@@ -294,8 +487,10 @@ class MainWindow(QMainWindow):
         bottomLayout.addWidget(self.runButton)
         bottomLayout.addWidget(self.status)
         bottomLayout.addWidget(self.pauseButton)
+        self.displayModeBox.currentTextChanged.connect(lambda: self.changeDisplayStyle(self, self.runButton, self.pauseButton, self.stopButton, self.displayModeBox.currentText()))
+        self.displayModeBox.setCurrentIndex(modes.index(self.loadDisplayMode()))
+        self.updateBottomButtonStyle(self.runButton, self.pauseButton, self.stopButton, self.loadDisplayMode())
         bottomContainer.setLayout(bottomLayout)
-        
         # Create a main layout to arrange the containers
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(topContainer)
@@ -305,21 +500,11 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(self.stopButton, 0, alignment=Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
         
-    def popupWindow(self, text):
-        popup = QDialog()
-        popup.setWindowTitle(" ")
-        parent_path = os.path.dirname(os.getcwd())
-        popup.setWindowIcon(QIcon(f"{parent_path}/veteranData/veteranLogo.png"))
-        popup.setGeometry(850, 500, 250, 150)
-        layout = QVBoxLayout()
-        message_label = QLabel(text)
-        message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(message_label)
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(popup.close)
-        layout.addWidget(close_button)
-        popup.setLayout(layout)
-        popup.exec()
+    def updateStatus(self, type, text):
+        if type == "Critical":
+            QMessageBox.critical(window, 'Error', text)
+        elif type == "Info":
+            QMessageBox.information(window, 'Information', text)
         self.runButton.setDisabled(False)
         self.status.setText("              Status :  Idle")
     
@@ -338,17 +523,17 @@ class MainWindow(QMainWindow):
           
     def startProcessing(self):
         if self.cemeteryBox.text() == "":
-            self.popupWindow("Cemetery field not filled out.")
+            QMessageBox.warning(window, 'Missing Info', "Cemetery field not filled out.")
             return
         if self.letterBox.text() == "":
-            self.popupWindow("Letter field not filled out.")
+            QMessageBox.warning(window, 'Missing Info', "Letter field not filled out.")
             return
         self.worker = Worker(False, self.cemeteryBox.text(), self.letterBox.text())
         self.worker.id_signal.connect(lambda id: self.updateID(id))
         self.worker.kvs_signal.connect(lambda printedKVS: self.updateKVS(printedKVS))
         self.worker.error_signal.connect(lambda errorMsg: self.updateError(errorMsg))
         self.worker.image_signal.connect(lambda imagePath: self.updateImage(imagePath))
-        self.worker.popup_signal.connect(lambda text: self.popupWindow(text))
+        self.worker.popup_signal.connect(lambda type, text: self.updateStatus(type, text))
         self.worker.start()
         self.status.setText("          Status :  Running...")
         self.runButton.setDisabled(True)
@@ -379,5 +564,5 @@ if __name__ == "__main__":
     parent_path = os.path.dirname(os.getcwd())
     window.setWindowIcon(QIcon(f"{parent_path}/veteranData/veteranLogo.png"))
     window.show()
-    window.popupWindow("If code is running, please press \"Stop Code\"\nbefore closing the application.")
+    QMessageBox.information(window, 'Instructions', "If code is running, please press \"Stop Code\"\nbefore closing the application.")
     sys.exit(app.exec())
