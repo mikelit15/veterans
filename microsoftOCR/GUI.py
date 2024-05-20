@@ -38,10 +38,6 @@ lightB = ("""
     QPushButton:hover {
         background-color: #0078D4; 
     }
-    QMessageBox QDialog {
-        background-color: #111111;  /* Background color of the button frame */
-        padding: 10px;
-    }
 """)
 
 '''
@@ -60,7 +56,14 @@ dark = qdarktheme.load_stylesheet(
                     "background>popup": "#303136",
                 }
             },
-        ) 
+        ) + """
+            QMessageBox {
+                background-color: #303135;
+            }
+            QMessageBox QLabel {
+                color: #E4E7EB;
+            }
+        """
 
 '''
 Light Mode Styling
@@ -79,7 +82,14 @@ light = qdarktheme.load_stylesheet(
                     "background>popup": "#cfcfd1",
                 }
             },
-        ) 
+        ) + """
+            QMessageBox {
+                background-color: #d4d4d4;
+            }
+            QMessageBox QLabel {
+                color: #111111;
+            }
+        """
 
 class Worker(QThread):
     idSignal = pyqtSignal(str)  # Signal to emit IDs
@@ -88,6 +98,21 @@ class Worker(QThread):
     imageSignal = pyqtSignal(str) # Signal to emit Image Path
     popupSignal = pyqtSignal(str, str) # Signal to update app status 
     
+    
+    '''
+    The main processing logic that runs when the "Run" button is pressed and all the required
+    fields are filled out. 
+
+    @param self - the main window
+    @param singleFlag - flag that indicates if main function is being called 
+                        by the duplicates utility program
+    @param singleCem - cemetery name variable for if main function is being 
+                    called by the duplicates utility program
+    @param singleLetter - folder letter variable for if main function is being 
+                        called by the duplicates utility program
+
+    @author Mike
+    '''
     def __init__(self, singleFlag, singleCem, singleLetter):
         super().__init__()
         self.singleFlag = singleFlag
@@ -96,6 +121,15 @@ class Worker(QThread):
         self.paused = False
         self.stopped = False
 
+    
+    '''
+    The main processing logic that runs when the "Run" button is pressed and all the required
+    fields are filled out. 
+
+    @param self - the main window
+
+    @author Mike
+    '''
     def run(self):
         global cemSet
         global miscSet
@@ -262,22 +296,26 @@ class MainWindow(QMainWindow):
         self.worker = None  
         self.mainLayout()
 
+
     '''
     Saves display mode to display_mode.txt
 
+    @param self - the main window
     @param mode - the name of the display mode that is being used, and therefore saved
 
     @author Mike
     '''
     def saveDisplayMode(self, mode):
         parentPath = os.path.dirname(os.getcwd())
-        with open(f"{parentPath}/veteranData/display_mode.txt", "w") as file:
+        with open(f"{parentPath}/_internal/veteranData/display_mode.txt", "w") as file:
             file.write(mode)
 
 
     '''
     Loads display mode name from display_mode.txt
 
+    @param self - the main window
+    
     @return string - the name of the display mode that was saved
 
     @author Mike
@@ -285,7 +323,7 @@ class MainWindow(QMainWindow):
     def loadDisplayMode(self):
         parentPath = os.path.dirname(os.getcwd())
         try:
-            with open(f"{parentPath}/veteranData/display_mode.txt", "r") as file:
+            with open(f"{parentPath}/_internal/veteranData/display_mode.txt", "r") as file:
                 return file.read().strip()
         except FileNotFoundError:
             return "Light"
@@ -294,9 +332,12 @@ class MainWindow(QMainWindow):
     '''
     Updates the display mode anytime the selection is changed within the app through
     the display mode selection box. Saves the mode selection to a local .txt file.
+    Manually adjusts the styling of the three buttons on the app.
 
-    @param window - the main window that is getting the styling adjustment
-    @param bottomButton - the QPushButton widget that is getting adjusted 
+    @param window - the main window
+    @param runButton - the QPushButton widget for the run button
+    @param pauseButton - the QPushButton widget for the pause button
+    @param stopButton - the QPushButton widget for the stop button
     @param displayMode - the name of the display mode selected
 
     @author Mike
@@ -310,6 +351,18 @@ class MainWindow(QMainWindow):
         self.updateButtonStyle(runButton, pauseButton, stopButton, displayMode)
     
     
+    '''
+    Updates the button styling anytime the selection is changed within the app through
+    the display mode selection box. 
+
+    @param window - the main window 
+    @param runButton - the QPushButton widget for the run button
+    @param pauseButton - the QPushButton widget for the pause button
+    @param stopButton - the QPushButton widget for the stop button
+    @param displayMode - the name of the display mode selected
+
+    @author Mike
+    '''
     def updateButtonStyle(self, runButton, pauseButton, stopButton, displayMode):
         if displayMode == "Light":
             runButton.setStyleSheet("""
@@ -405,6 +458,14 @@ class MainWindow(QMainWindow):
                 """)
         
         
+    '''
+    Creates the main window UI. Places all the widgets in their respective places
+    and adjusts their size and other properties.
+
+    @param self - the main window
+
+    @author Mike
+    '''        
     def mainLayout(self):
         centralWidget = QWidget(self)
         centralWidget.setObjectName("mainCentralWidget")
@@ -416,7 +477,7 @@ class MainWindow(QMainWindow):
         topLayout = QHBoxLayout()
         logoLabel = QLabel() 
         parentPath = os.path.dirname(os.getcwd())
-        logoImage = QPixmap(f"{parentPath}/veteranData/ucLogo.png") 
+        logoImage = QPixmap(f"{parentPath}/_internal/veteranData/ucLogo.png") 
         logoLabel.setPixmap(logoImage)
         programName = QLabel("Union County Clerk's Office\n\n       Veteran Extraction")
         font = QFont()
@@ -528,7 +589,18 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(bottomContainer)
         mainLayout.addWidget(self.stopButton, 0, alignment= Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
-        
+    
+    
+    '''
+    Calls a QMessageBox from the main run function from the Worker class. Passes in data needed for popup message.
+    Resets the window status. 
+
+    @param self - the main window
+    @param type - the icon needed for the popup
+    @param text - the text needed for the popup
+
+    @author Mike
+    '''        
     def updateStatus(self, type, text):
         if type == "Critical":
             msgBox = QMessageBox(QMessageBox.Icon.Critical, 'Error', text, QMessageBox.StandardButton.Ok, window)
@@ -554,19 +626,64 @@ class MainWindow(QMainWindow):
         self.runButton.setDisabled(False)
         self.status.setText("              Status :  Idle")
     
+    
+    '''
+    Function that updates the image display with the current image being processed
+
+    @param self - the main window
+    @param filePath - the path for the current image being processed
+
+    @author Mike
+    '''  
     def updateImage(self, filePath):
         pixmap = QPixmap(filePath)
         self.imageLabel.setPixmap(pixmap.scaled(430, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)) 
-        
+    
+    
+    '''
+    Function that updates the current ID number display for the current image being processed
+
+    @param self - the main window, used to apply its properties to QMessageBox
+    @param id - the current ID number being processed
+
+    @author Mike
+    '''      
     def updateID(self, id):
         self.idLabel.setText(id)
     
+    
+    '''
+    Function that updates the raw extracted text display for the current image being processed
+
+    @param self - the main window, used to apply its properties to QMessageBox
+    @param printedKVS - the raw extracted text from the current image
+
+    @author Mike
+    '''  
     def updateKVS(self, printedKVS):
         self.kvsLabel.setText(f"{printedKVS}")  
     
+    
+    '''
+    Function that updates error display for the current image being processed
+
+    @param self - the main window, used to apply its properties to QMessageBox
+    @param printedKVS - the error message that occured when processing the current image
+
+    @author Mike
+    '''  
     def updateError(self, errorMsg):
         self.errorLabel.setText(f"{errorMsg}")  
-          
+    
+    
+    '''
+    Function that sets up the Worker and the signals that the Worker will emit to 
+    call the display update funcitons.
+
+    @param self - the main window, used to apply its properties to QMessageBox
+
+    @author Mike
+    '''        
     def startProcessing(self):
         if self.cemeteryBox.text() == "":
             QMessageBox.warning(window, 'Missing Info', "Cemetery field not filled out.")
@@ -586,6 +703,15 @@ class MainWindow(QMainWindow):
         self.pauseButton.setDisabled(False)
         self.stopButton.setDisabled(False)
     
+    
+    '''
+    Function that changes the text of the Pause/Resume button and updates the 
+    app status accordingly. 
+
+    @param self - the main window, used to apply its properties to QMessageBox
+
+    @author Mike
+    ''' 
     def togglePauseResume(self):
         if self.worker.paused:
             self.stopButton.setDisabled(False)
@@ -598,19 +724,28 @@ class MainWindow(QMainWindow):
             self.pauseButton.setText("Resume")
             self.status.setText("           Status :  Paused" )
     
+    
+    '''
+    Function that stops the Worker and updates the status and buttons on the app.
+
+    @param self - the main window, used to apply its properties to QMessageBox
+
+    @author Mike
+    ''' 
     def stopProcessing(self):
         self.worker.stopped = True
         self.status.setText("          Status :  Stopping...")
         self.runButton.setDisabled(False)
+        
         
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.setWindowTitle("Veteran Extraction")
     parentPath = os.path.dirname(os.getcwd())
-    window.setWindowIcon(QIcon(f"{parentPath}/veteranData/veteranLogo.png"))
+    window.setWindowIcon(QIcon(f"{parentPath}/_internal/veteranData/veteranLogo.png"))
+    msgBox = QMessageBox(QMessageBox.Icon.Information, 'Instructions', "If code is running, please press \"Stop Code\" before closing the application.", QMessageBox.StandardButton.Ok, window)
     window.show()
-    msgBox = QMessageBox(QMessageBox.Icon.Information, 'Instructions', "If code is running, please press \"Stop Code\"\nbefore closing the application.", QMessageBox.StandardButton.Ok, window)
     if window.loadDisplayMode() == "Light":
         app.setStyleSheet(light)
         msgBox.setStyleSheet(lightB)

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, \
-     QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, QDialog, \
+     QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, \
      QTextEdit, QScrollArea, QComboBox, QMessageBox
 from PyQt6.QtGui import QPixmap, QFont, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
@@ -64,7 +64,14 @@ dark = qdarktheme.load_stylesheet(
                     "background>popup": "#303136",
                 }
             },
-        ) 
+        ) + """
+            QMessageBox {
+                background-color: #303135;
+            }
+            QMessageBox QLabel {
+                color: #E4E7EB;
+            }
+        """
 
 '''
 Light Mode Styling
@@ -83,7 +90,14 @@ light = qdarktheme.load_stylesheet(
                     "background>popup": "#cfcfd1",
                 }
             },
-        ) 
+        ) + """
+            QMessageBox {
+                background-color: #d4d4d4;
+            }
+            QMessageBox QLabel {
+                color: #111111;
+            }
+        """
 
 class Worker(QThread):
     adjustImageNameSignal = pyqtSignal(int, int, int)  # Signal to emit IDs
@@ -91,6 +105,18 @@ class Worker(QThread):
     cleanImagesSignal = pyqtSignal(int, str, str) # Signal to emit Error Message
     cleanHyperlinksSignal = pyqtSignal(str, int) # Signal to emit Image Path
     
+    
+    '''
+    The main processing logic that runs when the "Run" button is pressed and all the required
+    fields are filled out. 
+
+    @param self - the main window
+    @param cemetery (str): The name of the cemetery being processed
+    @param goodIDs (list): List of good ID numbers
+    @param badIDs (list): List of bad ID numbers to be corrected
+
+    @author Mike
+    '''
     def __init__(self, cemetery, goodIDs, badIDs):
         super().__init__()
         self.cemetery = cemetery
@@ -98,6 +124,15 @@ class Worker(QThread):
         self.badIDs = badIDs
         self.paused = False
 
+    
+    '''
+    The main processing logic that runs when the "Clean Duplicates" button is pressed and all the required
+    fields are filled out. 
+
+    @param self - the main window
+
+    @author Mike
+    '''
     def run(self):
         global excelFilePath
         excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
@@ -183,25 +218,44 @@ class MainWindow(QMainWindow):
         
     '''
     Updates the display mode anytime the selection is changed within the app through
-    the display mode selection box. Saves the mode selection to a local .txt file.
+    the display mode selection box. Saves the mode selection to a local .txt file. 
+    Calls functions to manually updates the styling of the buttons and the text widgets.
 
-    @param window - the main window that is getting the styling adjustment
-    @param bottomButton - the QPushButton widget that is getting adjusted 
+    @param self - the main window that is getting the styling adjustment
+    @param checkButton - the QPushButton widget that calls checkDuplicates()
+    @param pauseButton - the QPushButton widget that pauses the code
+    @param cleanButton - the QPushButton widget that calls the main worker
+    @param goodText - the QTextEdit widget holds the list of Good IDs
+    @param badText - the QTextEdit widget holds the list of Bad IDs
+    @param details1 - the QScrollArea widget that displays the duplicate records
+    @param details2 - the QScrollArea widget that displays the details of the cleaning process
     @param displayMode - the name of the display mode selected
 
     @author Mike
     '''
-    def changeDisplayStyle(self, window, checkButton, pauseButton, cleanButton, goodText, badText, details1, details2, displayMode):
+    def changeDisplayStyle(self, checkButton, pauseButton, cleanButton, goodText, badText, details1, details2, displayMode):
         if displayMode == "Dark":
             window.setStyleSheet(dark)
         else:
             window.setStyleSheet(light)
         self.saveDisplayMode(displayMode)
-        self.updateBottomButtonStyle(checkButton, pauseButton, cleanButton, displayMode)
+        self.updateButtonStyle(checkButton, pauseButton, cleanButton, displayMode)
         self.updateTextStyle(goodText, badText, details1, details2, displayMode)
     
     
-    def updateBottomButtonStyle(self, checkButton, pauseButton, cleanButton, displayMode):
+    '''
+    Updates the display mode anytime the selection is changed within the app through
+    the display mode selection box. Manually updates the styling of the buttons.
+
+    @param self - the main window that is getting the styling adjustment
+    @param checkButton - the QPushButton widget that calls checkDuplicates()
+    @param pauseButton - the QPushButton widget that pauses the code
+    @param cleanButton - the QPushButton widget that calls the main worker
+    @param displayMode - the name of the display mode selected
+
+    @author Mike
+    '''
+    def updateButtonStyle(self, checkButton, pauseButton, cleanButton, displayMode):
         if displayMode == "Light":
             checkButton.setStyleSheet("""
                 QPushButton {
@@ -296,6 +350,19 @@ class MainWindow(QMainWindow):
                 """)
     
     
+    '''
+    Updates the display mode anytime the selection is changed within the app through
+    the display mode selection box. Manually updates the styling of the text areas.
+
+    @param self - the main window that is getting the styling adjustment
+    @param goodText - the QTextEdit widget holds the list of Good IDs
+    @param badText - the QTextEdit widget holds the list of Bad IDs
+    @param details1 - the QScrollArea widget that displays the duplicate records
+    @param details2 - the QScrollArea widget that displays the details of the cleaning process
+    @param displayMode - the name of the display mode selected
+
+    @author Mike
+    '''
     def updateTextStyle(self, goodText, badText, details1, details2, displayMode):
         if displayMode == "Light":
             goodText.setStyleSheet("""
@@ -392,6 +459,15 @@ class MainWindow(QMainWindow):
                 }
                 """)
     
+    
+    '''
+    Creates the main window UI. Places all the widgets in their respective places
+    and adjusts their size and other properties.
+
+    @param self - the main window
+
+    @author Mike
+    '''    
     def mainLayout(self):
         centralWidget = QWidget(self)
         centralWidget.setObjectName("mainCentralWidget")
@@ -504,12 +580,12 @@ class MainWindow(QMainWindow):
         bottomLayout.addWidget(self.pauseButton)
         bottomLayout.addWidget(self.cleanButton)
         self.displayModeBox.currentTextChanged.connect(\
-                    lambda: self.changeDisplayStyle(self, self.checkButton, \
+                    lambda: self.changeDisplayStyle(self.checkButton, \
                         self.pauseButton, self.cleanButton, self.goodIDBox, \
                         self.badIDBox, self.scrollArea1, self.scrollArea2, \
                         self.displayModeBox.currentText()))
         self.displayModeBox.setCurrentIndex(modes.index(self.loadDisplayMode()))
-        self.updateBottomButtonStyle(self.checkButton, self.pauseButton, self.cleanButton, self.loadDisplayMode())
+        self.updateButtonStyle(self.checkButton, self.pauseButton, self.cleanButton, self.loadDisplayMode())
         self.updateTextStyle(self.goodIDBox, self.badIDBox, self.scrollArea1, self.scrollArea2, self.loadDisplayMode())
         bottomContainer.setLayout(bottomLayout)
         
@@ -522,7 +598,18 @@ class MainWindow(QMainWindow):
         self.status.setFixedWidth(150)
         mainLayout.addWidget(self.status, 0, alignment= Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
-        
+    
+    
+    '''
+    Calls a QMessageBox from the main run function from the Worker class. Passes in data needed for popup message.
+    Resets the window status. 
+
+    @param self - the main window
+    @param type - the icon needed for the popup
+    @param text - the text needed for the popup
+
+    @author Mike
+    '''        
     def updateStatus(self, type, text):
         if type == "Critical":
             msgBox = QMessageBox(QMessageBox.Icon.Critical, 'Error', text, QMessageBox.StandardButton.Ok, window)
@@ -548,6 +635,15 @@ class MainWindow(QMainWindow):
         self.runButton.setDisabled(False)
         self.status.setText("              Status :  Idle")
     
+    
+    '''
+    Function that changes the text of the Pause/Resume button and updates the 
+    app status accordingly. 
+
+    @param self - the main window
+
+    @author Mike
+    ''' 
     def togglePauseResume(self):
         if self.worker:
             if self.worker.paused:
@@ -559,6 +655,16 @@ class MainWindow(QMainWindow):
                 self.pauseButton.setText("Resume")
                 self.status.setText("             Status : Paused\n" )
     
+    
+    '''
+    Function that clears the layout of ScrollArea1. This allows for a new layout to 
+    be implemented that is deisgned to show the details of the cleaning process.
+
+    @param self - the main window
+    @param layout - the new layout to be displayed for ScrollArea2
+
+    @author Mike
+    ''' 
     def clearLayout(self, layout):
         while layout.count():
             item = layout.takeAt(0)
@@ -566,18 +672,45 @@ class MainWindow(QMainWindow):
                 item.widget().deleteLater()
             elif item.layout():
                 self.clearLayout(item.layout())
-                
+    
+    
+    '''
+    Function that changes the display to show the new ScrollArea.
+
+    @param self - the main window
+
+    @author Mike
+    '''             
     def switchToLayout2(self):
         if self.middleTopRightGroupBox.layout() is not None:
             self.clearLayout(self.middleTopRightGroupBox.layout())
             QWidget().setLayout(self.middleTopRightGroupBox.layout()) 
         self.middleTopRightGroupBox.setLayout(self.middleTopRightLayout2)
-        
+    
+    
+    '''
+    Function that scrolls to the bottom of the entire scroll area. Allows for new lines
+    that are added to always be at the bottom the scroll area display.
+
+    @param self - the main window
+    @param newText - the new line to be displayed at the bottom of the display
+
+    @author Mike
+    '''     
     def updateScroll(self, newText):
         currentText = self.duplicatesLabel2.text()
         self.duplicatesLabel2.setText(currentText + newText + "\n")
         self.scrollArea2.verticalScrollBar().setValue(self.scrollArea2.verticalScrollBar().maximum())
     
+    
+    '''
+    Function that clears the layout of ScrollArea1. This allows for a new layout to 
+    be implemented that is deisgned to show the details of the cleaning process.
+
+    @param self - the main window
+
+    @author Mike
+    ''' 
     def updateDuplicates(self):
         columnWidths = {
         "VID": 8,
