@@ -22,8 +22,6 @@ This program automates the extraction and cleaning of text from scanned PDF docu
   - **Running...**: Indicates that the code is actively processing the PDF files, extracting and cleaning text, then inserting into an Excel file.
   - **Paused**: The application has paused processing and requires the user to press "Resume" to continue.
   - **Stopping...**: The application is finishing up current PDF image to allow the user to safely exit, avoiding accidently corrupting the Excel file.
-    
-  ![image1_2_80](https://github.com/mikelit15/veterans/assets/79111823/d6fdaa49-0fa4-456f-9c60-453d2ef22671)
 
 #### 2. Filling in the Required Parameters
   - **Parameter Input**: Users must input two parameters, the cemetery name and the letter of the folder to be processed. Pop-ups will inform the user if either field is not filled out upon clicking the "Run Code" button.
