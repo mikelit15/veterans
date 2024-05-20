@@ -11,6 +11,39 @@ import sys
 import microsoftOCR
 import qdarktheme
 
+
+'''
+Dark Mode QMessageBox Button Styling
+'''
+darkB = ("""
+    QPushButton {
+        background-color: #0078D4; 
+        color: #FFFFFF;           
+        border: 1px solid #8A8A8A; 
+    }
+    QPushButton:hover {
+        background-color: #669df2; 
+    }
+""")
+
+'''
+Light Mode QMessageBox Button Styling
+'''
+lightB = ("""
+    QPushButton {
+        background-color: #669df2;  
+        color: #111111;            
+        border: 1px solid #111111; 
+    }
+    QPushButton:hover {
+        background-color: #0078D4; 
+    }
+    QMessageBox QDialog {
+        background-color: #111111;  /* Background color of the button frame */
+        padding: 10px;
+    }
+""")
+
 '''
 Dark Mode Styling
 '''
@@ -27,14 +60,7 @@ dark = qdarktheme.load_stylesheet(
                     "background>popup": "#303136",
                 }
             },
-        ) + """
-            QMessageBox {
-                background-color: #303135;
-            }
-            QMessageBox QLabel {
-                color: #E4E7EB;
-            }
-        """
+        ) 
 
 '''
 Light Mode Styling
@@ -53,21 +79,14 @@ light = qdarktheme.load_stylesheet(
                     "background>popup": "#cfcfd1",
                 }
             },
-        ) + """
-            QMessageBox {
-                background-color: #d4d4d4;
-            }
-            QMessageBox QLabel {
-                color: #111111;
-            }
-        """
+        ) 
 
 class Worker(QThread):
-    id_signal = pyqtSignal(str)  # Signal to emit IDs
-    kvs_signal = pyqtSignal(str) # Signal to emit KVS
-    error_signal = pyqtSignal(str) # Signal to emit Error Message
-    image_signal = pyqtSignal(str) # Signal to emit Image Path
-    popup_signal = pyqtSignal(str, str) # Signal to update app status 
+    idSignal = pyqtSignal(str)  # Signal to emit IDs
+    kvsSignal = pyqtSignal(str) # Signal to emit KVS
+    errorSignal = pyqtSignal(str) # Signal to emit Error Message
+    imageSignal = pyqtSignal(str) # Signal to emit Image Path
+    popupSignal = pyqtSignal(str, str) # Signal to update app status 
     
     def __init__(self, singleFlag, singleCem, singleLetter):
         super().__init__()
@@ -107,13 +126,13 @@ class Worker(QThread):
         try:
             worksheet = workbook[cemetery]
         except Exception:
-            self.popup_signal.emit('Critical', f"Cemetery '{cemetery}' not found in Veterans.xslx.")
+            self.popupSignal.emit('Critical', f"Cemetery '{cemetery}' not found in Veterans.xslx.")
             return
         warFlag = False
         try:
             pdfFiles = sorted(os.listdir(namePath))
         except Exception:
-            self.popup_signal.emit('Critical', f"Letter '{letter}' not found in '{cemetery}' folder.")
+            self.popupSignal.emit('Critical', f"Letter '{letter}' not found in '{cemetery}' folder.")
             return
         breakFlag = False
         for y in range(len(pdfFiles)):
@@ -137,22 +156,22 @@ class Worker(QThread):
                         continue
                     if self.stopped:
                             break
-                    self.id_signal.emit(str(id))
-                    self.kvs_signal.emit("")
-                    self.error_signal.emit("")
-                    self.image_signal.emit("")
+                    self.idSignal.emit(str(id))
+                    self.kvsSignal.emit("")
+                    self.errorSignal.emit("")
+                    self.imageSignal.emit("")
                     vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "")
-                    self.kvs_signal.emit(printedKVS)
+                    self.kvsSignal.emit(printedKVS)
                     redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                    self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
-                    worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
-                    worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
-                    worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
+                    self.imageSignal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                    worksheet.cell(row= rowIndex, column= 15).value = "PDF Image"
+                    worksheet.cell(row= rowIndex, column= 15).font = Font(underline= "single", color= "0563C1")
+                    worksheet.cell(row= rowIndex, column= 15).hyperlink = redactedFile
                     counter = 1
-                    worksheet.cell(row=rowIndex, column=counter, value=id)
+                    worksheet.cell(row= rowIndex, column= counter, value= id)
                     counter += 1
                     for x in vals:
-                        worksheet.cell(row=rowIndex, column=counter, value=x)
+                        worksheet.cell(row= rowIndex, column= counter, value= x)
                         counter += 1
                     microsoftOCR.highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast)
                     id += 1
@@ -168,33 +187,33 @@ class Worker(QThread):
                         if (filePath.replace("a.pdf", "") in pdfFiles):
                             continue
                         pathA = filePath
-                        self.id_signal.emit(f"{id} A")
-                        self.kvs_signal.emit("")
-                        self.error_signal.emit("")
-                        self.image_signal.emit("")
+                        self.idSignal.emit(f"{id} A")
+                        self.kvsSignal.emit("")
+                        self.errorSignal.emit("")
+                        self.imageSignal.emit("")
                         vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "A")
-                        self.kvs_signal.emit(printedKVS)
+                        self.kvsSignal.emit(printedKVS)
                         redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                        self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                        self.imageSignal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
                     if "b" in string:
                         if (filePath.replace("b.pdf", "") in pdfFiles):
                             continue
-                        self.id_signal.emit(f"{id} B")
-                        self.kvs_signal.emit("")
-                        self.error_signal.emit("")
-                        self.image_signal.emit("")
+                        self.idSignal.emit(f"{id} B")
+                        self.kvsSignal.emit("")
+                        self.errorSignal.emit("")
+                        self.imageSignal.emit("")
                         vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "B")
-                        self.kvs_signal.emit(printedKVS)
+                        self.kvsSignal.emit(printedKVS)
                         if not warFlag or not warFlagB:
                             warFlag = False
                         else:
                             warFlag = True
                         redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
-                        self.image_signal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                        self.imageSignal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
                         microsoftOCR.mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
                         microsoftOCR.mergeImages(pathA, filePath, cemetery, letter)
-                        link_text = "PDF Image"
-                        worksheet.cell(row=rowIndex, column=15).value = link_text
+                        linkText = "PDF Image"
+                        worksheet.cell(row=rowIndex, column=15).value = linkText
                         worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
                         worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                         id += 1
@@ -206,16 +225,16 @@ class Worker(QThread):
                 print(errorTraceback)
                 print(f"An error occurred: {e}")
                 errorMessage = f"SKIPPED DUE TO ERROR : {errorTraceback}"
-                worksheet.cell(row=rowIndex, column=1, value=id)
-                worksheet.cell(row=rowIndex, column=2, value=errorMessage)
-                highlightColor = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+                worksheet.cell(row= rowIndex, column= 1, value= id)
+                worksheet.cell(row= rowIndex, column= 2, value= errorMessage)
+                highlightColor = PatternFill(start_color= "FF0000", end_color= "FF0000", fill_type= "solid")
                 for colIndex in range(1, worksheet.max_column + 1):
-                    cell = worksheet.cell(row=rowIndex, column=colIndex)
+                    cell = worksheet.cell(row= rowIndex, column= colIndex)
                     cell.fill = highlightColor
-                error_file_path = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
-                with open(error_file_path, 'a') as error_file:
-                    error_file.write(f'{printedKVS} \n\n {errorTraceback}')
-                    self.error_signal.emit(errorTraceback)
+                errorFilePath = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
+                with open(errorFilePath, 'a') as errorFile:
+                    errorFile.write(f'{printedKVS} \n\n {errorTraceback}')
+                    self.errorSignal.emit(errorTraceback)
                 id += 1
                 rowIndex += 1
             extension1 = str(id-1).zfill(5)
@@ -232,7 +251,7 @@ class Worker(QThread):
             workbook.save('Veterans.xlsx')
             if breakFlag:
                 break
-        self.popup_signal.emit('Info', f"{cemetery} letter {letter} has finished processing.\n Please enter the next letter.")
+        self.popupSignal.emit('Info', f"{cemetery} letter {letter} has finished processing.\n Please enter the next letter.")
         return
    
 class MainWindow(QMainWindow):
@@ -241,10 +260,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Veteran Extraction")
         self.setGeometry(500, 35, 950, 150)
         self.worker = None  
-        if self.loadDisplayMode() == "Light":
-            app.setStyleSheet(light)
-        else:
-            app.setStyleSheet(dark)
         self.mainLayout()
 
     '''
@@ -255,8 +270,8 @@ class MainWindow(QMainWindow):
     @author Mike
     '''
     def saveDisplayMode(self, mode):
-        parent_path = os.path.dirname(os.getcwd())
-        with open(f"{parent_path}/veteranData/display_mode.txt", "w") as file:
+        parentPath = os.path.dirname(os.getcwd())
+        with open(f"{parentPath}/veteranData/display_mode.txt", "w") as file:
             file.write(mode)
 
 
@@ -268,9 +283,9 @@ class MainWindow(QMainWindow):
     @author Mike
     '''
     def loadDisplayMode(self):
-        parent_path = os.path.dirname(os.getcwd())
+        parentPath = os.path.dirname(os.getcwd())
         try:
-            with open(f"{parent_path}/veteranData/display_mode.txt", "r") as file:
+            with open(f"{parentPath}/veteranData/display_mode.txt", "r") as file:
                 return file.read().strip()
         except FileNotFoundError:
             return "Light"
@@ -292,10 +307,10 @@ class MainWindow(QMainWindow):
         else:
             window.setStyleSheet(light)
         self.saveDisplayMode(displayMode)
-        self.updateBottomButtonStyle(runButton, pauseButton, stopButton, displayMode)
+        self.updateButtonStyle(runButton, pauseButton, stopButton, displayMode)
     
     
-    def updateBottomButtonStyle(self, runButton, pauseButton, stopButton, displayMode):
+    def updateButtonStyle(self, runButton, pauseButton, stopButton, displayMode):
         if displayMode == "Light":
             runButton.setStyleSheet("""
                 QPushButton {
@@ -400,8 +415,8 @@ class MainWindow(QMainWindow):
         topContainer = QWidget()
         topLayout = QHBoxLayout()
         logoLabel = QLabel() 
-        parent_path = os.path.dirname(os.getcwd())
-        logoImage = QPixmap(f"{parent_path}/veteranData/ucLogo.png") 
+        parentPath = os.path.dirname(os.getcwd())
+        logoImage = QPixmap(f"{parentPath}/veteranData/ucLogo.png") 
         logoLabel.setPixmap(logoImage)
         programName = QLabel("Union County Clerk's Office\n\n       Veteran Extraction")
         font = QFont()
@@ -503,7 +518,7 @@ class MainWindow(QMainWindow):
         bottomLayout.addWidget(self.pauseButton)
         self.displayModeBox.currentTextChanged.connect(lambda: self.changeDisplayStyle(self, self.runButton, self.pauseButton, self.stopButton, self.displayModeBox.currentText()))
         self.displayModeBox.setCurrentIndex(modes.index(self.loadDisplayMode()))
-        self.updateBottomButtonStyle(self.runButton, self.pauseButton, self.stopButton, self.loadDisplayMode())
+        self.updateButtonStyle(self.runButton, self.pauseButton, self.stopButton, self.loadDisplayMode())
         bottomContainer.setLayout(bottomLayout)
         # Create a main layout to arrange the containers
         mainLayout = QVBoxLayout()
@@ -511,14 +526,31 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(middleTopContainer)
         mainLayout.addWidget(middleBottomContainer)
         mainLayout.addWidget(bottomContainer)
-        mainLayout.addWidget(self.stopButton, 0, alignment=Qt.AlignmentFlag.AlignCenter)
+        mainLayout.addWidget(self.stopButton, 0, alignment= Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
         
     def updateStatus(self, type, text):
         if type == "Critical":
-            QMessageBox.critical(window, 'Error', text)
+            msgBox = QMessageBox(QMessageBox.Icon.Critical, 'Error', text, QMessageBox.StandardButton.Ok, window)
+            if self.loadDisplayMode() == "Light":
+                msgBox.setStyleSheet(lightB)
+            else:
+                msgBox.setStyleSheet(darkB)
+            msgBox.exec()
+        elif type == "Warning":
+            msgBox = QMessageBox(QMessageBox.Icon.Warning, 'Warning', text, QMessageBox.StandardButton.Ok, window)
+            if self.loadDisplayMode() == "Light":
+                msgBox.setStyleSheet(lightB)
+            else:
+                msgBox.setStyleSheet(darkB)
+            msgBox.exec()
         elif type == "Info":
-            QMessageBox.information(window, 'Information', text)
+            msgBox = QMessageBox(QMessageBox.Icon.Information, 'Information', text, QMessageBox.StandardButton.Ok, window)
+            if self.loadDisplayMode() == "Light":
+                msgBox.setStyleSheet(lightB)
+            else:
+                msgBox.setStyleSheet(darkB)
+            msgBox.exec()
         self.runButton.setDisabled(False)
         self.status.setText("              Status :  Idle")
     
@@ -543,11 +575,11 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(window, 'Missing Info', "Letter field not filled out.")
             return
         self.worker = Worker(False, self.cemeteryBox.text(), self.letterBox.text())
-        self.worker.id_signal.connect(lambda id: self.updateID(id))
-        self.worker.kvs_signal.connect(lambda printedKVS: self.updateKVS(printedKVS))
-        self.worker.error_signal.connect(lambda errorMsg: self.updateError(errorMsg))
-        self.worker.image_signal.connect(lambda imagePath: self.updateImage(imagePath))
-        self.worker.popup_signal.connect(lambda type, text: self.updateStatus(type, text))
+        self.worker.idSignal.connect(lambda id: self.updateID(id))
+        self.worker.kvsSignal.connect(lambda printedKVS: self.updateKVS(printedKVS))
+        self.worker.errorSignal.connect(lambda errorMsg: self.updateError(errorMsg))
+        self.worker.imageSignal.connect(lambda imagePath: self.updateImage(imagePath))
+        self.worker.popupSignal.connect(lambda type, text: self.updateStatus(type, text))
         self.worker.start()
         self.status.setText("          Status :  Running...")
         self.runButton.setDisabled(True)
@@ -575,8 +607,15 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.setWindowTitle("Veteran Extraction")
-    parent_path = os.path.dirname(os.getcwd())
-    window.setWindowIcon(QIcon(f"{parent_path}/veteranData/veteranLogo.png"))
+    parentPath = os.path.dirname(os.getcwd())
+    window.setWindowIcon(QIcon(f"{parentPath}/veteranData/veteranLogo.png"))
     window.show()
-    QMessageBox.information(window, 'Instructions', "If code is running, please press \"Stop Code\"\nbefore closing the application.")
+    msgBox = QMessageBox(QMessageBox.Icon.Information, 'Instructions', "If code is running, please press \"Stop Code\"\nbefore closing the application.", QMessageBox.StandardButton.Ok, window)
+    if window.loadDisplayMode() == "Light":
+        app.setStyleSheet(light)
+        msgBox.setStyleSheet(lightB)
+    else:
+        app.setStyleSheet(dark)
+        msgBox.setStyleSheet(darkB)
+    msgBox.exec()
     sys.exit(app.exec())
