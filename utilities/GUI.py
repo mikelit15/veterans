@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, \
      QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, \
-     QTextEdit, QScrollArea, QComboBox, QMessageBox
+     QTextEdit, QScrollArea, QComboBox, QMessageBox, QPlainTextEdit
 from PyQt6.QtGui import QPixmap, QFont, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 import os
@@ -22,11 +22,42 @@ Dark Mode QMessageBox Button Styling
 darkB = ("""
     QPushButton {
         background-color: #0078D4; 
-        color: #FFFFFF;           
+        color: #E4E7EB;           
         border: 1px solid #8A8A8A; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #00A2FF, stop:1 #002D59);
     }
     QPushButton:hover {
         background-color: #669df2; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #80CFFF, stop:1 #004080);
+    }
+    QPushButton:pressed {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #004080, stop:1 #001B3D);
+    }
+    QPushButton:disabled {
+        background-color: #1A1A1C; 
+        border: 1px solid #3B3B3B;
+        color: #3B3B3B;   
+    }
+    QTextEdit {
+        background-color: #3F4042; 
+        color: #FFFFFF;           
+        border: 1px solid #8A8A8A; 
+    }
+    QTextEdit:disabled {
+        background-color: #1A1A1C; 
+        border: 1px solid #3B3B3B; 
+    }
+    QScrollArea {
+        background-color: #3F4042;  
+        color: #FFFFFF;            
+        border: 1px solid #8A8A8A; 
+    }
+    QScrollArea:disabled {
+        background-color: #1A1A1C;  
+        border: 1px solid #3B3B3B; 
     }
 """)
 
@@ -35,16 +66,44 @@ Light Mode QMessageBox Button Styling
 '''
 lightB = ("""
     QPushButton {
-        background-color: #669df2;  
+        background-color: #70c5ff;  
+        color: #111111;            
+        border: 1px solid #111111; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                            stop:0 #9EDFFF, stop:1 #1A8FE3);
+    }
+    QPushButton:hover {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                            stop:0 #70C5FF, stop:1 #0078D4);
+    }
+    QPushButton:pressed {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #0078D4, stop:1 #004080);
+    }
+    QPushButton:disabled {
+        background-color: #DBDBDB; 
+        color: #686868; 
+        border: 1px solid #686868;
+    }
+    QTextEdit {
+        background-color: #FFFFFF; 
+        color: #111111; 
+        border: 1px solid #111111;
+    }
+    QTextEdit:disabled {
+        background-color: #DBDBDB; 
+        color: #686868; 
+        border: 1px solid #686868;
+    }
+    QScrollArea {
+        background-color: #FFFFFF;  
         color: #111111;            
         border: 1px solid #111111; 
     }
-    QPushButton:hover {
-        background-color: #0078D4; 
-    }
-    QMessageBox QDialog {
-        background-color: #111111;  /* Background color of the button frame */
-        padding: 10px;
+    QScrollArea:disabled {
+        background-color: #DBDBDB;  
+        color: #686868;            
+        border: 1px solid #363636; 
     }
 """)
 
@@ -135,10 +194,10 @@ class Worker(QThread):
     '''
     def run(self):
         global excelFilePath
-        excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
+        excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans2.xlsx"
         global workbook
         workbook = openpyxl.load_workbook(excelFilePath)
-        global worksheet 
+        global worksheet
         worksheet = workbook[self.cemetery]
         for x in range(0, len(self.goodIDs)):
             workbook = openpyxl.load_workbook(excelFilePath)
@@ -196,7 +255,7 @@ class MainWindow(QMainWindow):
     '''
     def saveDisplayMode(self, mode):
         parentPath = os.path.dirname(os.getcwd())
-        with open(f"{parentPath}/veteranData/display_mode.txt", "w") as file:
+        with open(f"{parentPath}/_internal/veteranData/display_mode.txt", "w") as file:
             file.write(mode)
 
 
@@ -210,7 +269,7 @@ class MainWindow(QMainWindow):
     def loadDisplayMode(self):
         parentPath = os.path.dirname(os.getcwd())
         try:
-            with open(f"{parentPath}/veteranData/display_mode.txt", "r") as file:
+            with open(f"{parentPath}/_internal/veteranData/display_mode.txt", "r") as file:
                 return file.read().strip()
         except FileNotFoundError:
             return "Light"
@@ -235,9 +294,9 @@ class MainWindow(QMainWindow):
     '''
     def changeDisplayStyle(self, checkButton, pauseButton, cleanButton, goodText, badText, details1, details2, displayMode):
         if displayMode == "Dark":
-            window.setStyleSheet(dark)
+            self.setStyleSheet(dark)
         else:
-            window.setStyleSheet(light)
+            self.setStyleSheet(light)
         self.saveDisplayMode(displayMode)
         self.updateButtonStyle(checkButton, pauseButton, cleanButton, displayMode)
         self.updateTextStyle(goodText, badText, details1, details2, displayMode)
@@ -257,97 +316,13 @@ class MainWindow(QMainWindow):
     '''
     def updateButtonStyle(self, checkButton, pauseButton, cleanButton, displayMode):
         if displayMode == "Light":
-            checkButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #669df2;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QPushButton:hover {
-                    background-color: #0078D4; 
-                }
-                QPushButton:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
-            pauseButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #669df2;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QPushButton:hover {
-                    background-color: #0078D4; 
-                }
-                QPushButton:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
-            cleanButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #669df2;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QPushButton:hover {
-                    background-color: #0078D4; 
-                }
-                QPushButton:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
+            checkButton.setStyleSheet(lightB)
+            pauseButton.setStyleSheet(lightB)
+            cleanButton.setStyleSheet(lightB)
         else:
-            checkButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #0078D4; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QPushButton:hover {
-                    background-color: #669DF2; 
-                }
-                QPushButton:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B;
-                    color: #3B3B3B;   
-                }
-                """)
-            pauseButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #0078D4; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QPushButton:hover {
-                    background-color: #669DF2; 
-                }
-                QPushButton:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B;
-                    color: #3B3B3B;   
-                }
-                """)
-            cleanButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #0078D4; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QPushButton:hover {
-                    background-color: #669DF2; 
-                }
-                QPushButton:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B;
-                    color: #3B3B3B;   
-                }
-                """)
+            checkButton.setStyleSheet(darkB)
+            pauseButton.setStyleSheet(darkB)
+            cleanButton.setStyleSheet(darkB)
     
     
     '''
@@ -365,99 +340,15 @@ class MainWindow(QMainWindow):
     '''
     def updateTextStyle(self, goodText, badText, details1, details2, displayMode):
         if displayMode == "Light":
-            goodText.setStyleSheet("""
-                QTextEdit {
-                    background-color: #FFFFFF; 
-                    color: #111111; 
-                    border: 1px solid #111111;
-                }
-                QTextEdit:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
-            badText.setStyleSheet("""
-                QTextEdit {
-                    background-color: #FFFFFF; 
-                    color: #111111; 
-                    border: 1px solid #111111;
-                }
-                QTextEdit:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
-            details1.setStyleSheet("""
-                QScrollArea {
-                    background-color: #FFFFFF;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QScrollArea:disabled {
-                    background-color: #DBDBDB;  
-                    color: #686868;            
-                    border: 1px solid #363636; 
-                }
-                """)
-            details2.setStyleSheet("""
-                QScrollArea {
-                    background-color: #FFFFFF;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QScrollArea:disabled {
-                    background-color: #DBDBDB;  
-                    color: #686868;            
-                    border: 1px solid #363636; 
-                }
-                """)
+            goodText.setStyleSheet(lightB)
+            badText.setStyleSheet(lightB)
+            details1.setStyleSheet(lightB)
+            details2.setStyleSheet(lightB)
         else:
-            goodText.setStyleSheet("""
-                QTextEdit {
-                    background-color: #3F4042; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QTextEdit:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B; 
-                }
-                """)
-            badText.setStyleSheet("""
-                QTextEdit {
-                    background-color: #3F4042; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QTextEdit:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B; 
-                }
-                """)
-            details1.setStyleSheet("""
-                QScrollArea {
-                    background-color: #3F4042;  
-                    color: #FFFFFF;            
-                    border: 1px solid #8A8A8A; 
-                }
-                QScrollArea:disabled {
-                    background-color: #1A1A1C;  
-                    border: 1px solid #3B3B3B; 
-                }
-                """)
-            details2.setStyleSheet("""
-                QScrollArea {
-                    background-color: #3F4042;  
-                    color: #FFFFFF;            
-                    border: 1px solid #8A8A8A; 
-                }
-                QScrollArea:disabled {
-                    background-color: #1A1A1C;  
-                    border: 1px solid #3B3B3B; 
-                }
-                """)
+            goodText.setStyleSheet(darkB)
+            badText.setStyleSheet(darkB)
+            details1.setStyleSheet(darkB)
+            details2.setStyleSheet(darkB)
     
     
     '''
@@ -479,7 +370,7 @@ class MainWindow(QMainWindow):
         topLayout = QHBoxLayout()
         logoLabel = QLabel() 
         parentPath = os.path.dirname(os.getcwd())
-        logoImage = QPixmap(f"{parentPath}/veteranData/ucLogo.png") 
+        logoImage = QPixmap(f"{parentPath}/_internal/veteranData/ucLogo.png") 
         logoLabel.setPixmap(logoImage)
         programName = QLabel("Union County Clerk's Office\n\n Veteran Duplicate Cleaner")
         font = QFont()
@@ -535,18 +426,19 @@ class MainWindow(QMainWindow):
         self.middleTopRightGroupBox.setFixedSize(775, 425)
         self.middleTopRightLayout1 = QFormLayout()
         self.middleTopRightLayout2 = QFormLayout()
-        
+
         self.duplicatesLabel = QLabel("")
         self.scrollArea1 = QScrollArea()
-        self.scrollArea1.setWidgetResizable(True) 
+        self.scrollArea1.setWidgetResizable(True)
         self.scrollArea1.setWidget(self.duplicatesLabel)
         self.middleTopRightLayout1.addRow(" ", None)
         self.middleTopRightLayout1.addRow("Duplicate IDs :", self.scrollArea1)
         self.middleTopRightLayout1.addRow(" ", None)
-        
-        self.duplicatesLabel2 = QLabel("")
+
+        self.duplicatesLabel2 = QPlainTextEdit()
+        self.duplicatesLabel2.setReadOnly(True)
         self.scrollArea2 = QScrollArea()
-        self.scrollArea2.setWidgetResizable(True) 
+        self.scrollArea2.setWidgetResizable(True)
         self.scrollArea2.setWidget(self.duplicatesLabel2)
         self.middleTopRightLayout2.addRow(" ", None)
         self.middleTopRightLayout2.addRow("Details :", self.scrollArea2)
@@ -580,10 +472,10 @@ class MainWindow(QMainWindow):
         bottomLayout.addWidget(self.pauseButton)
         bottomLayout.addWidget(self.cleanButton)
         self.displayModeBox.currentTextChanged.connect(\
-                    lambda: self.changeDisplayStyle(self.checkButton, \
-                        self.pauseButton, self.cleanButton, self.goodIDBox, \
-                        self.badIDBox, self.scrollArea1, self.scrollArea2, \
-                        self.displayModeBox.currentText()))
+            lambda: self.changeDisplayStyle(self.checkButton, \
+                self.pauseButton, self.cleanButton, self.goodIDBox, \
+                self.badIDBox, self.scrollArea1, self.scrollArea2, \
+                self.displayModeBox.currentText()))
         self.displayModeBox.setCurrentIndex(modes.index(self.loadDisplayMode()))
         self.updateButtonStyle(self.checkButton, self.pauseButton, self.cleanButton, self.loadDisplayMode())
         self.updateTextStyle(self.goodIDBox, self.badIDBox, self.scrollArea1, self.scrollArea2, self.loadDisplayMode())
@@ -632,7 +524,8 @@ class MainWindow(QMainWindow):
             else:
                 msgBox.setStyleSheet(darkB)
             msgBox.exec()
-        self.runButton.setDisabled(False)
+        self.checkButton.setDisabled(False)
+        self.cleanButton.setDisabled(False)
         self.status.setText("              Status :  Idle")
     
     
@@ -649,11 +542,11 @@ class MainWindow(QMainWindow):
             if self.worker.paused:
                 self.worker.paused = False
                 self.pauseButton.setText("Pause")
-                self.status.setText("             Status : Running...\n")
+                self.status.setText("        Status : Running...\n")
             else:
                 self.worker.paused = True
                 self.pauseButton.setText("Resume")
-                self.status.setText("             Status : Paused\n" )
+                self.status.setText("          Status : Paused\n" )
     
     
     '''
@@ -698,8 +591,7 @@ class MainWindow(QMainWindow):
     @author Mike
     '''     
     def updateScroll(self, newText):
-        currentText = self.duplicatesLabel2.text()
-        self.duplicatesLabel2.setText(currentText + newText + "\n")
+        self.duplicatesLabel2.appendPlainText(newText)
         self.scrollArea2.verticalScrollBar().setValue(self.scrollArea2.verticalScrollBar().maximum())
     
     
@@ -757,12 +649,13 @@ class MainWindow(QMainWindow):
         self.worker.cleanImagesSignal.connect(lambda goodID, redac, redac2: self.cleanImages(goodID, redac, redac2))
         self.worker.cleanHyperlinksSignal.connect(lambda cemetery, startIndex: self.cleanHyperlinks(cemetery, startIndex))
         self.worker.start()
-        self.status.setText("              Status:  Running...\n")
+        self.status.setText("        Status:  Running...\n")
         self.cleanButton.setDisabled(True)
+        self.checkButton.setDisabled(True)
         self.switchToLayout2()
         
     def cleanImages(self, goodID, redac, redac2):
-            baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
+            baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Test{redac}"
             cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
             initialCount = 1
             start = goodID - 600
@@ -854,7 +747,7 @@ class MainWindow(QMainWindow):
 
     def adjustImageName(self, goodID, badID, goodRow):
         global excelFilePath
-        baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+        baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Test"
         goodIDFound = False
         badIDFound = False
         goodIDFilePath = ""
@@ -901,7 +794,7 @@ class MainWindow(QMainWindow):
         print(f"Record {goodID} data from row {goodRow} cleared successfully.")
 
     def cleanDelete(self, cemetery, badID, badRow):
-        baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+        baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Test - Redacted"
         text = ""
         for dirPath, dirNames, fileNames in os.walk(baseRedacPath):
             for fileName in fileNames:
@@ -938,7 +831,7 @@ class MainWindow(QMainWindow):
             print(f"Updated hyperlink in row {lastRow} to new target, {newTarget}.\n")
 
     def cleanHyperlinks(self, cemetery, startIndex):
-        baseBath = fr'\\ucclerk\pgmdoc\Veterans\Cemetery\{cemetery}'
+        baseBath = fr'\\ucclerk\pgmdoc\Veterans\Test\{cemetery}'
         fileDirectoryMap = {}
         for dirPath, dirNames, fileNames in os.walk(baseBath):
             for fileName in fileNames:
@@ -960,11 +853,14 @@ class MainWindow(QMainWindow):
                 self.updateLabelSignal.emit(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
                 print(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
             newID += 1
+        self.checkButton.setDisabled(False)
+        self.cleanButton.setDisabled(True)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     parentPath = os.path.dirname(os.getcwd())
-    window.setWindowIcon(QIcon(f"{parentPath}/veteranData/veteranLogo.png"))
+    window.setWindowIcon(QIcon(f"{parentPath}/_internal/veteranData/veteranLogo.png"))
     window.show()
     sys.exit(app.exec())

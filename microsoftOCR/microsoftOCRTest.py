@@ -715,7 +715,7 @@ def main(singleFlag, singleCem, singleLetter):
     worksheet = workbook[cemetery]
     warFlag = False
     pdfFiles = sorted(os.listdir(namePath))
-    initialID = 5093
+    initialID = 1
     breakFlag = False
     for y in range(len(pdfFiles)):
         try:

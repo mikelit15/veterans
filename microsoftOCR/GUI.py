@@ -18,11 +18,37 @@ Dark Mode QMessageBox Button Styling
 darkB = ("""
     QPushButton {
         background-color: #0078D4; 
-        color: #FFFFFF;           
+        color: #E4E7EB;           
         border: 1px solid #8A8A8A; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #00A2FF, stop:1 #002D59);
     }
     QPushButton:hover {
         background-color: #669df2; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #80CFFF, stop:1 #004080);
+    }
+    QPushButton:pressed {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #004080, stop:1 #001B3D);
+    }
+    QPushButton:disabled {
+        background-color: #1A1A1C; 
+        border: 1px solid #3B3B3B;
+        color: #3B3B3B;   
+    }
+""")
+
+darkNB = ("""
+    QPushButton {
+        color: #E4E7EB;          
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #00A2FF, stop:1 #002D59); 
+    }
+    QPushButton:hover {
+        background-color: #669df2; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #80CFFF, stop:1 #004080);
     }
 """)
 
@@ -31,12 +57,24 @@ Light Mode QMessageBox Button Styling
 '''
 lightB = ("""
     QPushButton {
-        background-color: #669df2;  
+        background-color: #70c5ff;  
         color: #111111;            
         border: 1px solid #111111; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                            stop:0 #9EDFFF, stop:1 #1A8FE3);
     }
     QPushButton:hover {
-        background-color: #0078D4; 
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                            stop:0 #70C5FF, stop:1 #0078D4);
+    }
+    QPushButton:pressed {
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                    stop:0 #0078D4, stop:1 #004080);
+    }
+    QPushButton:disabled {
+        background-color: #DBDBDB; 
+        color: #686868; 
+        border: 1px solid #686868;
     }
 """)
 
@@ -94,9 +132,10 @@ light = qdarktheme.load_stylesheet(
 class Worker(QThread):
     idSignal = pyqtSignal(str)  # Signal to emit IDs
     kvsSignal = pyqtSignal(str) # Signal to emit KVS
-    errorSignal = pyqtSignal(str) # Signal to emit Error Message
+    errorSignal = pyqtSignal(str, bool) # Signal to emit Error Message
     imageSignal = pyqtSignal(str) # Signal to emit Image Path
     popupSignal = pyqtSignal(str, str) # Signal to update app status 
+    finishedSignal = pyqtSignal(str, str)
     
     
     '''
@@ -131,44 +170,49 @@ class Worker(QThread):
     @author Mike
     '''
     def run(self):
-        global cemSet
-        global miscSet
-        global jewishSet
-        networkFolder = r"\\ucclerk\pgmdoc\Veterans"
-        os.chdir(networkFolder)
-        cemeterys = []
-        for x in os.listdir(r"Cemetery"):
-            cemeterys.append(x)
-        miscs = []
-        for x in os.listdir(r"Cemetery\Misc"):
-            miscs.append(x)
-        jewishs = []
-        for x in os.listdir(r"Cemetery\Jewish"):
-            jewishs.append(x)
-        cemSet = set(cemeterys)
-        miscSet = set(miscs)
-        jewishSet = set(jewishs)
-        workbook = openpyxl.load_workbook('Veterans.xlsx')
-        cemetery = self.singleCem 
-        cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
-        letter = self.singleLetter 
-        namePath = letter 
-        namePath = os.path.join(cemPath, namePath)
-        pathA = ""
-        rowIndex = 2
-        global worksheet
+        try:
+            global cemSet
+            global miscSet
+            global jewishSet
+            networkFolder = r"\\ucclerk\pgmdoc\Veterans"
+            os.chdir(networkFolder)
+            cemeterys = []
+            for x in os.listdir(r"Cemetery"):
+                cemeterys.append(x)
+            miscs = []
+            for x in os.listdir(r"Cemetery\Misc"):
+                miscs.append(x)
+            jewishs = []
+            for x in os.listdir(r"Cemetery\Jewish"):
+                jewishs.append(x)
+            cemSet = set(cemeterys)
+            miscSet = set(miscs)
+            jewishSet = set(jewishs)
+            workbook = openpyxl.load_workbook('Veterans.xlsx')
+            cemetery = self.singleCem 
+            cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
+            letter = self.singleLetter 
+            namePath = letter 
+            namePath = os.path.join(cemPath, namePath)
+            pathA = ""
+            warFlag = False
+            breakFlag = False
+            rowIndex = 2
+            global worksheet
+        except Exception:
+            error = traceback.format_exc()
+            self.errorSignal.emit(error[-775:], True)
+            return
         try:
             worksheet = workbook[cemetery]
         except Exception:
             self.popupSignal.emit('Critical', f"Cemetery '{cemetery}' not found in Veterans.xslx.")
             return
-        warFlag = False
         try:
             pdfFiles = sorted(os.listdir(namePath))
         except Exception:
             self.popupSignal.emit('Critical', f"Letter '{letter}' not found in '{cemetery}' folder.")
             return
-        breakFlag = False
         for y in range(len(pdfFiles)):
             try:
                 warFlag = False
@@ -192,7 +236,7 @@ class Worker(QThread):
                             break
                     self.idSignal.emit(str(id))
                     self.kvsSignal.emit("")
-                    self.errorSignal.emit("")
+                    self.errorSignal.emit("", False)
                     self.imageSignal.emit("")
                     vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "")
                     self.kvsSignal.emit(printedKVS)
@@ -223,7 +267,7 @@ class Worker(QThread):
                         pathA = filePath
                         self.idSignal.emit(f"{id} A")
                         self.kvsSignal.emit("")
-                        self.errorSignal.emit("")
+                        self.errorSignal.emit("", False)
                         self.imageSignal.emit("")
                         vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "A")
                         self.kvsSignal.emit(printedKVS)
@@ -234,7 +278,7 @@ class Worker(QThread):
                             continue
                         self.idSignal.emit(f"{id} B")
                         self.kvsSignal.emit("")
-                        self.errorSignal.emit("")
+                        self.errorSignal.emit("", False)
                         self.imageSignal.emit("")
                         vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "B")
                         self.kvsSignal.emit(printedKVS)
@@ -268,7 +312,7 @@ class Worker(QThread):
                 errorFilePath = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
                 with open(errorFilePath, 'a') as errorFile:
                     errorFile.write(f'{printedKVS} \n\n {errorTraceback}')
-                    self.errorSignal.emit(errorTraceback)
+                    self.errorSignal.emit(errorTraceback, False)
                 id += 1
                 rowIndex += 1
             extension1 = str(id-1).zfill(5)
@@ -285,7 +329,7 @@ class Worker(QThread):
             workbook.save('Veterans.xlsx')
             if breakFlag:
                 break
-        self.popupSignal.emit('Info', f"{cemetery} letter {letter} has finished processing.\n Please enter the next letter.")
+        self.finishedSignal.emit(cemetery, letter)
         return
    
 class MainWindow(QMainWindow):
@@ -365,97 +409,13 @@ class MainWindow(QMainWindow):
     '''
     def updateButtonStyle(self, runButton, pauseButton, stopButton, displayMode):
         if displayMode == "Light":
-            runButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #669df2;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QPushButton:hover {
-                    background-color: #0078D4; 
-                }
-                QPushButton:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
-            pauseButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #669df2;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QPushButton:hover {
-                    background-color: #0078D4; 
-                }
-                QPushButton:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
-            stopButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #669df2;  
-                    color: #111111;            
-                    border: 1px solid #111111; 
-                }
-                QPushButton:hover {
-                    background-color: #0078D4; 
-                }
-                QPushButton:disabled {
-                    background-color: #DBDBDB; 
-                    color: #686868; 
-                    border: 1px solid #686868;
-                }
-                """)
+            runButton.setStyleSheet(lightB)
+            pauseButton.setStyleSheet(lightB)
+            stopButton.setStyleSheet(lightB)
         else:
-            runButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #0078D4; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QPushButton:hover {
-                    background-color: #669DF2; 
-                }
-                QPushButton:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B;
-                    color: #3B3B3B;   
-                }
-                """)
-            pauseButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #0078D4; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QPushButton:hover {
-                    background-color: #669DF2; 
-                }
-                QPushButton:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B;
-                    color: #3B3B3B;   
-                }
-                """)
-            stopButton.setStyleSheet("""
-                QPushButton {
-                    background-color: #0078D4; 
-                    color: #FFFFFF;           
-                    border: 1px solid #8A8A8A; 
-                }
-                QPushButton:hover {
-                    background-color: #669DF2; 
-                }
-                QPushButton:disabled {
-                    background-color: #1A1A1C; 
-                    border: 1px solid #3B3B3B;
-                    color: #3B3B3B;   
-                }
-                """)
+            runButton.setStyleSheet(darkB)
+            pauseButton.setStyleSheet(darkB)
+            stopButton.setStyleSheet(darkB)
         
         
     '''
@@ -637,13 +597,13 @@ class MainWindow(QMainWindow):
     '''  
     def updateImage(self, filePath):
         pixmap = QPixmap(filePath)
-        self.imageLabel.setPixmap(pixmap.scaled(430, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)) 
+        self.imageLabel.setPixmap(pixmap.scaled(420, 490, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)) 
     
     
     '''
     Function that updates the current ID number display for the current image being processed
 
-    @param self - the main window, used to apply its properties to QMessageBox
+    @param self - the main window
     @param id - the current ID number being processed
 
     @author Mike
@@ -655,7 +615,7 @@ class MainWindow(QMainWindow):
     '''
     Function that updates the raw extracted text display for the current image being processed
 
-    @param self - the main window, used to apply its properties to QMessageBox
+    @param self - the main window
     @param printedKVS - the raw extracted text from the current image
 
     @author Mike
@@ -667,20 +627,43 @@ class MainWindow(QMainWindow):
     '''
     Function that updates error display for the current image being processed
 
-    @param self - the main window, used to apply its properties to QMessageBox
+    @param self - the main window
     @param printedKVS - the error message that occured when processing the current image
 
     @author Mike
     '''  
-    def updateError(self, errorMsg):
+    def updateError(self, errorMsg, resetFlag):
+        if resetFlag:
+            self.runButton.setDisabled(False)
+            self.pauseButton.setDisabled(True)
+            self.stopButton.setDisabled(True)
+            self.status.setText("              Status :  Idle")
         self.errorLabel.setText(f"{errorMsg}")  
+
     
     
+    '''
+    Function that updates resets the window when processing loop has finished
+
+    @param self - the main window
+    @param cemetery - the name of the cemetery that is being processed
+    @param letter - the letter folder that is being processed
+
+    @author Mike
+    '''  
+    def updateFinished(self, cemetery, letter):
+        self.updateStatus('Info', f"{cemetery} letter {letter} has finished processing. Please enter the next letter.") 
+        self.runButton.setDisabled(False)
+        self.pauseButton.setDisabled(True)
+        self.stopButton.setDisabled(True)
+        self.status.setText("              Status :  Idle")
+
+        
     '''
     Function that sets up the Worker and the signals that the Worker will emit to 
     call the display update funcitons.
 
-    @param self - the main window, used to apply its properties to QMessageBox
+    @param self - the main window
 
     @author Mike
     '''        
@@ -694,9 +677,10 @@ class MainWindow(QMainWindow):
         self.worker = Worker(False, self.cemeteryBox.text(), self.letterBox.text())
         self.worker.idSignal.connect(lambda id: self.updateID(id))
         self.worker.kvsSignal.connect(lambda printedKVS: self.updateKVS(printedKVS))
-        self.worker.errorSignal.connect(lambda errorMsg: self.updateError(errorMsg))
+        self.worker.errorSignal.connect(lambda errorMsg, resetFlag: self.updateError(errorMsg, resetFlag))
         self.worker.imageSignal.connect(lambda imagePath: self.updateImage(imagePath))
         self.worker.popupSignal.connect(lambda type, text: self.updateStatus(type, text))
+        self.worker.finishedSignal.connect(lambda cemetery, letter: self.updateFinished(cemetery, letter))
         self.worker.start()
         self.status.setText("          Status :  Running...")
         self.runButton.setDisabled(True)
@@ -735,7 +719,7 @@ class MainWindow(QMainWindow):
     def stopProcessing(self):
         self.worker.stopped = True
         self.status.setText("          Status :  Stopping...")
-        self.runButton.setDisabled(False)
+        self.pauseButton.setDisabled(True)
         
         
 if __name__ == "__main__":

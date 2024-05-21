@@ -14,7 +14,7 @@ duplicate records. The process includes several key steps:
 '''
 def main(cemetery):
     try:
-        df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", sheet_name= cemetery, usecols="A:K")
+        df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans2.xlsx", sheet_name= cemetery, usecols="A:K")
         df.reset_index(inplace=True, drop=True)  
         df.index = df.index + 2
         potential_duplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]

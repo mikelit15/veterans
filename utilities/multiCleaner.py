@@ -313,25 +313,7 @@ def cleanHyperlinks(cemetery, startIndex):
             worksheet[cell_ref].value = "PDF Image"
             print(f"Updated hyperlink from {orig_target} to {modified_string} in row {row}.")
         new_id += 1
-
-
-'''
-Processes good and bad IDs to update the Excel file and associated images and data.
-This function handles identifying good and bad rows, adjusting image names, calling OCR
-for image processing, cleaning deleted entries, and ensuring image file names and
-hyperlinks are correctly updated in the Excel sheet.
-
-@param cemetery (str): The name of the cemetery being processed.
-@param goodIDs (list): List of good ID numbers.
-@param badIDs (list): List of bad ID numbers to be corrected.
-
-- Loads the Excel workbook and worksheet for the specified cemetery.
-- Iterates through each good and bad ID pair to update the corresponding rows in the Excel sheet.
-- Adjusts image names, calls OCR processing, and deletes bad entries.
-- Cleans up image files and hyperlinks in the Excel sheet to maintain consistency.
-
-@author Mike
-'''
+        
 def main(cemetery, goodIDs, badIDs):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     global workbook
