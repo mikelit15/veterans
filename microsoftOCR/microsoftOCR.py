@@ -2,7 +2,7 @@ import re
 import openpyxl 
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.formrecognizer import DocumentAnalysisClient
-from openpyxl.styles import Font
+from openpyxl.styles import Font, PatternFill
 from collections import defaultdict
 import traceback
 import os
@@ -14,7 +14,6 @@ from reportlab.pdfgen import canvas
 from PIL import Image
 from nameparser import HumanName
 from nameparser.config import CONSTANTS
-from openpyxl.styles import PatternFill
 from fuzzywuzzy import fuzz
 import sys
 sys.path.append(r'C:\workspace\veterans\microsoftOCR')
@@ -721,7 +720,7 @@ def main(singleFlag, singleCem, singleLetter):
                         breakFlag = True
         except Exception as e:
             errorTraceback = traceback.format_exc()
-            print(errorTraceback)
+            # print(errorTraceback)
             print(f"An error occurred: {e}")
             errorMessage = f"SKIPPED DUE TO ERROR : {errorTraceback}"
             worksheet.cell(row=rowIndex, column=1, value=id)
@@ -755,5 +754,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "P" # Change this to continue running through the current cemetery
+    letter = "Q" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

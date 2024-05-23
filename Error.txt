@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "C:\workspace\installer\main.py", line 606, in <module>
+    main()
+  File "C:\workspace\installer\main.py", line 600, in main
+    mainWin = initUI()
+              ^^^^^^^^
+  File "C:\workspace\installer\main.py", line 474, in initUI
+    changeDisplayStyle(window, uninstallButton, installButton, displayModeBox, displayModeBox.currentText())
+  File "C:\workspace\installer\main.py", line 373, in changeDisplayStyle
+    saveDisplayMode(displayMode)
+  File "C:\workspace\installer\main.py", line 309, in saveDisplayMode
+    with open("_internal/installerData/display_mode.txt", "w") as file:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '_internal/installerData/display_mode.txt'

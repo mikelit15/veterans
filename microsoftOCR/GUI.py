@@ -15,13 +15,12 @@ import qdarktheme
 '''
 Dark Mode QMessageBox Button Styling
 '''
-darkB = ("""
+DarkB = ("""
     QPushButton {
         background-color: #0078D4; 
         color: #E4E7EB;           
         border: 1px solid #8A8A8A; 
-        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                    stop:0 #00A2FF, stop:1 #002D59);
+
     }
     QPushButton:hover {
         background-color: #669df2; 
@@ -39,11 +38,9 @@ darkB = ("""
     }
 """)
 
-darkNB = ("""
+DarkNB = ("""
     QPushButton {
         color: #E4E7EB;          
-        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                                    stop:0 #00A2FF, stop:1 #002D59); 
     }
     QPushButton:hover {
         background-color: #669df2; 
@@ -55,13 +52,11 @@ darkNB = ("""
 '''
 Light Mode QMessageBox Button Styling
 '''
-lightB = ("""
+LightB = ("""
     QPushButton {
         background-color: #70c5ff;  
         color: #111111;            
         border: 1px solid #111111; 
-        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                            stop:0 #9EDFFF, stop:1 #1A8FE3);
     }
     QPushButton:hover {
         background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
@@ -81,51 +76,51 @@ lightB = ("""
 '''
 Dark Mode Styling
 '''
-dark = qdarktheme.load_stylesheet(
+Dark = qdarktheme.load_stylesheet(
             theme="dark",
             custom_colors=
             {
                 "[dark]": 
                 {
                     "primary": "#0078D4",
+                    "background": "#202124",
                     "border": "#8A8A8A",
-                    "primary>button.hoverBackground": "#2B456E",
-                    "background>list": "#3F4042",
-                    "background>popup": "#303136",
+                    "background>popup": "#252626",
                 }
             },
         ) + """
-            QMessageBox {
-                background-color: #303135;
-            }
             QMessageBox QLabel {
                 color: #E4E7EB;
+            }
+            QDialog {
+                background-color: #252626;
             }
         """
 
 '''
 Light Mode Styling
 '''
-light = qdarktheme.load_stylesheet(
+Light = qdarktheme.load_stylesheet(
             theme="light",
             custom_colors=
             {
                 "[light]": 
                 {
+                    "primary": "#0078D4",
+                    "input.background": "#FFFFFF",
+                    "background>textarea": "#FFFFFF",
                     "foreground": "#111111",
+                    "background": "#F0F0F0",
                     "border": "#111111",
-                    "background": "#f0f0f0",
-                    "primary>button.hoverBackground": "#adcaf7",
-                    "background>list": "#FFFFFF",
-                    "background>popup": "#cfcfd1",
+                    "background>popup": "#C9C9C9",
                 }
             },
         ) + """
-            QMessageBox {
-                background-color: #d4d4d4;
-            }
             QMessageBox QLabel {
                 color: #111111;
+            }
+            QDialog {
+                background-color: #C9C9C9;
             }
         """
 
@@ -300,7 +295,6 @@ class Worker(QThread):
                             breakFlag = True
             except Exception as e:
                 errorTraceback = traceback.format_exc()
-                print(errorTraceback)
                 print(f"An error occurred: {e}")
                 errorMessage = f"SKIPPED DUE TO ERROR : {errorTraceback}"
                 worksheet.cell(row= rowIndex, column= 1, value= id)
@@ -376,47 +370,53 @@ class MainWindow(QMainWindow):
     '''
     Updates the display mode anytime the selection is changed within the app through
     the display mode selection box. Saves the mode selection to a local .txt file.
-    Manually adjusts the styling of the three buttons on the app.
+    Manually updates the styling for various widgets.
 
     @param window - the main window
     @param runButton - the QPushButton widget for the run button
     @param pauseButton - the QPushButton widget for the pause button
     @param stopButton - the QPushButton widget for the stop button
+    @param displayModeBox - the QComboBox widget that is getting adjusted
     @param displayMode - the name of the display mode selected
 
     @author Mike
     '''
-    def changeDisplayStyle(self, window, runButton, pauseButton, stopButton, displayMode):
+    def changeDisplayStyle(self, runButton, pauseButton, stopButton, displayModeBox, displayMode):
         if displayMode == "Dark":
-            window.setStyleSheet(dark)
+            displayModeBox.setStyleSheet("""            
+                QComboBox QAbstractItemView {
+                border: 1px solid #8A8A8A;
+                border-radius: 1px;
+                selection-background-color: #669df2;
+                }
+                QListView::item {
+                border-radius: 0px;
+                border-bottom: 1px solid #8A8A8A;
+                }
+                QListView::item:last {
+                    border-bottom: none;
+                }
+                """)
         else:
-            window.setStyleSheet(light)
+            displayModeBox.setStyleSheet("""            
+                QComboBox QAbstractItemView {
+                border: 1px solid #111111;
+                selection-background-color: #cfcfd1;
+                }
+                QListView::item {
+                border-radius: 0px;
+                border-bottom: 1px solid #111111;
+                }
+                QListView::item:last {
+                    border-bottom: none;
+                }
+                """)
+        self.setStyleSheet(globals()[displayMode])
+        runButton.setStyleSheet(globals()[f"{displayMode}B"])
+        pauseButton.setStyleSheet(globals()[f"{displayMode}B"])
+        stopButton.setStyleSheet(globals()[f"{displayMode}B"])
         self.saveDisplayMode(displayMode)
-        self.updateButtonStyle(runButton, pauseButton, stopButton, displayMode)
     
-    
-    '''
-    Updates the button styling anytime the selection is changed within the app through
-    the display mode selection box. 
-
-    @param window - the main window 
-    @param runButton - the QPushButton widget for the run button
-    @param pauseButton - the QPushButton widget for the pause button
-    @param stopButton - the QPushButton widget for the stop button
-    @param displayMode - the name of the display mode selected
-
-    @author Mike
-    '''
-    def updateButtonStyle(self, runButton, pauseButton, stopButton, displayMode):
-        if displayMode == "Light":
-            runButton.setStyleSheet(lightB)
-            pauseButton.setStyleSheet(lightB)
-            stopButton.setStyleSheet(lightB)
-        else:
-            runButton.setStyleSheet(darkB)
-            pauseButton.setStyleSheet(darkB)
-            stopButton.setStyleSheet(darkB)
-        
         
     '''
     Creates the main window UI. Places all the widgets in their respective places
@@ -537,9 +537,8 @@ class MainWindow(QMainWindow):
         bottomLayout.addWidget(self.runButton)
         bottomLayout.addWidget(self.status)
         bottomLayout.addWidget(self.pauseButton)
-        self.displayModeBox.currentTextChanged.connect(lambda: self.changeDisplayStyle(self, self.runButton, self.pauseButton, self.stopButton, self.displayModeBox.currentText()))
+        self.displayModeBox.currentTextChanged.connect(lambda: self.changeDisplayStyle(self.runButton, self.pauseButton, self.stopButton, self.displayModeBox, self.displayModeBox.currentText()))
         self.displayModeBox.setCurrentIndex(modes.index(self.loadDisplayMode()))
-        self.updateButtonStyle(self.runButton, self.pauseButton, self.stopButton, self.loadDisplayMode())
         bottomContainer.setLayout(bottomLayout)
         # Create a main layout to arrange the containers
         mainLayout = QVBoxLayout()
@@ -549,6 +548,7 @@ class MainWindow(QMainWindow):
         mainLayout.addWidget(bottomContainer)
         mainLayout.addWidget(self.stopButton, 0, alignment= Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
+        self.changeDisplayStyle(self.runButton, self.pauseButton, self.stopButton, self.displayModeBox, self.displayModeBox.currentText())
     
     
     '''
@@ -564,24 +564,15 @@ class MainWindow(QMainWindow):
     def updateStatus(self, type, text):
         if type == "Critical":
             msgBox = QMessageBox(QMessageBox.Icon.Critical, 'Error', text, QMessageBox.StandardButton.Ok, window)
-            if self.loadDisplayMode() == "Light":
-                msgBox.setStyleSheet(lightB)
-            else:
-                msgBox.setStyleSheet(darkB)
+            msgBox.setStyleSheet(globals()[f"{self.loadDisplayMode()}B"])
             msgBox.exec()
         elif type == "Warning":
             msgBox = QMessageBox(QMessageBox.Icon.Warning, 'Warning', text, QMessageBox.StandardButton.Ok, window)
-            if self.loadDisplayMode() == "Light":
-                msgBox.setStyleSheet(lightB)
-            else:
-                msgBox.setStyleSheet(darkB)
+            msgBox.setStyleSheet(globals()[f"{self.loadDisplayMode()}B"])
             msgBox.exec()
         elif type == "Info":
             msgBox = QMessageBox(QMessageBox.Icon.Information, 'Information', text, QMessageBox.StandardButton.Ok, window)
-            if self.loadDisplayMode() == "Light":
-                msgBox.setStyleSheet(lightB)
-            else:
-                msgBox.setStyleSheet(darkB)
+            msgBox.setStyleSheet(globals()[f"{self.loadDisplayMode()}B"])
             msgBox.exec()
         self.runButton.setDisabled(False)
         self.status.setText("              Status :  Idle")
@@ -730,11 +721,6 @@ if __name__ == "__main__":
     window.setWindowIcon(QIcon(f"{parentPath}/_internal/veteranData/veteranLogo.png"))
     msgBox = QMessageBox(QMessageBox.Icon.Information, 'Instructions', "If code is running, please press \"Stop Code\" before closing the application.", QMessageBox.StandardButton.Ok, window)
     window.show()
-    if window.loadDisplayMode() == "Light":
-        app.setStyleSheet(light)
-        msgBox.setStyleSheet(lightB)
-    else:
-        app.setStyleSheet(dark)
-        msgBox.setStyleSheet(darkB)
+    msgBox.setStyleSheet(globals()[f"{window.loadDisplayMode()}B"])
     msgBox.exec()
     sys.exit(app.exec())
