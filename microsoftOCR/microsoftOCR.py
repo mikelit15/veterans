@@ -752,7 +752,7 @@ def main(singleFlag, singleCem, singleLetter):
 
 if __name__ == "__main__":
     global cemetery
-    cemetery = "Graceland" # Change this to continue running through cemeteries
+    cemetery = "Evergreen" # Change this to continue running through cemeteries
     global letter
-    letter = "Q" # Change this to continue running through the current cemetery
+    letter = "P" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

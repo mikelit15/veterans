@@ -897,26 +897,15 @@ class MainWindow(QMainWindow):
         except Exception:
             self.updateStatus("Warning", "Cemetery field not filled out or misspelled.")
             return
-
-        # Fill NaN values with "NaN" for better visibility in the output
         df = df.fillna("NaN")
-        
-        # Function to format a single column value
         def format_value(value, width):
             return f"{str(value):<{width}}"
-
-        # Create a formatted string for the DataFrame
         formatted_lines = []
-        
-        # Format the header
         header = " ".join([format_value(col, columnWidths[col]) for col in df.columns])
         formatted_lines.append(header)
-        
-        # Format the rows
         for index, row in df.iterrows():
             formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns])
             formatted_lines.append(formatted_row)
-        
         string = "\n".join(formatted_lines)
         self.scrollArea.setDisabled(False)
         self.detailsLabel.appendPlainText("Current Duplicates:")
