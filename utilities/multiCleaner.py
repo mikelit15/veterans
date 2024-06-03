@@ -313,7 +313,29 @@ def cleanHyperlinks(cemetery, startIndex):
             worksheet[cell_ref].value = "PDF Image"
             print(f"Updated hyperlink from {orig_target} to {modified_string} in row {row}.")
         new_id += 1
-        
+
+
+'''
+Main function to process and update a specific worksheet in an Excel workbook containing 
+good and bad IDs. It adjusts image names, updates hyperlinks, cleans up records, and 
+checks for duplicates.
+
+@param cemetery (str): The name of the worksheet (cemetery) to be processed.
+@param goodIDs (list): List of good IDs to be processed.
+@param badIDs (list): List of bad IDs to be processed.
+
+- Loads the Excel workbook and selects the specified worksheet (cemetery).
+- Iterates through the good and bad IDs to adjust image names, perform OCR, and clean up 
+  records.
+- Cleans images for both regular and redacted versions.
+- Updates hyperlinks starting from a specific index.
+- Checks for duplicate records.
+
+The function uses various helper functions such as `adjustImageName`, `microsoftOCR.main`, 
+`cleanDelete`, `cleanImages`, `cleanHyperlinks`, and `duplicates.main`.
+
+The Excel file is saved after each major operation to ensure data consistency.
+'''
 def main(cemetery, goodIDs, badIDs):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     global workbook

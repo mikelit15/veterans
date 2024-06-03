@@ -19,10 +19,12 @@ def load_and_process_sheet(sheet_name, excel_file):
     df.reset_index(inplace=True, drop=True)
     df.index = df.index + 2
     df['VDOBY'] = df['VDOBY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
-    df['VDODY'] = df['VDODY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
     df['VDOBY'] = df['VDOBY'].astype(object).where(pd.notna(df['VDOBY']), np.nan)
+    df['VDODY'] = df['VDODY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
     df['VDODY'] = df['VDODY'].astype(object).where(pd.notna(df['VDODY']), np.nan)
-    df['SheetName'] = sheet_name  # Add a column to identify the sheet name
+    df['VID'] = df['VID'].apply(lambda x: int(x) if pd.notna(x) else np.nan)
+    df['VID'] = df['VID'].astype(object).where(pd.notna(df['VID']), np.nan)
+    df['SHEET NAME'] = sheet_name  
     return df
 
 def find_duplicates(df):
@@ -39,27 +41,23 @@ def find_duplicates(df):
     confirmed_duplicates.drop(columns=['MaxVIDinPair'], inplace=True)
     return confirmed_duplicates
 
-def main(file_path):
+def main():
+    file_path = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     combined_df = pd.DataFrame()
     confirmed_duplicates = pd.DataFrame()
-    
     try:
         excel_file = pd.ExcelFile(file_path)
         for sheet_name in excel_file.sheet_names:
             df = load_and_process_sheet(sheet_name, file_path)
             print(f"Processing sheet: {sheet_name}")
             print("Columns:", df.columns)
-            
             required_columns = {'VLNAME', 'VFNAME', 'VDODY', 'VDOBY', 'VID'}
             if not required_columns.issubset(df.columns):
                 print(f"### Missing required columns in sheet {sheet_name} ###")
                 continue
-            
             combined_df = pd.concat([combined_df, df], ignore_index=True)
-        
         if not combined_df.empty:
             confirmed_duplicates = find_duplicates(combined_df)
-        
         if confirmed_duplicates.empty:
             print("### No Duplicates ###")
         else:
@@ -67,7 +65,6 @@ def main(file_path):
     except Exception as e:
         print("### No Duplicates ###")
         print(f"Error: {e}")
-    
     return confirmed_duplicates
 
 # def main(cemetery):
@@ -101,5 +98,4 @@ def main(file_path):
 
 
 if __name__ == "__main__":
-    file_path = r"\\ucclerk\pgmdoc\Veterans\Veterans2.xlsx"
-    main(file_path)
+    main()

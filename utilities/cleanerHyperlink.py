@@ -47,6 +47,6 @@ def cleanHyperlink(id, cemetery):
 
 
 if __name__ == "__main__":
-    id = 1947 # The hyperlink gets decremented by 1 at this row #
+    id = 1800 # The hyperlink gets decremented by 1 at this row #
     cemetery = "Graceland"
     cleanHyperlink(id, cemetery)

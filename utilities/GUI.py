@@ -25,7 +25,7 @@ Dark Mode QMessageBox Button Styling
 DarkB = ("""
     QPushButton {
         background-color: #0078D4; 
-        color: #E4E7EB;           
+        color: #FFFFFF;           
         border: 1px solid #8A8A8A; 
 
     }
@@ -191,9 +191,8 @@ class Worker(QThread):
 
     @author Mike
     '''
-    def __init__(self, cemetery, goodIDs, badIDs):
+    def __init__(self, goodIDs, badIDs):
         super().__init__()
-        self.cemetery = cemetery
         self.goodIDs = goodIDs
         self.badIDs = badIDs
         self.paused = False
@@ -408,8 +407,7 @@ class Worker(QThread):
             isFirstFile = False
         return counter, startFlag
 
-    def adjustImageName(self, goodID, badID, goodRow):
-        global excelFilePath
+    def adjustImageName(self, goodID, badID, goodRow, goodWorkSheet):
         baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
         goodIDFound = False
         badIDFound = False
@@ -441,10 +439,21 @@ class Worker(QThread):
             shutil.move(badIDFilePath, newBadIDFilePath)
             self.updateLabelSignal.emit(f"{os.path.basename(badIDFilePath)} moved and renamed to {newBadIDFilename}")
             print(f"{os.path.basename(badIDFilePath)} moved and renamed to {newBadIDFilename}")
+        elif goodIDFound:
+            self.updateLabelSignal.emit("BadID file not found. Please check the IDs and directories.")
+            print("BadID file not found. Please check the IDs and directories.")
+            self.checkButtonSignal.emit(False)
+            self.cleanButtonSignal.emit(False)
+            quit()
+        elif badIDFound:
+            self.updateLabelSignal.emit("GoodID file not found. Please check the IDs and directories.")
+            print("GoodID file not found. Please check the IDs and directories.")
+            self.checkButtonSignal.emit(False)
+            self.cleanButtonSignal.emit(False)
+            quit()
         else:
-            self.updateLabelSignal.emit("GoodID or BadID file not found. Please check the IDs and directories.")
-            print("GoodID or BadID file not found. Please check the IDs and directories.")
-            workbook.save(excelFilePath)
+            self.updateLabelSignal.emit("GoodID and BadID files not found. Please check the IDs and directories.")
+            print("GoodID and BadID files not found. Please check the IDs and directories.")
             self.checkButtonSignal.emit(False)
             self.cleanButtonSignal.emit(False)
             quit()
@@ -453,12 +462,12 @@ class Worker(QThread):
         startColumnIndex = openpyxl.utils.column_index_from_string(startColumn)
         endColumnIndex = openpyxl.utils.column_index_from_string(endColumn)
         for colIndex in range(startColumnIndex, endColumnIndex + 1):
-            worksheet.cell(row= goodRow, column= colIndex).value = None
-        worksheet[f'O{goodRow}'].hyperlink = None
+            goodWorkSheet.cell(row= goodRow, column= colIndex).value = None
+        goodWorkSheet[f'O{goodRow}'].hyperlink = None
         self.updateLabelSignal.emit(f"Record {goodID} data from row {goodRow} cleared successfully.")
         print(f"Record {goodID} data from row {goodRow} cleared successfully.")
 
-    def cleanDelete(self, cemetery, badID, badRow):
+    def cleanDelete(self, badWorkSheet, badID, badRow):
         baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
         for dirPath, dirNames, fileNames in os.walk(baseRedacPath):
             for fileName in fileNames:
@@ -467,53 +476,72 @@ class Worker(QThread):
                     os.remove(filePath)
                     self.updateLabelSignal.emit(f"\nRedacted file, {fileName}, deleted successfully.")
                     print(f"Redacted file, {fileName}, deleted successfully.")
-        worksheet = workbook[cemetery]
-        worksheet.delete_rows(badRow)
+        badWorkSheet.delete_rows(badRow)
         self.updateLabelSignal.emit(f"Row {badRow} deleted successfully.")
         print(f"Row {badRow} deleted successfully.\n")
-        for row in range(badRow, worksheet.max_row + 1):
+        for row in range(badRow, badWorkSheet.max_row + 1):
             nextRow = row + 1
             cellRef = f'O{row}'
             nextCellRef = f'O{nextRow}'
-            if nextRow <= worksheet.max_row and worksheet[nextCellRef].hyperlink:
-                tempHyperlink = worksheet[nextCellRef].hyperlink
-                worksheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=tempHyperlink.target, display=tempHyperlink.display)
-                worksheet[cellRef].value = worksheet[nextCellRef].value
+            if nextRow <= badWorkSheet.max_row and badWorkSheet[nextCellRef].hyperlink:
+                tempHyperlink = badWorkSheet[nextCellRef].hyperlink
+                badWorkSheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=tempHyperlink.target, display=tempHyperlink.display)
+                badWorkSheet[cellRef].value = badWorkSheet[nextCellRef].value
                 self.updateLabelSignal.emit(f"Hyperlink and value from row {nextRow} moved to row {row}.")
                 print(f"Hyperlink and value from row {nextRow} moved to row {row}.")
-        if worksheet[f'O{worksheet.max_row - 1}'].hyperlink:
-            lastRow = worksheet.max_row
+        if badWorkSheet[f'O{badWorkSheet.max_row - 1}'].hyperlink:
+            lastRow = badWorkSheet.max_row
             self.updateLabelSignal.emit(f"\nAdjusting the hyperlink in the last row, row {lastRow}.")
             print(f"\nAdjusting the hyperlink in the last row, row {lastRow}.")
-            secondLastHyperlink = worksheet[f'O{lastRow - 1}'].hyperlink
+            secondLastHyperlink = badWorkSheet[f'O{lastRow - 1}'].hyperlink
             newTarget = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", secondLastHyperlink.target)
-            worksheet[f'O{lastRow}'].hyperlink = Hyperlink(ref=f'O{lastRow}', target=newTarget, display=secondLastHyperlink.display)
+            badWorkSheet[f'O{lastRow}'].hyperlink = Hyperlink(ref=f'O{lastRow}', target=newTarget, display=secondLastHyperlink.display)
             self.updateLabelSignal.emit(f"Updated hyperlink in row {lastRow} to new target, {newTarget}.\n")
             print(f"Updated hyperlink in row {lastRow} to new target, {newTarget}.\n")
 
-    def cleanHyperlinks(self, cemetery, startIndex):
-        baseBath = fr'\\ucclerk\pgmdoc\Veterans\Cemetery\{cemetery}'
-        fileDirectoryMap = {}
-        for dirPath, dirNames, fileNames in os.walk(baseBath):
-            for fileName in fileNames:
-                fileID = ''.join(filter(str.isdigit, fileName))[:5]
-                if fileID:
-                    fileDirectoryMap[fileID] = dirPath
-        newID = worksheet[f'A{startIndex}'].value
-        for row in range(startIndex, worksheet.max_row + 1):
-            worksheet[f'A{row}'].value = newID
-            cellRef = f'O{row}'
-            if worksheet[cellRef].hyperlink:
-                origTarget = worksheet[cellRef].hyperlink.target.replace("%20", " ")
-                formattedID = f"{newID:05d}"
-                folderName = fileDirectoryMap.get(formattedID, "UnknownFolder")[-1]
-                modifiedString = re.sub(fr'(\\)([A-Z])(\\)', f'\\1{folderName}\\3', origTarget)
-                modifiedString = re.sub(fr'({cemetery}[A-Z])\d{{5}}', f'{cemetery}{folderName}{formattedID}', modifiedString)
-                worksheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=modifiedString, display="PDF Image")
-                worksheet[cellRef].value = "PDF Image"
+    def cleanHyperlinks(self, badWorksheet, startIndex, newID):
+        base_path = fr'\\ucclerk\pgmdoc\Veterans\Cemetery'
+        file_directory_map = {}
+        for dirpath, dirnames, filenames in os.walk(base_path):
+            for filename in filenames:
+                file_id = ''.join(filter(str.isdigit, filename))[:5]
+                if file_id:
+                    file_directory_map[file_id] = dirpath
+        for row in range(startIndex, badWorksheet.max_row + 1):
+            badWorksheet[f'A{row}'].value = newID
+            cell_ref = f'O{row}'
+            if badWorksheet[cell_ref].hyperlink:
+                origTarget = badWorksheet[cell_ref].hyperlink.target.replace("%20", " ")
+                formatted_id = f"{newID:05d}"
+                folder_name = file_directory_map.get(formatted_id)[-1]
+                modifiedString = re.sub(r'([\\/])[A-Z]([\\/])', f'\\1{folder_name}\\2', origTarget)
+                modifiedString = re.sub(fr'({badWorksheet.title}[A-Z])\d{{5}}', f'{badWorksheet.title}{folder_name}{formatted_id}', modifiedString)
+                badWorksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=modifiedString, display="PDF Image")
+                badWorksheet[cell_ref].value = "PDF Image"
                 self.updateLabelSignal.emit(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
                 print(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
             newID += 1
+        return newID
+    
+    def compare_hyperlink_letters(workbook_path):
+        workbook = openpyxl.load_workbook(workbook_path)
+        pattern = re.compile(
+            r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folder_letter>[A-Z])[\\/][^\\/]+(?P<file_letter>[A-Z])\d+ redacted\.pdf'
+        )
+        for sheet_name in workbook.sheetnames:
+            worksheet = workbook[sheet_name]
+            for row in worksheet.iter_rows(min_row=2, max_col=worksheet.max_column):
+                cell = row[14]  
+                if cell.hyperlink:
+                    hyperlink = cell.hyperlink.target.replace("%20", " ")
+                    match = pattern.search(hyperlink)
+                    if match:
+                        folder_letter = match.group(1)
+                        file_letter = match.group(2)
+                        if folder_letter == file_letter:
+                            pass
+                        else:
+                            print(f"Not matching: {hyperlink} in row {cell.row}")
 
     '''
     The main processing logic that runs when the "Clean Duplicates" button is pressed and all the required
@@ -524,57 +552,90 @@ class Worker(QThread):
     @author Mike
     '''
     def run(self):
-        
         global excelFilePath
         excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
-        global workbook
-        workbook = openpyxl.load_workbook(excelFilePath)
-        global worksheet
-        worksheet = workbook[self.cemetery]
+        goodWorkSheet = None
+        badWorksheet = None
         for x in range(0, len(self.goodIDs)):
             workbook = openpyxl.load_workbook(excelFilePath)
-            worksheet = workbook[self.cemetery]
-            for row in range(1, worksheet.max_row + 1):
-                if worksheet[f'A{row}'].value == self.goodIDs[x]:
-                    goodRow = row
-                if worksheet[f'A{row}'].value == self.badIDs[x]:
-                    badRow = row
-            letter = worksheet[f'B{goodRow}'].value[0]
-            self.adjustImageName(self.goodIDs[x], self.badIDs[x], goodRow)
+            for sheet in workbook.sheetnames:
+                worksheet = workbook[sheet]
+                for row in range(2, worksheet.max_row + 1):
+                    if worksheet[f'A{row}'].value == self.goodIDs[x]:
+                        goodRow = row
+                        goodSheet = sheet
+                    if worksheet[f'A{row}'].value == self.badIDs[x]:
+                        badRow = row
+                        badSheet = sheet    
+            goodWorkSheet = workbook[goodSheet] 
+            if goodWorkSheet.title == "Extra":
+                letter = "A"
+            else:
+                letter = goodWorkSheet[f'B{goodRow}'].value[0]
+            self.adjustImageName(self.goodIDs[x], self.badIDs[x], goodRow, goodWorkSheet)
             workbook.save(excelFilePath)
-            self.runOCR(True, self.cemetery, letter)
+            self.runOCR(True, goodWorkSheet.title, letter)
             workbook = openpyxl.load_workbook(excelFilePath)
-            worksheet = workbook[self.cemetery]
-            self.cleanDelete(self.cemetery, self.badIDs[x], badRow)
+            worksheet = workbook[badSheet]
+            self.cleanDelete(badWorksheet, self.badIDs[x], badRow)
             workbook.save(excelFilePath)
-        mini = min(self.goodIDs)
-        if min(self.badIDs) < mini:
-            mini = min(self.badIDs) - 1
-        self.cleanImages(mini, "", "")
+        miniG = min(self.goodIDs)
+        if min(self.badIDs) < miniG:
+            miniG = min(self.badIDs) - 1
+        miniB = min(self.badIDs)
+        self.cleanImages(miniG, "", "")
         print("\n")
         self.updateLabelSignal.emit("\n")
-        self.cleanImages(mini, " - Redacted", " redacted")
+        self.cleanImages(miniG, " - Redacted", " redacted")
         workbook = openpyxl.load_workbook(excelFilePath)
-        worksheet = workbook[self.cemetery]
-        for row in range(1, worksheet.max_row + 1):
-            if worksheet[f'A{row}'].value == mini:
-                startIndex = row
-        self.cleanHyperlinks(self.cemetery, startIndex)
+        for x in range(0, len(self.goodIDs)):
+            for sheet in workbook.sheetnames:
+                worksheet = workbook[sheet]
+                for row in range(2, worksheet.max_row + 1):
+                    if worksheet[f'A{row}'].value == miniB-1:
+                        startIndex = row
+                        startSheet = sheet 
+        badWorksheet = workbook[startSheet]
+        newID = badWorksheet[f'A{startIndex}'].value
+        newID = self.cleanHyperlinks(badWorksheet, startIndex, newID)
         workbook.save(excelFilePath)
+        breakFlag = False
+        workbook = openpyxl.load_workbook(excelFilePath)
+        for x in range(0, len(workbook.sheetnames)):
+            if breakFlag:
+                badWorksheet = workbook[workbook.sheetnames[x]]
+                newID = self.cleanHyperlinks(badWorksheet, 2, newID)
+            if workbook.sheetnames[x] == badWorksheet.title:
+                breakFlag = True
+        workbook.save(excelFilePath)
+        self.compare_hyperlink_letters(excelFilePath)
         print("\n")
         columnWidths = {
         "VID": 8,
-        "VLNAME": 15,
+        "VLNAME": 250,
         "VFNAME": 15,
         "VMNAME": 5,
         "VSUF": 5,
-        "VDOB": 15,
-        "VDOBY": 10,
+        "VDOB": 25,
+        "VDOBY": 15,
         "VDOD": 15,
         "VDODY": 10
         }
-        df = duplicates.main(self.cemetery)
-        string = df.to_string(index= False, header= True, formatters= {key: f'{{:>{width}}}'.format for key, width in columnWidths.items()})
+        df = duplicates.main()
+        def format_value(value, width):
+            return f"{str(value):<{width}}"
+
+        # Format header
+        header = " ".join([format_value(col, columnWidths[col]) for col in df.columns if col in columnWidths])
+
+        # Format rows
+        formatted_lines = [header]
+        for index, row in df.iterrows():
+            formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns if col in columnWidths])
+            formatted_lines.append(formatted_row)
+
+        # Join all formatted lines into a single string
+        string = "\n".join(formatted_lines)
         self.updateLabelSignal.emit("\nCurrent Duplicates:")
         self.updateLabelSignal.emit(string)
         self.checkButtonSignal.emit(False)
@@ -711,8 +772,6 @@ class MainWindow(QMainWindow):
         middleTopLeftGroupBox = QGroupBox("Parameters")
         middleTopLeftGroupBox.setFixedSize(375, 425)
         middleTopLeftLayout = QFormLayout()
-        self.cemeteryBox = QLineEdit()
-        self.cemeteryBox.setFixedWidth(140)
         self.goodIDBox = QTextEdit()
         self.goodIDBox.setFixedWidth(250)
         self.goodIDBox.setFixedHeight(75)
@@ -722,12 +781,10 @@ class MainWindow(QMainWindow):
         self.badIDBox.setFixedHeight(75)
         self.badIDBox.setLineWrapColumnOrWidth(15)
         font = QFont("Monterchi Sans Book", 8)
-        noteLabel1 = QLabel("Note: This is the cemetery name based on its folder.")
-        noteLabel2 = QLabel("Note: This is a list of all the original IDs.")
-        noteLabel3 = QLabel("Note: This is a list of all the duplicate IDs.")
+        noteLabel1 = QLabel("Note: This is a list of all the original IDs.")
+        noteLabel2 = QLabel("Note: This is a list of all the duplicate IDs.")
         noteLabel1.setFont(font)
         noteLabel2.setFont(font)
-        noteLabel3.setFont(font)
         self.displayModeBox = QComboBox()
         self.displayModeBox.setFixedWidth(75)
         modes = ["Light", "Dark"]
@@ -735,14 +792,11 @@ class MainWindow(QMainWindow):
         middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Display Mode: ", self.displayModeBox)
         middleTopLeftLayout.addRow(" ", None)
-        middleTopLeftLayout.addRow("Cemetery :   ", self.cemeteryBox)
+        middleTopLeftLayout.addRow("Good IDs :", self.goodIDBox)
         middleTopLeftLayout.addRow(None, noteLabel1)
         middleTopLeftLayout.addRow(" ", None)
-        middleTopLeftLayout.addRow("Good IDs :", self.goodIDBox)
-        middleTopLeftLayout.addRow(None, noteLabel2)
-        middleTopLeftLayout.addRow(" ", None)
         middleTopLeftLayout.addRow("Bad IDs :", self.badIDBox)
-        middleTopLeftLayout.addRow(None, noteLabel3)
+        middleTopLeftLayout.addRow(None, noteLabel2)
         middleTopLeftGroupBox.setLayout(middleTopLeftLayout)
         self.goodIDBox.setDisabled(True)
         self.badIDBox.setDisabled(True)
@@ -878,38 +932,39 @@ class MainWindow(QMainWindow):
     @author Mike
     ''' 
     def updateDuplicates(self):
+        self.displayModeBox.setDisabled(True)
         self.detailsLabel.clear()
         columnWidths = {
-        "VID": 8,
-        "VLNAME": 15,
-        "VFNAME": 15,
-        "VMNAME": 15,
-        "VSUF": 5,
-        "VDOB": 11,
-        "VDOBY": 6,
-        "VDOD": 11,
-        "VDODY": 6,
-        "VWARREC": 15,
-        "VCLNWAR": 15
+            "VID": 10,
+            "VLNAME": 20,
+            "VFNAME": 20,
+            "VDOB": 20,
+            "VDOBY": 10,
+            "VDOD": 20,
+            "VDODY": 10,
+            "VWARREC": 20,
+            "SHEET NAME": 10
         }
-        try:
-            df = duplicates.main(self.cemeteryBox.text())
-        except Exception:
-            self.updateStatus("Warning", "Cemetery field not filled out or misspelled.")
-            return
-        df = df.fillna("NaN")
-        def format_value(value, width):
-            return f"{str(value):<{width}}"
-        formatted_lines = []
-        header = " ".join([format_value(col, columnWidths[col]) for col in df.columns])
-        formatted_lines.append(header)
-        for index, row in df.iterrows():
-            formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns])
-            formatted_lines.append(formatted_row)
-        string = "\n".join(formatted_lines)
+        df = duplicates.main()
+        # def format_value(value, width):
+        #     return f"{str(value):<{width}}"
+
+        # # Format header
+        # header = " ".join([format_value(col, columnWidths[col]) for col in df.columns if col in columnWidths])
+
+        # # Format rows
+        # formatted_lines = [header]
+        # for index, row in df.iterrows():
+        #     formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns if col in columnWidths])
+        #     formatted_lines.append(formatted_row)
+
+        # # Join all formatted lines into a single string
+        # string = "\n".join(formatted_lines)
+        df_string = df.to_string(index=False)
+
         self.scrollArea.setDisabled(False)
         self.detailsLabel.appendPlainText("Current Duplicates:")
-        self.detailsLabel.appendPlainText(f"{string}\n")
+        self.detailsLabel.appendPlainText(f"{df_string}\n")
         self.scrollArea.verticalScrollBar().setValue(self.scrollArea.verticalScrollBar().maximum())
         self.cleanButton.setDisabled(False)
         self.goodIDBox.clear()
@@ -919,6 +974,7 @@ class MainWindow(QMainWindow):
             self.badIDBox.setDisabled(False)
         except Exception:
             pass
+        self.displayModeBox.setDisabled(False)
           
     def startProcessing(self):
         try:
@@ -931,7 +987,7 @@ class MainWindow(QMainWindow):
         except Exception:
             self.updateStatus("Warning", "Bad ID field is empty.")
             return
-        self.worker = Worker(self.cemeteryBox.text(), self.goodIDBox, self.badIDBox)
+        self.worker = Worker(self.goodIDBox, self.badIDBox)
         self.worker.updateLabelSignal.connect(lambda text: self.updateScroll(text))
         self.worker.checkButtonSignal.connect(lambda condition: self.checkButton.setDisabled(condition))
         self.worker.cleanButtonSignal.connect(lambda condition: self.cleanButton.setDisabled(condition))
@@ -940,6 +996,7 @@ class MainWindow(QMainWindow):
         self.status.setText("          Status:  Running...\n")
         self.cleanButton.setDisabled(True)
         self.checkButton.setDisabled(True)
+        self.displayModeBox.setDisabled(True)
 
 
 if __name__ == "__main__":

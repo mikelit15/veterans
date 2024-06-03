@@ -18,7 +18,7 @@ Dark Mode QMessageBox Button Styling
 DarkB = ("""
     QPushButton {
         background-color: #0078D4; 
-        color: #E4E7EB;           
+        color: #FFFFFF;           
         border: 1px solid #8A8A8A; 
 
     }
@@ -40,7 +40,7 @@ DarkB = ("""
 
 DarkNB = ("""
     QPushButton {
-        color: #E4E7EB;          
+        color: #FFFFFF;          
     }
     QPushButton:hover {
         background-color: #669df2; 
@@ -95,6 +95,11 @@ Dark = qdarktheme.load_stylesheet(
             QDialog {
                 background-color: #252626;
             }
+            QComboBox:disabled {
+                background-color: #1A1A1C; 
+                border: 1px solid #3B3B3B;
+                color: #3B3B3B;  
+            }
         """
 
 '''
@@ -121,6 +126,11 @@ Light = qdarktheme.load_stylesheet(
             }
             QDialog {
                 background-color: #C9C9C9;
+            }
+            QComboBox:disabled {
+                background-color: #DBDBDB; 
+                color: #686868; 
+                border: 1px solid #686868;
             }
         """
 
@@ -530,7 +540,7 @@ class MainWindow(QMainWindow):
         self.stopButton = QPushButton("Stop Code")
         self.stopButton.setFixedWidth(225)
         self.stopButton.clicked.connect(self.stopProcessing)
-        self.status = QLabel("              Status :  Idle")
+        self.status = QLabel("             Status :  Idle")
         self.status.setFixedWidth(150)
         self.pauseButton.setDisabled(True)
         self.stopButton.setDisabled(True)
@@ -575,7 +585,7 @@ class MainWindow(QMainWindow):
             msgBox.setStyleSheet(globals()[f"{self.loadDisplayMode()}B"])
             msgBox.exec()
         self.runButton.setDisabled(False)
-        self.status.setText("              Status :  Idle")
+        self.status.setText("             Status :  Idle")
     
     
     '''
@@ -589,7 +599,7 @@ class MainWindow(QMainWindow):
     def updateImage(self, filePath):
         pixmap = QPixmap(filePath)
         self.imageLabel.setPixmap(pixmap.scaled(420, 490, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)) 
-    
+        self.imageLabel.setAlignment(Qt.AlignmentFlag.AlignCenter)
     
     '''
     Function that updates the current ID number display for the current image being processed
@@ -628,10 +638,9 @@ class MainWindow(QMainWindow):
             self.runButton.setDisabled(False)
             self.pauseButton.setDisabled(True)
             self.stopButton.setDisabled(True)
-            self.status.setText("              Status :  Idle")
+            self.status.setText("             Status :  Idle")
         self.errorLabel.setText(f"{errorMsg}")  
 
-    
     
     '''
     Function that updates resets the window when processing loop has finished
@@ -647,7 +656,8 @@ class MainWindow(QMainWindow):
         self.runButton.setDisabled(False)
         self.pauseButton.setDisabled(True)
         self.stopButton.setDisabled(True)
-        self.status.setText("              Status :  Idle")
+        self.status.setText("             Status :  Idle")
+        self.displayModeBox.setDisabled(False)
 
         
     '''
@@ -673,10 +683,11 @@ class MainWindow(QMainWindow):
         self.worker.popupSignal.connect(lambda type, text: self.updateStatus(type, text))
         self.worker.finishedSignal.connect(lambda cemetery, letter: self.updateFinished(cemetery, letter))
         self.worker.start()
-        self.status.setText("          Status :  Running...")
+        self.status.setText("         Status :  Running...")
         self.runButton.setDisabled(True)
         self.pauseButton.setDisabled(False)
         self.stopButton.setDisabled(False)
+        self.displayModeBox.setDisabled(True)
     
     
     '''
@@ -692,7 +703,7 @@ class MainWindow(QMainWindow):
             self.stopButton.setDisabled(False)
             self.worker.paused = False
             self.pauseButton.setText("Pause")
-            self.status.setText("          Status :  Running...")
+            self.status.setText("         Status :  Running...")
         else:
             self.stopButton.setDisabled(True)
             self.worker.paused = True
@@ -709,7 +720,7 @@ class MainWindow(QMainWindow):
     ''' 
     def stopProcessing(self):
         self.worker.stopped = True
-        self.status.setText("          Status :  Stopping...")
+        self.status.setText("         Status :  Stopping...")
         self.pauseButton.setDisabled(True)
         
         
