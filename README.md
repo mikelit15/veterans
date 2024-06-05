@@ -87,7 +87,7 @@ This program automates the extraction and cleaning of text from scanned PDF docu
 - **Robust Error Management**: Implement robust try-catch blocks around each major processing step to capture and log exceptions.
 - **Continuity Assurance**: Ensure that the occurrence of an error in processing one file does not halt the entire batch process, allowing the system to move on to the next file.
 
-## Conclusion
+## Summary
 This highly detailed automated system not only significantly reduces manual labor but also increases the accuracy and privacy compliance of managing veteran grave registration data. Through sophisticated OCR technology and meticulous data handling procedures, the program ensures that the data is processed with high precision and security.
 
 ## multiCleaner GUI:
@@ -143,7 +143,7 @@ This highly detailed automated system not only significantly reduces manual labo
   - Adjust the numeric ID within each hyperlink to ensure they accurately reflect the updated record IDs.
   - Ensure all hyperlinks are active and correctly pointing to the associated PDF files.
 
-## Conclusion
+## Summary
 This script provides an automated solution to manage and organize Veteran Grave Registration Card images efficiently, ensuring data accuracy and ease of access for administrative and historical research purposes.
 
 
