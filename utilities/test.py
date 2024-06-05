@@ -1,10 +1,25 @@
 import re
+import duplicates
+import pandas as pd
 
-badWorksheet = "Evergreen"
-folder_name = "A"
-formatted_id = "02241"
-orig_target = "Cemetery - Redacted/Fairview - Redacted/Z/FairviewB08223 redacted.pdf"
-modified_string = re.sub(r'(/[A-Z]/)', f'/{folder_name}/', orig_target)
-modified_string = re.sub(fr'(Fairview[A-Z])\d{{5}}', f'{badWorksheet}{folder_name}{formatted_id}', modified_string)
+columnWidths = {
+    "VID": 10,
+    "VLNAME": 20,
+    "VFNAME": 20,
+    "VDOB": 20,
+    "VDOBY": 10,
+    "VDOD": 20,
+    "VDODY": 10,
+    "VWARREC": 20,
+    "SHEET NAME": 10
+}
+# df = duplicates.main()
+# for index, row in df.iterrows():
+#     for col in df.columns:
+#         print(f"Row {index}, Column {col}: {row[col]}")
 
-print(modified_string)
+d = {'col1': [1], 'col2': [4, 5, 6]}
+max_length = max(len(d['col1']), len(d['col2']))
+d['col1'].extend([None] * (max_length - len(d['col1'])))
+df = pd.DataFrame(d)
+print(df.to_string())

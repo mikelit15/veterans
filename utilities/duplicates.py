@@ -27,7 +27,8 @@ def load_and_process_sheet(sheet_name, excel_file):
     df['SHEET NAME'] = sheet_name  
     return df
 
-def find_duplicates(df):
+def find_duplicates(df, exclude_list):
+    df = df[~df['VID'].isin(exclude_list)]
     confirmed_duplicates = pd.DataFrame()
     potential_duplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
     for _, group in potential_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):
@@ -37,7 +38,7 @@ def find_duplicates(df):
         else:
             confirmed_duplicates = pd.concat([confirmed_duplicates, group])
     confirmed_duplicates['MaxVIDinPair'] = confirmed_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')
-    confirmed_duplicates.sort_values(by=['MaxVIDinPair', 'VID'], inplace=True)
+    confirmed_duplicates.sort_values(by=['VLNAME', 'VFNAME', 'VDODY', 'MaxVIDinPair', 'VID'], inplace=True)
     confirmed_duplicates.drop(columns=['MaxVIDinPair'], inplace=True)
     return confirmed_duplicates
 
@@ -45,6 +46,9 @@ def main():
     file_path = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     combined_df = pd.DataFrame()
     confirmed_duplicates = pd.DataFrame()
+    
+    exclude_list = [8465, 424, 9494, 2123, 4661, 4662]
+    
     try:
         excel_file = pd.ExcelFile(file_path)
         for sheet_name in excel_file.sheet_names:
@@ -57,7 +61,7 @@ def main():
                 continue
             combined_df = pd.concat([combined_df, df], ignore_index=True)
         if not combined_df.empty:
-            confirmed_duplicates = find_duplicates(combined_df)
+            confirmed_duplicates = find_duplicates(combined_df, exclude_list)
         if confirmed_duplicates.empty:
             print("### No Duplicates ###")
         else:

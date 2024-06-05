@@ -395,7 +395,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
             birth = birth.replace(".", "")
         birth = birth.replace(":", " ").replace("I", "1").replace(".", " ")\
             .replace("&", "").replace("x", "").replace("\n", " ").replace(";", " ")\
-            .replace("_", "")
+            .replace("_", "").replace("X", "")
         if "at" in birth.lower():
             birth = birth.lower().split("at")[0]
         while birth and not birth[-1].isnumeric():
@@ -414,6 +414,8 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
         if len(birth.replace(" ", "")) == 4:
             bYear = birth.replace(" ", "")
             birth = ""
+        if "/" in birth:
+            birth = birth.replace(" ", "")
     # temp = birth[:3].replace('7', '/')
     # birth = temp + birth[3:]
     death = value
@@ -422,7 +424,7 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
             death = death.replace(".", "")
         death = death.replace(":", " ").replace("I", "1").replace(".", " ")\
             .replace("&", "").replace("x", "").replace("\n", " ").replace(";", " ")\
-            .replace("_", "")
+            .replace("_", "").replace("X", "")
         if death[-1] == " ":
             death = death[:-1]
         if death[-1] == "/":
@@ -441,6 +443,8 @@ def dateRule(finalVals, value, dob, buried, cent, war, app):
             death = death.lower().split("death")[1]
         while death and not death[-1].isnumeric():
             death = death[:-1]
+        if "/" in death:
+            death = death.replace(" ", "")
     while buried and not buried[-1].isnumeric():
         buried = buried[:-1]
     # temp2 = death[:3].replace('7', '/')

@@ -100,6 +100,11 @@ Dark = qdarktheme.load_stylesheet(
                 border: 1px solid #3B3B3B;
                 color: #3B3B3B;  
             }
+            QLineEdit:disabled {
+                background-color: #1A1A1C; 
+                border: 1px solid #3B3B3B;
+                color: #3B3B3B;  
+            }
         """
 
 '''
@@ -128,6 +133,11 @@ Light = qdarktheme.load_stylesheet(
                 background-color: #C9C9C9;
             }
             QComboBox:disabled {
+                background-color: #DBDBDB; 
+                color: #686868; 
+                border: 1px solid #686868;
+            }
+            QLineEdit:disabled {
                 background-color: #DBDBDB; 
                 color: #686868; 
                 border: 1px solid #686868;
@@ -658,6 +668,8 @@ class MainWindow(QMainWindow):
         self.stopButton.setDisabled(True)
         self.status.setText("             Status :  Idle")
         self.displayModeBox.setDisabled(False)
+        self.cemeteryBox.setDisabled(False)
+        self.letterBox.setDisabled(False)
 
         
     '''
@@ -685,6 +697,8 @@ class MainWindow(QMainWindow):
         self.worker.start()
         self.status.setText("         Status :  Running...")
         self.runButton.setDisabled(True)
+        self.cemeteryBox.setDisabled(True)
+        self.letterBox.setDisabled(True)
         self.pauseButton.setDisabled(False)
         self.stopButton.setDisabled(False)
         self.displayModeBox.setDisabled(True)

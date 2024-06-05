@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, \
      QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, \
      QTextEdit, QScrollArea, QComboBox, QMessageBox, QPlainTextEdit
 from PyQt6.QtGui import QPixmap, QFont, QIcon
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QCoreApplication
 from openpyxl.styles import Font, PatternFill
 import traceback
 import os
@@ -50,6 +50,7 @@ DarkB = ("""
     }
     QTextEdit:disabled {
         background-color: #1A1A1C; 
+        color: #3B3B3B;  
         border: 1px solid #3B3B3B; 
     }
     QPlainTextEdit {
@@ -110,7 +111,6 @@ LightB = ("""
     }
     QPlainTextEdit:disabled {
         background-color: #DBDBDB; 
-        color: #686868; 
     }
     QScrollArea {
         background-color: #FFFFFF;  
@@ -146,6 +146,11 @@ Dark = qdarktheme.load_stylesheet(
             QDialog {
                 background-color: #252626;
             }
+            QComboBox:disabled {
+                background-color: #1A1A1C; 
+                border: 1px solid #3B3B3B;
+                color: #3B3B3B;  
+            }
         """
 
 '''
@@ -173,13 +178,18 @@ Light = qdarktheme.load_stylesheet(
             QDialog {
                 background-color: #C9C9C9;
             }
+            QComboBox:disabled {
+                background-color: #DBDBDB; 
+                color: #686868; 
+                border: 1px solid #686868;
+            }
         """
 
 class Worker(QThread):
     updateLabelSignal = pyqtSignal(str)  
     checkButtonSignal = pyqtSignal(bool)
     cleanButtonSignal = pyqtSignal(bool)
-    statusSignal = pyqtSignal(str)
+    stopSignal = pyqtSignal(bool)
     '''
     The main processing logic that runs when the "Run" button is pressed and all the required
     fields are filled out. 
@@ -518,16 +528,17 @@ class Worker(QThread):
                 modifiedString = re.sub(fr'({badWorksheet.title}[A-Z])\d{{5}}', f'{badWorksheet.title}{folder_name}{formatted_id}', modifiedString)
                 badWorksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=modifiedString, display="PDF Image")
                 badWorksheet[cell_ref].value = "PDF Image"
-                self.updateLabelSignal.emit(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
+                self.updateLabelSignal.emit(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.\n")
                 print(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
             newID += 1
         return newID
     
-    def compare_hyperlink_letters(workbook_path):
-        workbook = openpyxl.load_workbook(workbook_path)
+    def compare_hyperlink_letters(self, workbookPath):
+        workbook = openpyxl.load_workbook(workbookPath)
         pattern = re.compile(
             r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folder_letter>[A-Z])[\\/][^\\/]+(?P<file_letter>[A-Z])\d+ redacted\.pdf'
         )
+        flag = False
         for sheet_name in workbook.sheetnames:
             worksheet = workbook[sheet_name]
             for row in worksheet.iter_rows(min_row=2, max_col=worksheet.max_column):
@@ -541,7 +552,12 @@ class Worker(QThread):
                         if folder_letter == file_letter:
                             pass
                         else:
-                            print(f"Not matching: {hyperlink} in row {cell.row}")
+                            flag = True
+                            self.updateLabelSignal.emit(f"Not matching: {hyperlink} in row {cell.row}\n")
+                            print(f"Not matching: {hyperlink} in row {cell.row}\n")
+        if not flag:
+            self.updateLabelSignal.emit("All hyperlinks are correct.\n")
+            print("All hyperlinks are correct.\n")
 
     '''
     The main processing logic that runs when the "Clean Duplicates" button is pressed and all the required
@@ -576,7 +592,7 @@ class Worker(QThread):
             workbook.save(excelFilePath)
             self.runOCR(True, goodWorkSheet.title, letter)
             workbook = openpyxl.load_workbook(excelFilePath)
-            worksheet = workbook[badSheet]
+            badWorksheet = workbook[badSheet]
             self.cleanDelete(badWorksheet, self.badIDs[x], badRow)
             workbook.save(excelFilePath)
         miniG = min(self.goodIDs)
@@ -609,38 +625,9 @@ class Worker(QThread):
                 breakFlag = True
         workbook.save(excelFilePath)
         self.compare_hyperlink_letters(excelFilePath)
-        print("\n")
-        columnWidths = {
-        "VID": 8,
-        "VLNAME": 250,
-        "VFNAME": 15,
-        "VMNAME": 5,
-        "VSUF": 5,
-        "VDOB": 25,
-        "VDOBY": 15,
-        "VDOD": 15,
-        "VDODY": 10
-        }
-        df = duplicates.main()
-        def format_value(value, width):
-            return f"{str(value):<{width}}"
-
-        # Format header
-        header = " ".join([format_value(col, columnWidths[col]) for col in df.columns if col in columnWidths])
-
-        # Format rows
-        formatted_lines = [header]
-        for index, row in df.iterrows():
-            formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns if col in columnWidths])
-            formatted_lines.append(formatted_row)
-
-        # Join all formatted lines into a single string
-        string = "\n".join(formatted_lines)
-        self.updateLabelSignal.emit("\nCurrent Duplicates:")
-        self.updateLabelSignal.emit(string)
         self.checkButtonSignal.emit(False)
         self.cleanButtonSignal.emit(False)  
-        self.statusSignal.emit(" ")  
+        self.stopSignal.emit(True)  
                 
 class MainWindow(QMainWindow):
     updateLabelSignal = pyqtSignal(str)
@@ -886,7 +873,7 @@ class MainWindow(QMainWindow):
             msgBox.exec()
         self.checkButton.setDisabled(False)
         self.cleanButton.setDisabled(False)
-        self.status.setText("              Status :  Idle")
+        self.status.setText("             Status :  Idle\n")
 
     
     '''
@@ -902,7 +889,7 @@ class MainWindow(QMainWindow):
             if self.worker.paused:
                 self.worker.paused = False
                 self.pauseButton.setText("Pause")
-                self.status.setText("          Status : Running...\n")
+                self.status.setText("         Status : Running...\n")
             else:
                 self.worker.paused = True
                 self.pauseButton.setText("Resume")
@@ -932,43 +919,47 @@ class MainWindow(QMainWindow):
     @author Mike
     ''' 
     def updateDuplicates(self):
+        self.cleanButton.setDisabled(True)
+        self.goodIDBox.setDisabled(True)
+        self.badIDBox.setDisabled(True)
+        self.scrollArea.setDisabled(True)
         self.displayModeBox.setDisabled(True)
         self.detailsLabel.clear()
+        self.detailsLabel.appendPlainText("Checking for duplicates...")
+        self.status.setText("         Status:  Running...\n")
+        self.goodIDBox.clear()
+        self.badIDBox.clear()
+        QCoreApplication.processEvents() 
+        self.detailsLabel.clear()
+        self.status.setText("             Status :  Idle\n")
+        font = QFont('Courier')
+        self.detailsLabel.setFont(font)
         columnWidths = {
-            "VID": 10,
-            "VLNAME": 20,
-            "VFNAME": 20,
-            "VDOB": 20,
-            "VDOBY": 10,
-            "VDOD": 20,
-            "VDODY": 10,
-            "VWARREC": 20,
-            "SHEET NAME": 10
+            "VID": 6,
+            "VLNAME": 10,
+            "VFNAME": 8,
+            "VDOB": 11,
+            "VDOBY": 6,
+            "VDOD": 11,
+            "VDODY": 6,
+            "VWARREC": 13,
+            "SHEET NAME": 1
         }
         df = duplicates.main()
-        # def format_value(value, width):
-        #     return f"{str(value):<{width}}"
-
-        # # Format header
-        # header = " ".join([format_value(col, columnWidths[col]) for col in df.columns if col in columnWidths])
-
-        # # Format rows
-        # formatted_lines = [header]
-        # for index, row in df.iterrows():
-        #     formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns if col in columnWidths])
-        #     formatted_lines.append(formatted_row)
-
-        # # Join all formatted lines into a single string
-        # string = "\n".join(formatted_lines)
-        df_string = df.to_string(index=False)
-
+        def format_value(value, width):
+            return f"{str(value):<{width}}"
+        header = " ".join([format_value(col, columnWidths[col]) for col in df.columns if col in columnWidths])
+        formatted_lines = [header]
+        for index, row in df.iterrows():
+            formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns if col in columnWidths])
+            formatted_lines.append(formatted_row)
+        string = "\n".join(formatted_lines)
+        string = string.replace("nan", "NaN")
         self.scrollArea.setDisabled(False)
-        self.detailsLabel.appendPlainText("Current Duplicates:")
-        self.detailsLabel.appendPlainText(f"{df_string}\n")
+        self.detailsLabel.appendPlainText("Current Duplicates:\n")
+        self.detailsLabel.appendPlainText(f"{string}\n")
         self.scrollArea.verticalScrollBar().setValue(self.scrollArea.verticalScrollBar().maximum())
         self.cleanButton.setDisabled(False)
-        self.goodIDBox.clear()
-        self.goodIDBox.clear()
         try:
             self.goodIDBox.setDisabled(False)
             self.badIDBox.setDisabled(False)
@@ -976,33 +967,48 @@ class MainWindow(QMainWindow):
             pass
         self.displayModeBox.setDisabled(False)
           
+          
     def startProcessing(self):
         try:
-            self.goodIDBox = [int(numericString) for numericString in self.goodIDBox.toPlainText().split(", ")]
+            goodIDs = [int(numericString) for numericString in self.goodIDBox.toPlainText().split(", ")]
         except Exception:
             self.updateStatus("Warning", "Good ID field is empty.")
             return
         try:
-            self.badIDBox = [int(numericString) for numericString in self.badIDBox.toPlainText().split(", ")]
+            badIDs = [int(numericString) for numericString in self.badIDBox.toPlainText().split(", ")]
         except Exception:
             self.updateStatus("Warning", "Bad ID field is empty.")
             return
-        self.worker = Worker(self.goodIDBox, self.badIDBox)
+        self.worker = Worker(goodIDs, badIDs)
         self.worker.updateLabelSignal.connect(lambda text: self.updateScroll(text))
         self.worker.checkButtonSignal.connect(lambda condition: self.checkButton.setDisabled(condition))
         self.worker.cleanButtonSignal.connect(lambda condition: self.cleanButton.setDisabled(condition))
-        self.worker.statusSignal.connect(lambda status: self.status.setText("              Status :  Idle"))
+        self.worker.stopSignal.connect(lambda condition: self.stopProcessing())
         self.worker.start()
-        self.status.setText("          Status:  Running...\n")
+        self.status.setText("         Status:  Running...\n")
         self.cleanButton.setDisabled(True)
         self.checkButton.setDisabled(True)
         self.displayModeBox.setDisabled(True)
-
+        self.goodIDBox.setDisabled(True)
+        self.badIDBox.setDisabled(True)
+    
+    def stopProcessing(self):
+        self.status.setText("             Status :  Idle\n")
+        self.displayModeBox.setDisabled(False)
+        self.goodIDBox.setDisabled(False)
+        self.badIDBox.setDisabled(False)
+        self.cleanButton.setDisabled(True)
+        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     parentPath = os.path.dirname(os.getcwd())
     window.setWindowIcon(QIcon(f"{parentPath}/_internal/veteranData/veteranLogo.png"))
+    msgBox = QMessageBox(QMessageBox.Icon.Warning, 'Disclaimer', "This program will modify image files and Excel records. " 
+        "Image files, redacted image files, and Excel records will be renamed, moved, and deleted."
+        "\n\n\t\t  PLEASE USE WITH CAUTION!!!", QMessageBox.StandardButton.Ok, window)
     window.show()
+    msgBox.setStyleSheet(globals()[f"{window.loadDisplayMode()}B"])
+    # msgBox.exec()
     sys.exit(app.exec())
