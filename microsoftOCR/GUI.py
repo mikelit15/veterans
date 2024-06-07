@@ -253,9 +253,15 @@ class Worker(QThread):
                     self.kvsSignal.emit("")
                     self.errorSignal.emit("", False)
                     self.imageSignal.emit("")
+                    while self.paused:
+                        self.sleep(1)
                     vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "")
+                    while self.paused:
+                        self.sleep(1)
                     self.kvsSignal.emit(printedKVS)
                     redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                    while self.paused:
+                        self.sleep(1)
                     self.imageSignal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
                     worksheet.cell(row= rowIndex, column= 15).value = "PDF Image"
                     worksheet.cell(row= rowIndex, column= 15).font = Font(underline= "single", color= "0563C1")
@@ -269,6 +275,8 @@ class Worker(QThread):
                     microsoftOCR.highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast)
                     id += 1
                     rowIndex += 1
+                    while self.paused:
+                        self.sleep(1)
                 else:
                     if id != int(string.replace("a", "").replace("b", "")):
                         if self.stopped:
@@ -284,10 +292,18 @@ class Worker(QThread):
                         self.kvsSignal.emit("")
                         self.errorSignal.emit("", False)
                         self.imageSignal.emit("")
+                        while self.paused:
+                            self.sleep(1)
                         vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "A")
+                        while self.paused:
+                            self.sleep(1)
                         self.kvsSignal.emit(printedKVS)
                         redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                        while self.paused:
+                            self.sleep(1)
                         self.imageSignal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                        while self.paused:
+                            self.sleep(1)
                     if "b" in string:
                         if (filePath.replace("b.pdf", "") in pdfFiles):
                             continue
@@ -295,31 +311,47 @@ class Worker(QThread):
                         self.kvsSignal.emit("")
                         self.errorSignal.emit("", False)
                         self.imageSignal.emit("")
+                        while self.paused:
+                            self.sleep(1)
                         vals2, warFlagB, nameCoords, serialCoords, printedKVS, kinLast = microsoftOCR.createRecord(filePath, id, cemetery, "B")
+                        while self.paused:
+                            self.sleep(1)
                         self.kvsSignal.emit(printedKVS)
                         if not warFlag or not warFlagB:
                             warFlag = False
                         else:
                             warFlag = True
                         redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                        while self.paused:
+                            self.sleep(1)
                         self.imageSignal.emit(r"\\ucclerk\pgmdoc\Veterans\temp.png")
+                        while self.paused:
+                            self.sleep(1)
                         microsoftOCR.mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
                         microsoftOCR.mergeImages(pathA, filePath, cemetery, letter)
+                        while self.paused:
+                            self.sleep(1)
                         linkText = "PDF Image"
                         worksheet.cell(row=rowIndex, column=15).value = linkText
                         worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
                         worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                         id += 1
                         rowIndex += 1
+                        while self.paused:
+                            self.sleep(1)
                         if self.singleFlag:
                             breakFlag = True
             except Exception as e:
+                while self.paused:
+                            self.sleep(1)
                 errorTraceback = traceback.format_exc()
                 print(f"An error occurred: {e}")
                 errorMessage = f"SKIPPED DUE TO ERROR : {errorTraceback}"
                 worksheet.cell(row= rowIndex, column= 1, value= id)
                 worksheet.cell(row= rowIndex, column= 2, value= errorMessage)
                 highlightColor = PatternFill(start_color= "FF0000", end_color= "FF0000", fill_type= "solid")
+                while self.paused:
+                            self.sleep(1)
                 for colIndex in range(1, worksheet.max_column + 1):
                     cell = worksheet.cell(row= rowIndex, column= colIndex)
                     cell.fill = highlightColor
@@ -327,6 +359,8 @@ class Worker(QThread):
                 with open(errorFilePath, 'a') as errorFile:
                     errorFile.write(f'{printedKVS} \n\n {errorTraceback}')
                     self.errorSignal.emit(errorTraceback, False)
+                    while self.paused:
+                            self.sleep(1)
                 id += 1
                 rowIndex += 1
             extension1 = str(id-1).zfill(5)
@@ -365,6 +399,8 @@ class MainWindow(QMainWindow):
     '''
     def saveDisplayMode(self, mode):
         parentPath = os.path.dirname(os.getcwd())
+        if "veterans" not in parentPath:
+            parentPath = r"C:\workspace\veterans"
         with open(f"{parentPath}/_internal/veteranData/display_mode.txt", "w") as file:
             file.write(mode)
 
@@ -715,11 +751,13 @@ class MainWindow(QMainWindow):
     def togglePauseResume(self):
         if self.worker.paused:
             self.stopButton.setDisabled(False)
+            self.displayModeBox.setDisabled(True)
             self.worker.paused = False
             self.pauseButton.setText("Pause")
             self.status.setText("         Status :  Running...")
         else:
             self.stopButton.setDisabled(True)
+            self.displayModeBox.setDisabled(False)
             self.worker.paused = True
             self.pauseButton.setText("Resume")
             self.status.setText("           Status :  Paused" )

@@ -15,7 +15,8 @@ the formatted name components to a list.
 def nameRule(finalVals, value):
     suffiFlag = False
     value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
-        .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")
+        .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")\
+        .replace(":", ".")
     CONSTANTS.force_mixed_case_capitalization = True
     name = HumanName(value)
     flag = True

@@ -15,12 +15,10 @@ from PIL import Image
 from nameparser import HumanName
 from nameparser.config import CONSTANTS
 from fuzzywuzzy import fuzz
-import sys
-sys.path.append(r'C:\workspace\veterans\microsoftOCR')
-import nameRule
-import dateRule
-import warRule
-import branchRule
+from microsoftOCR import nameRule
+from microsoftOCR import dateRule
+from microsoftOCR import warRule
+from microsoftOCR import branchRule
 
 
 '''
@@ -61,7 +59,7 @@ def redact(filePath, cemetery, letter, nameCoords, serialCoords):
     image.close()
 
     pdfDocument = fitz.open(filePath)
-    fullLocation = r"\\ucclerk\pgmdoc\Veterans\Test - Redacted"
+    fullLocation = r"\\ucclerk\pgmdoc\Veterans\test - Redacted"
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
@@ -94,7 +92,7 @@ of the card, both redacted.
 @author Mike
 '''
 def mergeImages(pathA, pathB, cemetery, letter):
-    fullLocation = r"\\ucclerk\pgmdoc\Veterans\Test - Redacted"
+    fullLocation = r"\\ucclerk\pgmdoc\Veterans\test - Redacted"
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
@@ -642,19 +640,19 @@ def main(singleFlag, singleCem, singleLetter):
     networkFolder = r"\\ucclerk\pgmdoc\Veterans"
     os.chdir(networkFolder)
     cemeterys = []
-    for x in os.listdir(r"Test"):
+    for x in os.listdir(r"test"):
         cemeterys.append(x)
     # miscs = []
-    # for x in os.listdir(r"Test\Misc"):
+    # for x in os.listdir(r"test\Misc"):
     #     miscs.append(x)
     # jewishs = []
-    # for x in os.listdir(r"Test\Jewish"):
+    # for x in os.listdir(r"test\Jewish"):
     #     jewishs.append(x)
     cemSet = set(cemeterys)
     # miscSet, jewishSet = set(miscs), set(jewishs)
     workbook = openpyxl.load_workbook('Veterans2.xlsx')
     cemetery = singleCem 
-    cemPath = os.path.join(networkFolder, fr"Test\{cemetery}")
+    cemPath = os.path.join(networkFolder, fr"test\{cemetery}")
     letter = singleLetter 
     namePath = letter 
     namePath = os.path.join(cemPath, namePath)

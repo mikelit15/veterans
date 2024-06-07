@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, \
-     QHBoxLayout, QPushButton, QLineEdit, QLabel, QGroupBox, QFormLayout, \
-     QTextEdit, QScrollArea, QComboBox, QMessageBox, QPlainTextEdit
+     QHBoxLayout, QPushButton, QLabel, QGroupBox, QFormLayout, QTextEdit, \
+     QScrollArea, QComboBox, QMessageBox, QPlainTextEdit
 from PyQt6.QtGui import QPixmap, QFont, QIcon
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QCoreApplication
 from openpyxl.styles import Font, PatternFill
@@ -11,12 +11,10 @@ import re
 from openpyxl.worksheet.hyperlink import Hyperlink
 import shutil
 import sys
-import pandas as pd
 import duplicates
 sys.path.append(r'C:\workspace\veterans')
 from microsoftOCR import microsoftOCR
 import qdarktheme
-from tabulate import tabulate
 
 
 '''
@@ -366,10 +364,22 @@ class Worker(QThread):
         try:
             currentLetterIndex = letters.index(letter)
         except ValueError:
-            return
+            return initialCount, startFlag
         folderBeforeIndex = max(0, currentLetterIndex - 1)
         folderBefore = letters[folderBeforeIndex]
         pdfFilesBefore = sorted([file for file in os.listdir(os.path.join(cemPath, folderBefore)) if file.lower().endswith('.pdf')])
+        if letter == "A" and folderBefore == "A":
+            cemeteryFolders = sorted(os.listdir(os.path.dirname(cemPath)))
+            currentCemeteryIndex = cemeteryFolders.index(os.path.basename(os.path.normpath(cemPath)))
+            if currentCemeteryIndex > 0:
+                previousCemeteryIndex = currentCemeteryIndex - 1
+                previousCemeteryFolder = cemeteryFolders[previousCemeteryIndex]
+                previousCemeteryPath = os.path.join(os.path.dirname(cemPath), previousCemeteryFolder)
+                previousCemeteryLetters = sorted([folder for folder in os.listdir(previousCemeteryPath) if os.path.isdir(os.path.join(previousCemeteryPath, folder))])
+                folderBefore = previousCemeteryLetters[-1]  
+                pdfFilesBefore = sorted([file for file in os.listdir(os.path.join(previousCemeteryPath, folderBefore)) if file.lower().endswith('.pdf')])
+            else:
+                return initialCount, startFlag
         maxCounter = 0
         for file in pdfFilesBefore:
             match = re.search(r'\d+', file)
@@ -438,14 +448,14 @@ class Worker(QThread):
         if goodIDFound and badIDFound:
             goodIDPrefix = os.path.basename(os.path.dirname(goodIDFilePath))
             badIDPrefix = os.path.basename(os.path.dirname(badIDFilePath))
-            newBadIDFilename = os.path.basename(badIDFilePath).replace(f"{badID:05d}", f"{goodID:05d}b").replace(badIDPrefix, goodIDPrefix)
+            newBadIDFilename = os.path.basename(goodIDFilePath).replace(f"{goodID:05d}", f"{goodID:05d}b").replace(badIDPrefix, goodIDPrefix)
             newBadIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newBadIDFilename)
             if not "a.pdf" in os.path.basename(goodIDFilePath):
                 newGoodIDFilename = os.path.basename(goodIDFilePath).replace(".pdf", "a.pdf")
                 newGoodIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newGoodIDFilename)
                 os.rename(goodIDFilePath, newGoodIDFilePath)
-                self.updateLabelSignal.emit(f"{os.path.basename(goodIDFilePath)} renamed to {newGoodIDFilename}")
-                print(f"{os.path.basename(goodIDFilePath)} renamed to {newGoodIDFilename}")
+                self.updateLabelSignal.emit(f"\n{os.path.basename(goodIDFilePath)} renamed to {newGoodIDFilename}")
+                print(f"\n{os.path.basename(goodIDFilePath)} renamed to {newGoodIDFilename}")
             shutil.move(badIDFilePath, newBadIDFilePath)
             self.updateLabelSignal.emit(f"{os.path.basename(badIDFilePath)} moved and renamed to {newBadIDFilename}")
             print(f"{os.path.basename(badIDFilePath)} moved and renamed to {newBadIDFilename}")
@@ -556,8 +566,8 @@ class Worker(QThread):
                             self.updateLabelSignal.emit(f"Not matching: {hyperlink} in row {cell.row}\n")
                             print(f"Not matching: {hyperlink} in row {cell.row}\n")
         if not flag:
-            self.updateLabelSignal.emit("All hyperlinks are correct.\n")
-            print("All hyperlinks are correct.\n")
+            self.updateLabelSignal.emit("All hyperlinks are correct.")
+            print("All hyperlinks are correct.")
 
     '''
     The main processing logic that runs when the "Clean Duplicates" button is pressed and all the required
@@ -624,6 +634,7 @@ class Worker(QThread):
             if workbook.sheetnames[x] == badWorksheet.title:
                 breakFlag = True
         workbook.save(excelFilePath)
+        self.updateLabelSignal.emit("Checking hyperlinks...")
         self.compare_hyperlink_letters(excelFilePath)
         self.checkButtonSignal.emit(False)
         self.cleanButtonSignal.emit(False)  
@@ -957,7 +968,7 @@ class MainWindow(QMainWindow):
         string = string.replace("nan", "NaN")
         self.scrollArea.setDisabled(False)
         self.detailsLabel.appendPlainText("Current Duplicates:\n")
-        self.detailsLabel.appendPlainText(f"{string}\n")
+        self.detailsLabel.appendPlainText(f"{string}")
         self.scrollArea.verticalScrollBar().setValue(self.scrollArea.verticalScrollBar().maximum())
         self.cleanButton.setDisabled(False)
         try:
@@ -1007,6 +1018,7 @@ if __name__ == "__main__":
     window.setWindowIcon(QIcon(f"{parentPath}/_internal/veteranData/veteranLogo.png"))
     msgBox = QMessageBox(QMessageBox.Icon.Warning, 'Disclaimer', "This program will modify image files and Excel records. " 
         "Image files, redacted image files, and Excel records will be renamed, moved, and deleted."
+        "\n\n\t\t  PLEASE BACKUP ALL IMAGE AND EXCEL FILES!!!"
         "\n\n\t\t  PLEASE USE WITH CAUTION!!!", QMessageBox.StandardButton.Ok, window)
     window.show()
     msgBox.setStyleSheet(globals()[f"{window.loadDisplayMode()}B"])

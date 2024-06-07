@@ -4,9 +4,9 @@ import shutil
 import re
 import sys
 from openpyxl.worksheet.hyperlink import Hyperlink
-import duplicates
 sys.path.append(r'C:\workspace\veterans')
-from microsoftOCR import microsoftOCR
+from testFiles import duplicates
+from testFiles import microsoftOCRTest
 
 
 '''
@@ -27,7 +27,7 @@ Jewish and Misc folders as they contain more, much smaller, cemeteries.
 @author Mike
 '''
 def cleanImages(goodID, redac, redac2):
-    baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
+    baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\test{redac}"
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
     start = goodID - 600
@@ -200,7 +200,7 @@ merged data.
 @author Mike
 '''
 def adjustImageName(goodID, badID, goodRow, goodWorkSheet):
-    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\test"
     goodIDFound = False
     badIDFound = False
     goodIDFilePath = ""
@@ -266,7 +266,7 @@ active in order to adjust them automatically later in the process.
 @author Mike
 '''
 def cleanDelete(badWorkSheet, badID, badRow):
-    baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+    baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\test - Redacted"
     for dirpath, dirnames, filenames in os.walk(baseRedacPath):
         for filename in filenames:
             if f"{badID:05d}" in filename:
@@ -309,7 +309,7 @@ they accurately reflect the current record IDs following modifications.
 @author Mike
 '''
 def cleanHyperlinks(badWorksheet, startIndex, newID):
-    base_path = fr'\\ucclerk\pgmdoc\Veterans\Cemetery'
+    base_path = fr'\\ucclerk\pgmdoc\Veterans\test'
     file_directory_map = {}
     for dirpath, dirnames, filenames in os.walk(base_path):
         for filename in filenames:
@@ -349,7 +349,7 @@ and file letter in the hyperlink do not match and prints these discrepancies.
 def compare_hyperlink_letters(workbook_path):
     workbook = openpyxl.load_workbook(workbook_path)
     pattern = re.compile(
-        r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folder_letter>[A-Z])[\\/][^\\/]+(?P<file_letter>[A-Z])\d+ redacted\.pdf'
+        r'test - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folder_letter>[A-Z])[\\/][^\\/]+(?P<file_letter>[A-Z])\d+ redacted\.pdf'
     )
     for sheet_name in workbook.sheetnames:
         worksheet = workbook[sheet_name]
@@ -410,7 +410,7 @@ def main(goodIDs, badIDs):
             letter = goodWorkSheet[f'B{goodRow}'].value[0]
         adjustImageName(goodIDs[x], badIDs[x], goodRow, goodWorkSheet)
         workbook.save(excelFilePath)
-        microsoftOCR.main(True, goodWorkSheet.title, letter)
+        microsoftOCRTest.main(True, goodWorkSheet.title, letter)
         workbook = openpyxl.load_workbook(excelFilePath)
         badWorksheet = workbook[badSheet]
         cleanDelete(badWorksheet, badIDs[x], badRow)
