@@ -15,8 +15,7 @@ the formatted name components to a list.
 def nameRule(finalVals, value):
     suffiFlag = False
     value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
-        .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")\
-        .replace(":", ".")
+        .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")
     CONSTANTS.force_mixed_case_capitalization = True
     name = HumanName(value)
     flag = True
@@ -38,6 +37,8 @@ def nameRule(finalVals, value):
     suffix = name.suffix
     title = name.title
     suffi = ["Jr", "Sr", "I", "II", "III", "IV"]
+    temp = value.replace("Jr.", "").replace("Sr.", "").replace("I.", "").replace("II.", "")\
+        .replace("III.", "").replace("IV.", "")
     temp = value.replace("Jr", "").replace("Sr", "").replace("I", "").replace("II", "")\
         .replace("III", "").replace("IV", "")
     if ("," in value and "." in firstName):
@@ -67,6 +68,8 @@ def nameRule(finalVals, value):
         suffix = suffix.replace(", ", "")
         middleName = suffix.replace("Sr.", "").replace("Jr.", "").replace("I.", "").replace("II.", "")\
         .replace("III.", "").replace("IV.", "")
+        middleName = suffix.replace("Sr", "").replace("Jr", "").replace("I", "").replace("II", "")\
+        .replace("III", "").replace("IV", "")
         suffix = suffix.replace(middleName, "")
     elif len(suffix) > 0 and middleName:
         suffix = suffix.replace(", ", "")

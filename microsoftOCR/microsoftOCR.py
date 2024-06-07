@@ -38,7 +38,7 @@ the original second page.
 @param nameCoords (list) - Bounding box coordinates for "NAME" key
 @param serialCoords (list) - Bounding box coordinates for "SERIAL" key
 
-@return new_pdf_file (str) - Path to the newly created redacted PDF file
+@return newPDF_File (str) - Path to the newly created redacted PDF file
 
 @author Mike
 '''
@@ -65,19 +65,19 @@ def redact(filePath, cemetery, letter, nameCoords, serialCoords):
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
-    redacted_pdf_document  = fitz.open(pdfFile)
-    new_pdf_document  = fitz.open()
-    new_pdf_document.insert_pdf(redacted_pdf_document, from_page=0, to_page=0)
-    new_pdf_document.insert_pdf(pdfDocument, from_page=1, to_page=1)
+    redactedPDF_Document  = fitz.open(pdfFile)
+    newPDF_Document  = fitz.open()
+    newPDF_Document.insert_pdf(redactedPDF_Document, from_page=0, to_page=0)
+    newPDF_Document.insert_pdf(pdfDocument, from_page=1, to_page=1)
     tempName = filePath[-9:]
     if "a" in tempName or "b" in tempName:
         tempName = filePath[-10:]
-    new_pdf_file = f'{fullLocation}\\{cemetery}{letter}{tempName.replace(".pdf", "")} redacted.pdf'
-    new_pdf_document.save(new_pdf_file)
-    new_pdf_document.close()
-    redacted_pdf_document.close()
+    newPDF_File = f'{fullLocation}\\{cemetery}{letter}{tempName.replace(".pdf", "")} redacted.pdf'
+    newPDF_Document.save(newPDF_File)
+    newPDF_Document.close()
+    redactedPDF_Document.close()
     pdfDocument.close()
-    return new_pdf_file    
+    return newPDF_File    
 
 
 '''
@@ -102,13 +102,13 @@ def mergeImages(pathA, pathB, cemetery, letter):
     merger = PyPDF2.PdfMerger()
     merger.append(pathA)
     merger.append(pathB)
-    # with open(f'\\ucclerk\pgmdoc\Veterans\\{cemetery}{letter}{fileName[2].replace("a.pdf", ".pdf")}', 'wb') as out_pdf:
-    #     merger.write(out_pdf)
+    # with open(f'\\ucclerk\pgmdoc\Veterans\\{cemetery}{letter}{fileName[2].replace("a.pdf", ".pdf")}', 'wb') as outputPDF:
+    #     merger.write(outputPDF)
     merger2 = PyPDF2.PdfMerger()
     merger2.append(f'{fullLocation}\\{cemetery}{letter}{fileName[-1].replace(".pdf", "")} redacted.pdf')
     merger2.append(f'{fullLocation}\\{cemetery}{letter}{fileName[-1].replace("a.pdf", "b")} redacted.pdf')
-    with open(f'{fullLocation}\\{cemetery}{letter}{fileName[-1].replace("a.pdf", "")} redacted.pdf', 'wb') as out_pdf:
-        merger2.write(out_pdf)
+    with open(f'{fullLocation}\\{cemetery}{letter}{fileName[-1].replace("a.pdf", "")} redacted.pdf', 'wb') as outputPDF:
+        merger2.write(outputPDF)
         
         
 '''
@@ -129,12 +129,12 @@ field needed from extraction.
 def analyzeDocument(filePath, id, suffix):
     endpoint = os.environ["VISION_ENDPOINT"]
     key = os.environ["VISION_KEY"]
-    document_analysis_client = DocumentAnalysisClient(endpoint=endpoint, credential=AzureKeyCredential(key))
+    documentAnalysisClient = DocumentAnalysisClient(endpoint=endpoint, credential=AzureKeyCredential(key))
     with open(filePath, "rb") as file:
         imgTest = file.read()
         bytesTest = bytearray(imgTest)
         print('\nImage loaded', f"{id} {suffix}")
-    poller = document_analysis_client.begin_analyze_document("Test2.4n", document=bytesTest)
+    poller = documentAnalysisClient.begin_analyze_document("Test2.4n", document=bytesTest)
     result = poller.result()
     return result
 
@@ -155,7 +155,7 @@ Associates the values with the specific key names that are used throughout the c
 
 @author Mike
 '''
-def extract_key_value_pairs(result):
+def extractKeyValuePairs(result):
     kvs = defaultdict(list)
     war = ""
     nameCoords = []
@@ -222,7 +222,7 @@ or presenting the extracted data.
 
 @author Mike
 '''
-def print_kvs(kvs):
+def printKVS(kvs):
     result = "----Key-value pairs found in document----\n"
     for key, value in kvs.items():
         result += f"{key} : {value}\n"
@@ -235,14 +235,14 @@ Searches for and retrieves the value associated with a specified key from the di
 of key-value pairs. Compares strings for equality.
 
 @param kvs (defaultdict(list)) - Dictionary containing key-value pairs
-@param search_key (str) - The key for which the value needs to be retrieved for
+@param searchKey (str) - The key for which the value needs to be retrieved for
 
-@return value (str or None) - The value associated with the search_key, if found. 
+@return value (str or None) - The value associated with the searchKey, if found. 
                               Otherwise, None
 
 @author Mike
 ''' 
-def search_value(kvs, searchKey):
+def searchValue(kvs, searchKey):
     for key, value in kvs.items():
         if key.strip().upper() == searchKey.upper():
             return value
@@ -253,14 +253,14 @@ Searches for and retrieves the value associated with a specified key from the di
 of key-value pairs. Uses REGEX instead of comparing strings.
 
 @param kvs (defaultdict(list)) - Dictionary containing key-value pairs
-@param search_key (str) - The key for which the value needs to be retrieved for
+@param searchKey (str) - The key for which the value needs to be retrieved for
 
-@return value (str or None) - The value associated with the search_key, if found. 
+@return value (str or None) - The value associated with the searchKey, if found. 
                             Otherwise, None
 
 @author Mike
 ''' 
-def search_value_regex(kvs, searchKey):
+def searchValueRegex(kvs, searchKey):
     searchPattern = r'\b' + re.escape(searchKey) + r'\b'
     for key, value in kvs.items():
         if re.search(searchPattern, key, re.IGNORECASE):
@@ -307,8 +307,8 @@ def createRecord(fileName, id, cemetery, suffix):
     # page = pageReader.pages[0]
     # pdfWriter = PyPDF2.PdfWriter()
     # pdfWriter.add_page(page)
-    # with open("temp.pdf", 'wb') as output_pdf:
-    #     pdfWriter.write(output_pdf)
+    # with open("temp.pdf", 'wb') as outputPDF:
+    #     pdfWriter.write(outputPDF)
     while attempt == False:
         try:
             doc = fitz.open(fileName)
@@ -320,13 +320,13 @@ def createRecord(fileName, id, cemetery, suffix):
             print(f"Failed to process document: {e}")
             time.sleep(5)  
     documentResult = analyzeDocument("temp.png", id, suffix)
-    kvs, nameCoords, serialCoords, world = extract_key_value_pairs(documentResult)
-    printedKVS = print_kvs(kvs)  
+    kvs, nameCoords, serialCoords, world = extractKeyValuePairs(documentResult)
+    printedKVS = printKVS(kvs)  
     keys = ["", "NAME", "KIN", "WAR RECORD", "BORN", "19", "BURIED", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
     flag3 = False
     for x in keys:
         try:
-            value = search_value(kvs, x)[0]
+            value = searchValue(kvs, x)[0]
         except TypeError:
             value = "" 
         if x == "NAME":
@@ -371,7 +371,7 @@ def createRecord(fileName, id, cemetery, suffix):
             dob = value
         elif x == "DATE OF DEATH":
             try:
-                app = search_value(kvs, "Application")[0]
+                app = searchValue(kvs, "Application")[0]
             except Exception:
                 pass
             try:
@@ -496,11 +496,11 @@ def mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, lette
         requiredColors.append(highlightColors["mergedNameBug"])
     if requiredColors:
         numColors = len(requiredColors)
-        cols_per_color = max(1, (14 - 2) // numColors)
+        colsPerColor = max(1, (14 - 2) // numColors)
         for colIndex in range(2, 16 + 1):
             if colIndex == 15:
                 continue
-            colorIndex = (colIndex - 2) // cols_per_color
+            colorIndex = (colIndex - 2) // colsPerColor
             colorIndex = min(colorIndex, numColors - 1) 
             cell = worksheet.cell(row=rowIndex, column=colIndex)
             cell.fill = requiredColors[colorIndex]
@@ -517,7 +517,7 @@ Finds the next empty row in the worksheet to begin processing at that index.
 
 @author Mike
 '''  
-def find_next_empty_row(worksheet):
+def findNextEmptyRow(worksheet):
     for row in worksheet.iter_rows(min_row=1, min_col=1, max_col=1):
         if row[0].value is None:
             return row[0].row
@@ -588,8 +588,8 @@ def highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast):
             worksheet[f'C{rowIndex}'].value = worksheet[f'C{rowIndex}'].value[:-1]
     except IndexError:
         requiredColors.append(highlightColors["lastNameMismatch"])
-    two_uppercase_pattern = re.compile(r'.*[A-Z].*[A-Z].*')
-    if two_uppercase_pattern.match(worksheet[f'C{rowIndex}'].value):
+    twoUppercasePattern = re.compile(r'.*[A-Z].*[A-Z].*')
+    if twoUppercasePattern.match(worksheet[f'C{rowIndex}'].value):
         requiredColors.append(highlightColors["lastNameMismatch"])
     if kinLast:
         if kinLast != worksheet[f'B{rowIndex}'].value and \
@@ -598,11 +598,11 @@ def highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast):
                 requiredColors.append(highlightColors["lastNameMismatch"])
     if requiredColors:
         numColors = len(requiredColors)
-        cols_per_color = max(1, (14 - 2) // numColors)  
+        colsPerColor = max(1, (14 - 2) // numColors)  
         for colIndex in range(2, 16 + 1):
             if colIndex == 15:
                 continue
-            colorIndex = (colIndex - 2) // cols_per_color
+            colorIndex = (colIndex - 2) // colsPerColor
             colorIndex = min(colorIndex, numColors - 1) 
             cell = worksheet.cell(row=rowIndex, column=colIndex)
             cell.fill = requiredColors[colorIndex]
@@ -667,7 +667,7 @@ def main(singleFlag, singleCem, singleLetter):
         try:
             warFlag = False
             filePath = os.path.join(namePath, pdfFiles[y])
-            rowIndex = find_next_empty_row(worksheet)
+            rowIndex = findNextEmptyRow(worksheet)
             try:
                 id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
             except Exception:
@@ -710,8 +710,8 @@ def main(singleFlag, singleCem, singleLetter):
                     redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
                     mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
                     mergeImages(pathA, filePath, cemetery, letter)
-                    link_text = "PDF Image"
-                    worksheet.cell(row=rowIndex, column=15).value = link_text
+                    linkText = "PDF Image"
+                    worksheet.cell(row=rowIndex, column=15).value = linkText
                     worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
                     worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                     id += 1
@@ -729,9 +729,9 @@ def main(singleFlag, singleCem, singleLetter):
             for colIndex in range(1, worksheet.max_column + 1):
                 cell = worksheet.cell(row=rowIndex, column=colIndex)
                 cell.fill = highlightColor
-            error_file_path = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
-            with open(error_file_path, 'a') as error_file:
-                error_file.write(f'{printedKVS} \n\n {errorTraceback}')
+            errorFilePath = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
+            with open(errorFilePath, 'a') as errorFile:
+                errorFile.write(f'{printedKVS} \n\n {errorTraceback}')
             id += 1
             rowIndex += 1
         extension1 = str(id-1).zfill(5)
@@ -754,5 +754,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "R" # Change this to continue running through the current cemetery
+    letter = "T" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

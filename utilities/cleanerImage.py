@@ -16,14 +16,14 @@ It starts renaming files from a specified point, controlled by 'start' and 'star
 
 @author Mike
 '''
-def process_cemetery(cemeteryName, basePath, initialCount, start, startFlag):
-    uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
+def processCemetery(cemeteryName, basePath, initialCount, start, startFlag):
+    uppercaseAlphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
     firstFileFlag = True
-    for letter in uppercase_alphabet:
-        name_path = os.path.join(basePath, cemeteryName, letter)
+    for letter in uppercaseAlphabet:
+        namePath = os.path.join(basePath, cemeteryName, letter)
         try:
             print(f"Processing {cemeteryName} - {letter}")
-            initialCount, startFlag = clean(cemeteryName, letter, name_path, os.path.join(basePath, cemeteryName), \
+            initialCount, startFlag = clean(cemeteryName, letter, namePath, os.path.join(basePath, cemeteryName), \
                 initialCount, firstFileFlag, start, startFlag)
             firstFileFlag = False
         except FileNotFoundError:
@@ -111,10 +111,10 @@ def cleanImages(id):
             subCemeteries = [d for d in os.listdir(subCemPath) if os.path.isdir(os.path.join(subCemPath, d))]
             for subCemetery in subCemeteries:
                 print(f"Processing {cemetery} - {subCemetery}")
-                initialCount, startFlag = process_cemetery(subCemetery, subCemPath, initialCount, start, startFlag)
+                initialCount, startFlag = processCemetery(subCemetery, subCemPath, initialCount, start, startFlag)
         else:
             print(f"Processing {cemetery}")
-            initialCount, startFlag = process_cemetery(cemetery, baseCemPath, initialCount, start, startFlag)
+            initialCount, startFlag = processCemetery(cemetery, baseCemPath, initialCount, start, startFlag)
             
             
 if __name__ == "__main__":

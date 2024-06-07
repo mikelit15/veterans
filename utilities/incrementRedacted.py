@@ -7,9 +7,9 @@ matches the expected pattern, the numeric part is incremented by 1, and the file
 reformatted with the incremented number while maintaining leading zeros and the original 
 suffix.
 
-@param filename (str): The filename to be incremented.
+@param fileName (str): The filename to be incremented.
 
-@return new_filename (str): The filename with its numeric part incremented by 1. 
+@return newFileName (str): The filename with its numeric part incremented by 1. 
                             Returns the original filename if it does not match the expected 
                             pattern.
 
@@ -18,14 +18,14 @@ suffix.
 
 @author Mike
 '''
-def increment_filename(filename):
-    match = re.match(r"(.+?)(\d+)(\sredacted\.pdf)$", filename)
+def incrementFilename(fileName):
+    match = re.match(r"(.+?)(\d+)(\sredacted\.pdf)$", fileName)
     if not match:
-        return filename
+        return fileName
     base, number, ext = match.groups()
-    new_number = int(number) + 1
-    new_filename = f"{base}{new_number:05d}{ext}" 
-    return new_filename
+    newNumber = int(number) + 1
+    newFileName = f"{base}{newNumber:05d}{ext}" 
+    return newFileName
 
 
 '''

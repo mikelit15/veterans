@@ -32,11 +32,11 @@ def parseBirth(birth, bYear, birthYYFlag):
         elif len(year) > 6:
             temp = year[:4]
             if temp.isnumeric():
-                death_no_spaces = birth.replace(' ', '')
-                start_index = death_no_spaces.find(year[4:])
-                num_spaces_before = birth[:start_index].count(' ')
-                adjusted_start_index = start_index + num_spaces_before
-                birth = birth[:adjusted_start_index].strip()
+                deathNoSpaces = birth.replace(' ', '')
+                startIndex = deathNoSpaces.find(year[4:])
+                numSpacesBefore = birth[:startIndex].count(' ')
+                adjustedStartIndex = startIndex + numSpacesBefore
+                birth = birth[:adjustedStartIndex].strip()
                 birth = dateparser.parse(birth)
                 birth = birth.strftime("%m/%d/%Y")
                 bYear = temp
@@ -65,11 +65,11 @@ def parseBirth(birth, bYear, birthYYFlag):
         elif len(year) > 6:
             temp = year[:4]
             if temp.isnumeric():
-                death_no_spaces = birth.replace(' ', '')
-                start_index = death_no_spaces.find(year[4:])
-                num_spaces_before = birth[:start_index].count(' ')
-                adjusted_start_index = start_index + num_spaces_before
-                birth = birth[:adjusted_start_index].strip()
+                deathNoSpaces = birth.replace(' ', '')
+                startIndex = deathNoSpaces.find(year[4:])
+                numSpacesBefore = birth[:startIndex].count(' ')
+                adjustedStartIndex = startIndex + numSpacesBefore
+                birth = birth[:adjustedStartIndex].strip()
                 birth = dateparser.parse(birth)
                 birth = birth.strftime("%m/%d/%Y")
                 bYear = temp
@@ -97,11 +97,11 @@ def parseBirth(birth, bYear, birthYYFlag):
         elif len(year) > 6:
             temp = year[:4]
             if temp.isnumeric():
-                death_no_spaces = birth.replace(' ', '')
-                start_index = death_no_spaces.find(year[4:])
-                num_spaces_before = birth[:start_index].count(' ')
-                adjusted_start_index = start_index + num_spaces_before
-                birth = birth[:adjusted_start_index].strip()
+                deathNoSpaces = birth.replace(' ', '')
+                startIndex = deathNoSpaces.find(year[4:])
+                numSpacesBefore = birth[:startIndex].count(' ')
+                adjustedStartIndex = startIndex + numSpacesBefore
+                birth = birth[:adjustedStartIndex].strip()
                 birth = dateparser.parse(birth)
                 birth = birth.strftime("%m/%d/%Y")
                 bYear = temp
@@ -163,11 +163,11 @@ def parseDeath(death, dYear, deathYYFlag):
         elif len(year3) > 6:
             temp = year3[:4]
             if temp.isnumeric():
-                death_no_spaces = death.replace(' ', '')
-                start_index = death_no_spaces.find(year3[4:])
-                num_spaces_before = death[:start_index].count(' ')
-                adjusted_start_index = start_index + num_spaces_before
-                death = death[:adjusted_start_index].strip()
+                deathNoSpaces = death.replace(' ', '')
+                startIndex = deathNoSpaces.find(year3[4:])
+                numSpacesBefore = death[:startIndex].count(' ')
+                adjustedStartIndex = startIndex + numSpacesBefore
+                death = death[:adjustedStartIndex].strip()
                 death = dateparser.parse(death)
                 death = death.strftime("%m/%d/%Y")
                 dYear = temp
@@ -199,11 +199,11 @@ def parseDeath(death, dYear, deathYYFlag):
         elif len(year3) > 6:
             temp = year3[:4]
             if temp.isnumeric():
-                death_no_spaces = death.replace(' ', '')
-                start_index = death_no_spaces.find(year3[4:])
-                num_spaces_before = death[:start_index].count(' ')
-                adjusted_start_index = start_index + num_spaces_before
-                death = death[:adjusted_start_index].strip()
+                deathNoSpaces = death.replace(' ', '')
+                startIndex = deathNoSpaces.find(year3[4:])
+                numSpacesBefore = death[:startIndex].count(' ')
+                adjustedStartIndex = startIndex + numSpacesBefore
+                death = death[:adjustedStartIndex].strip()
                 death = dateparser.parse(death)
                 death = death.strftime("%m/%d/%Y")
                 dYear = temp
@@ -231,11 +231,11 @@ def parseDeath(death, dYear, deathYYFlag):
         elif len(year3) > 6:
             temp = year3[:4]
             if temp.isnumeric():
-                death_no_spaces = death.replace(' ', '')
-                start_index = death_no_spaces.find(year3[4:])
-                num_spaces_before = death[:start_index].count(' ')
-                adjusted_start_index = start_index + num_spaces_before
-                death = death[:adjusted_start_index].strip()
+                deathNoSpaces = death.replace(' ', '')
+                startIndex = deathNoSpaces.find(year3[4:])
+                numSpacesBefore = death[:startIndex].count(' ')
+                adjustedStartIndex = startIndex + numSpacesBefore
+                death = death[:adjustedStartIndex].strip()
                 death = dateparser.parse(death)
                 death = death.strftime("%m/%d/%Y")
                 dYear = temp

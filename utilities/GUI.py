@@ -235,7 +235,7 @@ class Worker(QThread):
             try:
                 warFlag = False
                 filePath = os.path.join(namePath, pdfFiles[y])
-                rowIndex = microsoftOCR.find_next_empty_row(worksheet)
+                rowIndex = microsoftOCR.findNextEmptyRow(worksheet)
                 try:
                     id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
                 except Exception:
@@ -284,8 +284,8 @@ class Worker(QThread):
                         redactedFile = microsoftOCR.redact(filePath, cemetery, letter, nameCoords, serialCoords)
                         microsoftOCR.mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
                         microsoftOCR.mergeImages(pathA, filePath, cemetery, letter)
-                        link_text = "PDF Image"
-                        worksheet.cell(row=rowIndex, column=15).value = link_text
+                        linkText = "PDF Image"
+                        worksheet.cell(row=rowIndex, column=15).value = linkText
                         worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
                         worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                         id += 1
@@ -303,9 +303,9 @@ class Worker(QThread):
                 for colIndex in range(1, worksheet.max_column + 1):
                     cell = worksheet.cell(row=rowIndex, column=colIndex)
                     cell.fill = highlightColor
-                error_file_path = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
-                with open(error_file_path, 'a') as error_file:
-                    error_file.write(f'{printedKVS} \n\n {errorTraceback}')
+                errorFilePath = fr'Errors/{cemetery}{letter}{str(id).zfill(5)} Error.txt' 
+                with open(errorFilePath, 'a') as errorFile:
+                    errorFile.write(f'{printedKVS} \n\n {errorTraceback}')
                 id += 1
                 rowIndex += 1
             extension1 = str(id-1).zfill(5)
@@ -337,13 +337,13 @@ class Worker(QThread):
                     for subCemetery in subCemeteries:
                         self.updateLabelSignal.emit(f"Processing {cemetery} - {subCemetery}")
                         print(f"Processing {cemetery} - {subCemetery}")
-                        initialCount, startFlag = self.process_cemetery(subCemetery, subCemPath, initialCount, start, startFlag, redac2)
+                        initialCount, startFlag = self.processCemetery(subCemetery, subCemPath, initialCount, start, startFlag, redac2)
                 else:
                     self.updateLabelSignal.emit(f"Processing {cemetery}")
                     print(f"Processing {cemetery}")
-                    initialCount, startFlag = self.process_cemetery(cemetery, baseCemPath, initialCount, start, startFlag, redac2)
+                    initialCount, startFlag = self.processCemetery(cemetery, baseCemPath, initialCount, start, startFlag, redac2)
             
-    def process_cemetery(self, cemeteryName, basePath, initialCount, start, startFlag, redac2):
+    def processCemetery(self, cemeteryName, basePath, initialCount, start, startFlag, redac2):
         uppercaseAlphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
         isFirstFile = True
         for letter in uppercaseAlphabet:
@@ -520,46 +520,46 @@ class Worker(QThread):
             print(f"Updated hyperlink in row {lastRow} to new target, {newTarget}.\n")
 
     def cleanHyperlinks(self, badWorksheet, startIndex, newID):
-        base_path = fr'\\ucclerk\pgmdoc\Veterans\Cemetery'
-        file_directory_map = {}
-        for dirpath, dirnames, filenames in os.walk(base_path):
+        basePath = fr'\\ucclerk\pgmdoc\Veterans\Cemetery'
+        fileDirectoryMap = {}
+        for dirpath, dirnames, filenames in os.walk(basePath):
             for filename in filenames:
-                file_id = ''.join(filter(str.isdigit, filename))[:5]
-                if file_id:
-                    file_directory_map[file_id] = dirpath
+                fileID = ''.join(filter(str.isdigit, filename))[:5]
+                if fileID:
+                    fileDirectoryMap[fileID] = dirpath
         for row in range(startIndex, badWorksheet.max_row + 1):
             badWorksheet[f'A{row}'].value = newID
-            cell_ref = f'O{row}'
-            if badWorksheet[cell_ref].hyperlink:
-                origTarget = badWorksheet[cell_ref].hyperlink.target.replace("%20", " ")
-                formatted_id = f"{newID:05d}"
-                folder_name = file_directory_map.get(formatted_id)[-1]
-                modifiedString = re.sub(r'([\\/])[A-Z]([\\/])', f'\\1{folder_name}\\2', origTarget)
-                modifiedString = re.sub(fr'({badWorksheet.title}[A-Z])\d{{5}}', f'{badWorksheet.title}{folder_name}{formatted_id}', modifiedString)
-                badWorksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=modifiedString, display="PDF Image")
-                badWorksheet[cell_ref].value = "PDF Image"
+            cellRef = f'O{row}'
+            if badWorksheet[cellRef].hyperlink:
+                origTarget = badWorksheet[cellRef].hyperlink.target.replace("%20", " ")
+                formattedID = f"{newID:05d}"
+                folderName = fileDirectoryMap.get(formattedID)[-1]
+                modifiedString = re.sub(r'([\\/])[A-Z]([\\/])', f'\\1{folderName}\\2', origTarget)
+                modifiedString = re.sub(fr'({badWorksheet.title}[A-Z])\d{{5}}', f'{badWorksheet.title}{folderName}{formattedID}', modifiedString)
+                badWorksheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=modifiedString, display="PDF Image")
+                badWorksheet[cellRef].value = "PDF Image"
                 self.updateLabelSignal.emit(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.\n")
                 print(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
             newID += 1
         return newID
     
-    def compare_hyperlink_letters(self, workbookPath):
+    def compareHyperlinkLetters(self, workbookPath):
         workbook = openpyxl.load_workbook(workbookPath)
         pattern = re.compile(
-            r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folder_letter>[A-Z])[\\/][^\\/]+(?P<file_letter>[A-Z])\d+ redacted\.pdf'
+            r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folderLetter>[A-Z])[\\/][^\\/]+(?P<folderLetter>[A-Z])\d+ redacted\.pdf'
         )
         flag = False
-        for sheet_name in workbook.sheetnames:
-            worksheet = workbook[sheet_name]
+        for sheetName in workbook.sheetnames:
+            worksheet = workbook[sheetName]
             for row in worksheet.iter_rows(min_row=2, max_col=worksheet.max_column):
                 cell = row[14]  
                 if cell.hyperlink:
                     hyperlink = cell.hyperlink.target.replace("%20", " ")
                     match = pattern.search(hyperlink)
                     if match:
-                        folder_letter = match.group(1)
-                        file_letter = match.group(2)
-                        if folder_letter == file_letter:
+                        folderLetter = match.group(1)
+                        fileLetter = match.group(2)
+                        if folderLetter == fileLetter:
                             pass
                         else:
                             flag = True
@@ -635,7 +635,7 @@ class Worker(QThread):
                 breakFlag = True
         workbook.save(excelFilePath)
         self.updateLabelSignal.emit("Checking hyperlinks...")
-        self.compare_hyperlink_letters(excelFilePath)
+        self.compareHyperlinkLetters(excelFilePath)
         self.checkButtonSignal.emit(False)
         self.cleanButtonSignal.emit(False)  
         self.stopSignal.emit(True)  
@@ -957,14 +957,14 @@ class MainWindow(QMainWindow):
             "SHEET NAME": 1
         }
         df = duplicates.main()
-        def format_value(value, width):
+        def formatValue(value, width):
             return f"{str(value):<{width}}"
-        header = " ".join([format_value(col, columnWidths[col]) for col in df.columns if col in columnWidths])
-        formatted_lines = [header]
+        header = " ".join([formatValue(col, columnWidths[col]) for col in df.columns if col in columnWidths])
+        formattedLines = [header]
         for index, row in df.iterrows():
-            formatted_row = " ".join([format_value(row[col], columnWidths[col]) for col in df.columns if col in columnWidths])
-            formatted_lines.append(formatted_row)
-        string = "\n".join(formatted_lines)
+            formattedRow = " ".join([formatValue(row[col], columnWidths[col]) for col in df.columns if col in columnWidths])
+            formattedLines.append(formattedRow)
+        string = "\n".join(formattedLines)
         string = string.replace("nan", "NaN")
         self.scrollArea.setDisabled(False)
         self.detailsLabel.appendPlainText("Current Duplicates:\n")

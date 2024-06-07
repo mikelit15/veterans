@@ -232,7 +232,7 @@ class Worker(QThread):
             try:
                 warFlag = False
                 filePath = os.path.join(namePath, pdfFiles[y])
-                rowIndex = microsoftOCR.find_next_empty_row(worksheet)
+                rowIndex = microsoftOCR.findNextEmptyRow(worksheet)
                 try:
                     id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
                 except Exception:

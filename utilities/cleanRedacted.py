@@ -4,11 +4,11 @@ import re
 '''
 Decrements the numerical part of file names in a directory and its subdirectories, 
 starting from a specified index. This is used to maintain a sequential order after 
-removing files. Files with a number greater than or equal to start_index will have 
+removing files. Files with a number greater than or equal to startIndex will have 
 their number decremented by 1.
 
-@param base_path (str) - The path to the directory containing the files to be renamed.
-@param start_index (int) - The file number from which to start decrementing.
+@param basePath (str) - The path to the directory containing the files to be renamed.
+@param startIndex (int) - The file number from which to start decrementing.
 
 @author Mike
 '''      

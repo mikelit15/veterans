@@ -15,49 +15,49 @@ from nameparser.config import CONSTANTS
 from openpyxl.styles import PatternFill
 
 def redact(file, flag):
-    pdf_document  = fitz.open(file)
-    first_page  = pdf_document.load_page(0)
-    first_page_image  = first_page.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
-    image_file  = "temp.png"
-    first_page_image.save(image_file)
-    img = cv2.imread(image_file)
+    PDF_Document  = fitz.open(file)
+    firstPage  = PDF_Document.load_page(0)
+    firstPageImage  = firstPage.get_pixmap(matrix=fitz.Matrix(600/72, 600/72))
+    imageFile  = "temp.png"
+    firstPageImage.save(imageFile)
+    img = cv2.imread(imageFile)
     pt1 = (2670, 500)
     pt3 = (3526, 950)
     if flag:
         pt1 = (2670, 260)
         pt3 = (3500, 550)
     cv2.rectangle(img, pt1, pt3, (0, 0, 0), thickness=cv2.FILLED)
-    cv2.imwrite(image_file, img)
-    image = Image.open(image_file)
+    cv2.imwrite(imageFile, img)
+    image = Image.open(imageFile)
     pdfFile = "temp.pdf"
     c = canvas.Canvas(pdfFile, pagesize=(image.width, image.height))
-    c.drawImage(image_file, 0, 0, width=image.width, height=image.height)
+    c.drawImage(imageFile, 0, 0, width=image.width, height=image.height)
     c.save()
     
-    redacted_pdf_document  = fitz.open(pdfFile)
-    new_pdf_document  = fitz.open()
-    new_pdf_document.insert_pdf(redacted_pdf_document, from_page=0, to_page=0)
-    new_pdf_document.insert_pdf(pdf_document, from_page=1, to_page=1)
-    new_pdf_file  = f'{file.replace(".pdf", "")} redacted.pdf'
-    new_pdf_document.save(new_pdf_file)
-    new_pdf_document.close()
-    redacted_pdf_document.close()
-    pdf_document.close()    
+    redactedPDF_Document  = fitz.open(pdfFile)
+    newPDF_Document  = fitz.open()
+    newPDF_Document.insert_pdf(redactedPDF_Document, from_page=0, to_page=0)
+    newPDF_Document.insert_pdf(PDF_Document, from_page=1, to_page=1)
+    newPDF_File  = f'{file.replace(".pdf", "")} redacted.pdf'
+    newPDF_Document.save(newPDF_File)
+    newPDF_Document.close()
+    redactedPDF_Document.close()
+    PDF_Document.close()    
 
-def get_kv_map(file_name):
-    with open(file_name, 'rb') as file:
-        img_test = file.read()
-        bytes_test = bytearray(img_test)
-        print('Image loaded', file_name)
+def getKV_Map(fileName):
+    with open(fileName, 'rb') as file:
+        imgTest = file.read()
+        bytesTest = bytearray(imgTest)
+        print('Image loaded', fileName)
     client = boto3.client('textract', region_name='us-east-1')
-    response = client.analyze_document(Document={'Bytes': bytes_test}, FeatureTypes=['FORMS'])
+    response = client.analyze_document(Document={'Bytes': bytesTest}, FeatureTypes=['FORMS'])
     blocks = response['Blocks']
-    key_map = {}
+    keyMap = {}
     civil = ""
     world = ""
     badVal = ""
-    value_map = {}
-    block_map = {}
+    valueMap = {}
+    blockMap = {}
     for block in blocks:
         try:
             if block['Text'] == "Civil War":
@@ -69,40 +69,40 @@ def get_kv_map(file_name):
             #         badVal.append(block['Text'])
         except KeyError:
             None
-        block_id = block['Id']
-        block_map[block_id] = block
+        blockID = block['Id']
+        blockMap[blockID] = block
         if block['BlockType'] == "KEY_VALUE_SET":
             if 'KEY' in block['EntityTypes']:
-                key_map[block_id] = block
+                keyMap[blockID] = block
             else:
-                value_map[block_id] = block
+                valueMap[blockID] = block
 
-    return key_map, value_map, block_map, civil, badVal, world
+    return keyMap, valueMap, blockMap, civil, badVal, world
 
-def get_kv_relationship(key_map, value_map, block_map):
+def getKV_Relationship(keyMap, valueMap, blockMap):
     kvs = defaultdict(list)
-    for block_id, key_block in key_map.items():
-        value_block = find_value_block(key_block, value_map)
-        key = get_text(key_block, block_map)
+    for blockID, keyBlock in keyMap.items():
+        valueBlock = findValueBlock(keyBlock, valueMap)
+        key = getText(keyBlock, blockMap)
         key = re.sub(r'[^a-zA-Z0-9\s]', '', key)
-        val = get_text(value_block, block_map)
+        val = getText(valueBlock, blockMap)
         kvs[key].append(val)
     return kvs
 
-def find_value_block(key_block, value_map):
-    for relationship in key_block['Relationships']:
+def findValueBlock(keyBlock, valueMap):
+    for relationship in keyBlock['Relationships']:
         if relationship['Type'] == 'VALUE':
-            for value_id in relationship['Ids']:
-                value_block = value_map[value_id]
-    return value_block
+            for valueID in relationship['Ids']:
+                valueBlock = valueMap[valueID]
+    return valueBlock
 
-def get_text(result, blocks_map):
+def getText(result, blocksMap):
     text = ''
     if 'Relationships' in result:
         for relationship in result['Relationships']:
             if relationship['Type'] == 'CHILD':
-                for child_id in relationship['Ids']:
-                    word = blocks_map[child_id]
+                for childID in relationship['Ids']:
+                    word = blocksMap[childID]
                     if word['BlockType'] == 'WORD':
                         text += word['Text'] + ' '
                     if word['BlockType'] == 'SELECTION_ELEMENT':
@@ -110,19 +110,19 @@ def get_text(result, blocks_map):
                             text += 'X '
     return text
 
-def print_kvs(kvs):
+def printKVS(kvs):
     for key, value in kvs.items():
         print(key, ":", value)
 
-def search_value(kvs, search_key):
+def searchValue(kvs, searchKey):
     for key, value in kvs.items():
         key = str.rstrip(key)
-        if key.upper() == search_key.upper():
+        if key.upper() == searchKey.upper():
             return value
 
-def search_value_x(kvs, search_key):
+def searchValueX(kvs, searchKey):
     for key, value in kvs.items():
-        if re.search(search_key, key, re.IGNORECASE):
+        if re.search(searchKey, key, re.IGNORECASE):
             return value
         
 def nameRule(worksheet, rowIndex, letter, value, counter):
@@ -194,11 +194,11 @@ def nameRule(worksheet, rowIndex, letter, value, counter):
     worksheet.cell(row=rowIndex, column=counter, value=middleName.replace(",", "."))
     counter += 1
     worksheet.cell(row=rowIndex, column=counter, value=suffix.replace(",", "."))
-    highlight_color = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+    highlightColor = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
     try:
         if lastName[0] != letter:
             for cell in worksheet[rowIndex]:
-                cell.fill = highlight_color
+                cell.fill = highlightColor
     except IndexError:
         None
     return counter
@@ -397,12 +397,12 @@ def warRule(value, civil, world):
     if "N." in war:
         war = war.replace("N", "W")
     tempText = war.replace("-", "").replace(".", "").replace("#", "").replace(" ", "").replace(",", "")
-    # ww1_and_2_pattern = re.compile(r'WWI&?II|WW1&2|WW\s*1\s*&\s*2|World\s*War\s*(1|I)&(2|II)|World\s*War\s*(1|I)\s*&\s*(2|II)')
-    ww1_pattern = re.compile(r'WWI|WW1|WW\s*I|World\s*War\s*(1|I)|World\s*War|WW\s*1|1')
-    ww2_pattern = re.compile(r'WWII|WW2|WW\s*2|WW\s*#?II|World\s*War\s*(II|2)|2')
-    if (ww2_pattern.findall(tempText)):
+    # WW1and2_Pattern = re.compile(r'WWI&?II|WW1&2|WW\s*1\s*&\s*2|World\s*War\s*(1|I)&(2|II)|World\s*War\s*(1|I)\s*&\s*(2|II)')
+    WW1_Pattern = re.compile(r'WWI|WW1|WW\s*I|World\s*War\s*(1|I)|World\s*War|WW\s*1|1')
+    WW2_Pattern = re.compile(r'WWII|WW2|WW\s*2|WW\s*#?II|World\s*War\s*(II|2)|2')
+    if (WW2_Pattern.findall(tempText)):
         war = "World War 2"
-    elif (ww1_pattern.findall(tempText)):
+    elif (WW1_Pattern.findall(tempText)):
         war = "World War 1"
     # if (ww1_and_2_pattern.findall(tempText)):
     #     war = "World War 1 and 2"
@@ -436,7 +436,7 @@ def warRule2(worksheet, rowIndex, counter, war):
     return counter 
 
 def branchRule(worksheet, rowIndex, value, counter, war):
-    # state_info = {
+    # stateInfo = {
     # ('Alabama', 'AL'), ('Alaska', 'AK'), ('Arizona', 'AZ'), ('Arkansas', 'AR'), ('California', 'CA'),
     # ('Colorado', 'CO'), ('Connecticut', 'CT'), ('Delaware', 'DE'), ('Florida', 'FL'), ('Georgia', 'GA'),
     # ('Hawaii', 'HI'), ('Idaho', 'ID'), ('Illinois', 'IL'), ('Indiana', 'IN'), ('Iowa', 'IA'), ('Kansas', 'KS'),
@@ -461,29 +461,29 @@ def branchRule(worksheet, rowIndex, value, counter, war):
     #     company = ""
     #     state = ""
     #     branch = branch.replace('"', "").replace("/", " ")
-    #     company_letter_match = re.search(r'(Co\.|Co|C)\s*([A-Z])', branch)
+    #     companyLetterMatch = re.search(r'(Co\.|Co|C)\s*([A-Z])', branch)
     #     try:
-    #         if len(company_letter_match.group(1)) != 1:
-    #             company = company_letter_match.group(2)
+    #         if len(companyLetterMatch.group(1)) != 1:
+    #             company = companyLetterMatch.group(2)
     #         else:
-    #             company = company_letter_match.group(1)
-    #         number_match = re.search(r'(\d+)', branch)
-    #         reg = number_match.group(1)
+    #             company = companyLetterMatch.group(1)
+    #         numberMatch = re.search(r'(\d+)', branch)
+    #         reg = numberMatch.group(1)
     #         word = branch.split()
     #         for y in word:
     #             y = y.replace(".", "").replace("Inf", "")
-    #             for z in state_info:
+    #             for z in stateInfo:
     #                 if y == z[1]:
     #                     state = z[1]
     #                 elif y == z[0]:
     #                     state = z[1]
     #     except AttributeError:
-    #         number_match = re.search(r'(\d+)', branch)
-    #         reg = number_match.group(1)
+    #         numberMatch = re.search(r'(\d+)', branch)
+    #         reg = numberMatch.group(1)
     #         word = branch.split()
     #         for y in word:
     #             y = y.replace(".", "").replace("Inf", "")
-    #             for z in state_info:
+    #             for z in stateInfo:
     #                 if y == z[1]:
     #                     state = z[1]
     #                 elif y == z[0]:
@@ -493,7 +493,7 @@ def branchRule(worksheet, rowIndex, value, counter, war):
     #         branch = branch.replace("N.Y.", " NY ").replace("N.J.", " NJ ").replace("U.S.", " US ")
     #         word = branch.split()
     #         for y in word:
-    #             for z in state_info:
+    #             for z in stateInfo:
     #                 if y == z[1]:
     #                     state = z[1]
     #                 elif y == z[0]:
@@ -532,9 +532,9 @@ def branchRule(worksheet, rowIndex, value, counter, war):
             break
         if "Not Listed" in branch:
             branch = ""
-    ww1_pattern = re.compile(r'WWI|WW1|WW\s*I|World\s*War\s*(1|I)|World\s*War|WW\s*1')
-    ww2_pattern = re.compile(r'WWII|WW2|WW\s*2|WW\s*#?II|World\s*War\s*(II|2)|2')
-    if (ww2_pattern.findall(branch) or (ww1_pattern.findall(branch))):
+    WW1_Pattern = re.compile(r'WWI|WW1|WW\s*I|World\s*War\s*(1|I)|World\s*War|WW\s*1')
+    WW2_Pattern = re.compile(r'WWII|WW2|WW\s*2|WW\s*#?II|World\s*War\s*(II|2)|2')
+    if (WW2_Pattern.findall(branch) or (WW1_Pattern.findall(branch))):
         branch = ""
     worksheet.cell(row=rowIndex, column=counter, value=value)   
     counter += 1
@@ -553,36 +553,36 @@ def cemeteryRule(worksheet, rowIndex, value, counter, cemetery, badVal):
         worksheet.cell(row=rowIndex, column=counter, value=strippedText)
     return counter      
 
-def createRecord(rowIndex, file_name, id):
+def createRecord(rowIndex, fileName, id):
     century = None
     buried = ""
     civil = ""
     world = ""
     war = ""
     badVal = []
-    pageReader = PyPDF2.PdfReader(open(file_name, 'rb'))
+    pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
     page = pageReader.pages[0]
-    pdf_writer = PyPDF2.PdfWriter()
-    pdf_writer.add_page(page)
-    with open("temp.pdf", 'wb') as output_pdf:
-        pdf_writer.write(output_pdf)
-    key_map, value_map, block_map, civil, badVal, world = get_kv_map("temp.pdf")
-    kvs = get_kv_relationship(key_map, value_map, block_map)
-    print_kvs(kvs)
+    pdfWriter = PyPDF2.PdfWriter()
+    pdfWriter.add_page(page)
+    with open("temp.pdf", 'wb') as outputPDF:
+        pdfWriter.write(outputPDF)
+    keyMap, valueMap, blockMap, civil, badVal, world = getKV_Map("temp.pdf")
+    kvs = getKV_Relationship(keyMap, valueMap, blockMap)
+    printKVS(kvs)
     keys = ["", "NAME", "WAR RECORD", "BORN", "19", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
     counter = 1
     flag = False
     flag3 = False
     worksheet.cell(row=rowIndex, column=counter, value=id)
     counter += 1
-    if search_value_x(kvs, "Care Assigned") == None:
+    if searchValueX(kvs, "Care Assigned") == None:
         flag = False
     else:
         flag = True
     dob = ""
     for x in keys:
         try:
-            value = search_value(kvs, x)[0]
+            value = searchValue(kvs, x)[0]
         except TypeError:
             value = "" 
         if x == "NAME":
@@ -620,42 +620,42 @@ def createRecord(rowIndex, file_name, id):
         elif x == "IN":
             counter = cemeteryRule(worksheet, rowIndex, value, counter, cemetery, badVal)
         counter += 1
-    redact(file_name, flag)
-    link_text = "PDF Image"
-    worksheet.cell(row=rowIndex, column=counter).value = link_text
+    redact(fileName, flag)
+    linkText = "PDF Image"
+    worksheet.cell(row=rowIndex, column=counter).value = linkText
     worksheet.cell(row=rowIndex, column=counter).font = Font(underline="single", color="0563C1")
-    worksheet.cell(row=rowIndex, column=counter).hyperlink = f'{file_name.replace(".pdf", "")} redacted.pdf'
+    worksheet.cell(row=rowIndex, column=counter).hyperlink = f'{fileName.replace(".pdf", "")} redacted.pdf'
 
-def createRecord2(rowIndex, file_name, id):
+def createRecord2(rowIndex, fileName, id):
     century = None
     buried = ""
     civil = ""
     world = ""
     war = ""
     badVal = []
-    pageReader = PyPDF2.PdfReader(open(file_name, 'rb'))
+    pageReader = PyPDF2.PdfReader(open(fileName, 'rb'))
     page = pageReader.pages[0]
-    pdf_writer = PyPDF2.PdfWriter()
-    pdf_writer.add_page(page)
-    with open("temp.pdf", 'wb') as output_pdf:
-        pdf_writer.write(output_pdf)
-    key_map, value_map, block_map, civil, badVal, world = get_kv_map("temp.pdf")
-    kvs = get_kv_relationship(key_map, value_map, block_map)
-    print_kvs(kvs)
+    pdfWriter = PyPDF2.PdfWriter()
+    pdfWriter.add_page(page)
+    with open("temp.pdf", 'wb') as outputPDF:
+        pdfWriter.write(outputPDF)
+    keyMap, valueMap, blockMap, civil, badVal, world = getKV_Map("temp.pdf")
+    kvs = getKV_Relationship(keyMap, valueMap, blockMap)
+    printKVS(kvs)
     keys = ["", "NAME", "WAR RECORD", "BORN", "19", "DATE OF DEATH", "WAR RECORD", "BRANCH OF SERVICE" , "IN"]
     counter = 1
     flag = False
     flag3 = False
     worksheet.cell(row=rowIndex, column=counter, value=id)
     counter += 1
-    if search_value_x(kvs, "Care Assigned") == None:
+    if searchValueX(kvs, "Care Assigned") == None:
         flag = False
     else:
         flag = True
     dob = ""
     for x in keys:
         try:
-            value = search_value(kvs, x)[0]
+            value = searchValue(kvs, x)[0]
         except TypeError:
             value = "" 
         if x == "NAME":
@@ -693,30 +693,30 @@ def createRecord2(rowIndex, file_name, id):
         elif x == "IN":
             counter = cemeteryRule(worksheet, rowIndex, value, counter, cemetery, badVal)
         counter += 1
-    redact(file_name, flag)
-    link_text = "PDF Image"
-    worksheet.cell(row=rowIndex, column=counter).value = link_text
+    redact(fileName, flag)
+    linkText = "PDF Image"
+    worksheet.cell(row=rowIndex, column=counter).value = linkText
     worksheet.cell(row=rowIndex, column=counter).font = Font(underline="single", color="0563C1")
-    worksheet.cell(row=rowIndex, column=counter).hyperlink = f'{file_name.replace(".pdf", "")} redacted.pdf'
+    worksheet.cell(row=rowIndex, column=counter).hyperlink = f'{fileName.replace(".pdf", "")} redacted.pdf'
 
-def clean(cemetery, letter, name_path):
-    pdf_files = [file for file in os.listdir(name_path) if file.lower().endswith('.pdf')]
-    letterBefore = list(name_path)
+def clean(cemetery, letter, namePath):
+    PDF_Files = [file for file in os.listdir(namePath) if file.lower().endswith('.pdf')]
+    letterBefore = list(namePath)
     letterBefore[-1] = chr(ord(letter) - 1)
     letterBefore = ''.join(letterBefore)
-    pdf_filesBefore = [file for file in os.listdir(letterBefore) if file.lower().endswith('.pdf')]
-    counter = pdf_filesBefore[len(pdf_filesBefore) - 1]
+    PDF_FilesBefore = [file for file in os.listdir(letterBefore) if file.lower().endswith('.pdf')]
+    counter = PDF_FilesBefore[len(PDF_FilesBefore) - 1]
     match = re.search(r'\d+', counter)
     number = match.group()
     counter = int(number) + 1
-    for x in pdf_files:
+    for x in PDF_Files:
         if "redacted" in x:
             newName = f"{cemetery}{letter}{counter:05d} redacted.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
+            os.rename(os.path.join(namePath, x), os.path.join(namePath, newName))
             counter -= 1
         else:    
             newName = f"{cemetery}{letter}{counter:05d}.pdf"
-            os.rename(os.path.join(name_path, x), os.path.join(name_path, newName))
+            os.rename(os.path.join(namePath, x), os.path.join(namePath, newName))
         counter += 1
 
 def main():
@@ -726,17 +726,17 @@ def main():
                 "B'Nai Abraham", "B'Nai Israel", "B'Nai Jeshuran", "Gemel Chesed", "Ohed Sholom"]
     global cemSet
     cemSet = set(cemeterys)
-    network_folder = r"\\ucclerk\pgmdoc\Veterans"
-    os.chdir(network_folder)
+    networkFolder = r"\\ucclerk\pgmdoc\Veterans"
+    os.chdir(networkFolder)
     workbook = openpyxl.load_workbook('Veterans2.xlsx')
     global cemetery
     cemetery = "Evergreen"
-    cem_path = cemetery
-    cem_path = os.path.join(network_folder, cem_path)
+    cemPath = cemetery
+    cemPath = os.path.join(networkFolder, cemPath)
     global letter
     letter = "M"
-    name_path = letter
-    name_path = os.path.join(cem_path, name_path)
+    namePath = letter
+    namePath = os.path.join(cemPath, namePath)
     rowIndex = 1
     global worksheet
     worksheet = workbook[cemetery]
@@ -747,19 +747,19 @@ def main():
         else:
             rowIndex = cell.row + 1
     id = rowIndex - 1
-    clean(cemetery, letter, name_path)
-    pdf_files = [file for file in os.listdir(name_path) if file.lower()]
-    for y in range(len(pdf_files)):
-        file_path = os.path.join(name_path, pdf_files[y])
-        if "output" in pdf_files[y] or "redacted" in pdf_files[y]:
+    clean(cemetery, letter, namePath)
+    PDF_Files = [file for file in os.listdir(namePath) if file.lower()]
+    for y in range(len(PDF_Files)):
+        filePath = os.path.join(namePath, PDF_Files[y])
+        if "output" in PDF_Files[y] or "redacted" in PDF_Files[y]:
             continue
         else:
-            string = pdf_files[y][:-4]
+            string = PDF_Files[y][:-4]
             string = string.split(letter) 
             string = string[-1].lstrip('0')
             if id != int(string):
                 continue
-            createRecord(rowIndex, file_path, id)
+            createRecord(rowIndex, filePath, id)
             id += 1
             rowIndex += 1
         workbook.save('Veterans2.xlsx')

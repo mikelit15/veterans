@@ -9,22 +9,22 @@ import aspose.words as aw
 from reportlab.pdfgen import canvas
 import PyPDF2
 
-def preProcess(img_path, flag):
-    img = cv2.imread(img_path)
+def preProcess(imgPath, flag):
+    img = cv2.imread(imgPath)
     pt1 = (5340, 1400)
     pt3 = (7055, 1700)
     # if flag:
     #     pt1 = (5400, 680)
     #     pt3 = (7000, 980)
     cv2.rectangle(img, pt1, pt3, (0, 0, 0), thickness=cv2.FILLED)
-    cv2.imwrite(img_path, img)
-    image = Image.open(img_path)
+    cv2.imwrite(imgPath, img)
+    image = Image.open(imgPath)
     pdfFile = "output.pdf"
     c = canvas.Canvas(pdfFile, pagesize=(image.width, image.height))
-    c.drawImage(img_path, 0, 0, width=image.width, height=image.height)
+    c.drawImage(imgPath, 0, 0, width=image.width, height=image.height)
     c.save()
 
-    img2 = cv2.imread(img_path)
+    img2 = cv2.imread(imgPath)
     gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
     thresh = cv2.adaptiveThreshold(~gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, -2)
     kernal = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 5))
@@ -44,7 +44,7 @@ def preProcess(img_path, flag):
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength, maxLineGap)
     for x1, y1, x2, y2 in lines[0]:
         cv2.line(outimage, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    cv2.imwrite(f'{img_path.replace(".png", "")} edit.png', outimage)
+    cv2.imwrite(f'{imgPath.replace(".png", "")} edit.png', outimage)
 
 def easyOCR(imagePath):
     reader = easyocr.Reader(['en'])
@@ -54,7 +54,7 @@ def easyOCR(imagePath):
     for x in text:
         print(x)
     prev_bbox = None  
-    current_word = "" 
+    currentWord = "" 
     current_bbox = None
     # Loop through the OCR results
     for key in keys:
@@ -63,16 +63,16 @@ def easyOCR(imagePath):
             if (prev_bbox and 
                     0 <= (bbox[0][0] - prev_bbox[1][0]) <= 70 and 
                     (bbox[0][1] - prev_bbox[1][1]) <= 10):                    
-                    current_word += " " + word
+                    currentWord += " " + word
                     current_bbox[1] = bbox[1]
                     current_bbox[2] = bbox[2]
             else:
-                if key[1].lower() in current_word.lower() and ("REGISTRATION" not in current_word):
+                if key[1].lower() in currentWord.lower() and ("REGISTRATION" not in currentWord):
                     if bbox[0][1] > 600:
-                        coords.append([current_word.upper(), current_bbox])
+                        coords.append([currentWord.upper(), current_bbox])
                         found = True
                         break
-                current_word = word
+                currentWord = word
                 current_bbox = bbox.copy()
             prev_bbox = bbox
         if not found:

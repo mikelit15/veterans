@@ -14,8 +14,8 @@ duplicate records. The process includes several key steps:
 @author: Mike
 '''
 
-def load_and_process_sheet(sheet_name, excel_file):
-    df = pd.read_excel(excel_file, sheet_name=sheet_name, usecols="A:K")
+def loadAndProcessSheet(sheetName, excelFile):
+    df = pd.read_excel(excelFile, sheet_name=sheetName, usecols="A:K")
     df.reset_index(inplace=True, drop=True)
     df.index = df.index + 2
     df['VDOBY'] = df['VDOBY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
@@ -24,81 +24,81 @@ def load_and_process_sheet(sheet_name, excel_file):
     df['VDODY'] = df['VDODY'].astype(object).where(pd.notna(df['VDODY']), np.nan)
     df['VID'] = df['VID'].apply(lambda x: int(x) if pd.notna(x) else np.nan)
     df['VID'] = df['VID'].astype(object).where(pd.notna(df['VID']), np.nan)
-    df['SHEET NAME'] = sheet_name  
+    df['SHEET NAME'] = sheetName  
     return df
 
-def find_duplicates(df, exclude_list):
-    df = df[~df['VID'].isin(exclude_list)]
-    confirmed_duplicates = pd.DataFrame()
-    potential_duplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
-    for _, group in potential_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):
+def findDuplicates(df, excludeList):
+    df = df[~df['VID'].isin(excludeList)]
+    confirmedDuplicates = pd.DataFrame()
+    potentialDuplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
+    for _, group in potentialDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):
         if not group['VDOBY'].isna().any():
             confirmed_group = group[group.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'], keep=False)]
-            confirmed_duplicates = pd.concat([confirmed_duplicates, confirmed_group])
+            confirmedDuplicates = pd.concat([confirmedDuplicates, confirmed_group])
         else:
-            confirmed_duplicates = pd.concat([confirmed_duplicates, group])
-    confirmed_duplicates['MaxVIDinPair'] = confirmed_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')
-    confirmed_duplicates.sort_values(by=['VLNAME', 'VFNAME', 'VDODY', 'MaxVIDinPair', 'VID'], inplace=True)
-    confirmed_duplicates.drop(columns=['MaxVIDinPair'], inplace=True)
-    return confirmed_duplicates
+            confirmedDuplicates = pd.concat([confirmedDuplicates, group])
+    confirmedDuplicates['MaxVIDinPair'] = confirmedDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')
+    confirmedDuplicates.sort_values(by=['VLNAME', 'VFNAME', 'VDODY', 'MaxVIDinPair', 'VID'], inplace=True)
+    confirmedDuplicates.drop(columns=['MaxVIDinPair'], inplace=True)
+    return confirmedDuplicates
 
 def main():
-    file_path = r"\\ucclerk\pgmdoc\Veterans\Veterans2.xlsx"
-    combined_df = pd.DataFrame()
-    confirmed_duplicates = pd.DataFrame()
+    filePath = r"\\ucclerk\pgmdoc\Veterans\VeteransTest.xlsx"
+    combinedDF = pd.DataFrame()
+    confirmedDuplicates = pd.DataFrame()
     
-    exclude_list = [8465, 424, 9494, 2123, 4661, 4662]
+    excludeList = [8465, 424, 9494, 2123, 4661, 4662]
     
     try:
-        excel_file = pd.ExcelFile(file_path)
-        for sheet_name in excel_file.sheet_names:
-            df = load_and_process_sheet(sheet_name, file_path)
-            print(f"Processing sheet: {sheet_name}")
+        excelFile = pd.ExcelFile(filePath)
+        for sheetName in excelFile.sheetNames:
+            df = loadAndProcessSheet(sheetName, filePath)
+            print(f"Processing sheet: {sheetName}")
             print("Columns:", df.columns)
-            required_columns = {'VLNAME', 'VFNAME', 'VDODY', 'VDOBY', 'VID'}
-            if not required_columns.issubset(df.columns):
-                print(f"### Missing required columns in sheet {sheet_name} ###")
+            requiredColumns = {'VLNAME', 'VFNAME', 'VDODY', 'VDOBY', 'VID'}
+            if not requiredColumns.issubset(df.columns):
+                print(f"### Missing required columns in sheet {sheetName} ###")
                 continue
-            combined_df = pd.concat([combined_df, df], ignore_index=True)
-        if not combined_df.empty:
-            confirmed_duplicates = find_duplicates(combined_df, exclude_list)
-        if confirmed_duplicates.empty:
+            combinedDF = pd.concat([combinedDF, df], ignore_index=True)
+        if not combinedDF.empty:
+            confirmedDuplicates = findDuplicates(combinedDF, excludeList)
+        if confirmedDuplicates.empty:
             print("### No Duplicates ###")
         else:
-            print(confirmed_duplicates)
+            print(confirmedDuplicates)
     except Exception as e:
         print("### No Duplicates ###")
         print(f"Error: {e}")
-    return confirmed_duplicates
+    return confirmedDuplicates
 
 # def main(cemetery):
-#     confirmed_duplicates = pd.DataFrame()
+#     confirmedDuplicates = pd.DataFrame()
 #     try:
-#         df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", sheet_name= cemetery, usecols="A:K")
+#         df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", sheetName= cemetery, usecols="A:K")
 #         df.reset_index(inplace=True, drop=True)  
 #         df.index = df.index + 2
 #         df['VDOBY'] = df['VDOBY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
 #         df['VDODY'] = df['VDODY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
 #         df['VDOBY'] = df['VDOBY'].astype(object).where(pd.notna(df['VDOBY']), np.nan)
 #         df['VDODY'] = df['VDODY'].astype(object).where(pd.notna(df['VDODY']), np.nan)
-#         potential_duplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
-#         for _, group in potential_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):
+#         potentialDuplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
+#         for _, group in potentialDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):
 #             if not group['VDOBY'].isna().any():
-#                 confirmed_group = group[group.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'], keep=False)]
-#                 confirmed_duplicates = pd.concat([confirmed_duplicates, confirmed_group])
+#                 confirmedGroup = group[group.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'], keep=False)]
+#                 confirmedDuplicates = pd.concat([confirmedDuplicates, confirmedGroup])
 #             else:
-#                 confirmed_duplicates = pd.concat([confirmed_duplicates, group])
-#         confirmed_duplicates['MaxVIDinPair'] = confirmed_duplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')
-#         confirmed_duplicates.sort_values(by=['MaxVIDinPair', 'VID'], inplace=True)
-#         confirmed_duplicates.drop(columns=['MaxVIDinPair'], inplace=True)
-#         if confirmed_duplicates.empty:
+#                 confirmedDuplicates = pd.concat([confirmedDuplicates, group])
+#         confirmedDuplicates['MaxVIDinPair'] = confirmedDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')
+#         confirmedDuplicates.sort_values(by=['MaxVIDinPair', 'VID'], inplace=True)
+#         confirmedDuplicates.drop(columns=['MaxVIDinPair'], inplace=True)
+#         if confirmedDuplicates.empty:
 #             print("### No Duplicates ###")
 #         else:
-#             print(confirmed_duplicates)
+#             print(confirmedDuplicates)
 #     except Exception as e:
 #         print("### No Duplicates ###")
 #         print(f"Error: {e}")
-#     return confirmed_duplicates
+#     return confirmedDuplicates
 
 
 if __name__ == "__main__":
