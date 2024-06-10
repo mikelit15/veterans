@@ -235,7 +235,7 @@ of key-value pairs. Compares strings for equality.
 @param kvs (defaultdict(list)) - Dictionary containing key-value pairs
 @param searchKey (str) - The key for which the value needs to be retrieved for
 
-@return value (str or None) - The value associated with the search_key, if found. 
+@return value (str or None) - The value associated with the searchKey, if found. 
                               Otherwise, None
 
 @author Mike
@@ -253,7 +253,7 @@ of key-value pairs. Uses REGEX instead of comparing strings.
 @param kvs (defaultdict(list)) - Dictionary containing key-value pairs
 @param searchKey (str) - The key for which the value needs to be retrieved for
 
-@return value (str or None) - The value associated with the search_key, if found. 
+@return value (str or None) - The value associated with the searchKey, if found. 
                             Otherwise, None
 
 @author Mike

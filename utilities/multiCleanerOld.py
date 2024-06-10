@@ -11,8 +11,8 @@ from microsoftOCR import microsoftOCR
 
 '''
 Initiates the file name cleaning process. This function goes through each cemetery folder
-and then calls process_cemetery to handle the letter subfolders. The function starts calling 
-process_cemetery when the ID matches "start." This is used to significantly speed up
+and then calls processCemetery to handle the letter subfolders. The function starts calling 
+processCemetery when the ID matches "start." This is used to significantly speed up
 the process of this function, especially for further cemeteries. Special handling is 
 required if a cemetery folder contains more cemetery subfolders. This is the case for 
 Jewish and Misc folders as they contain more, much smaller, cemeteries.
@@ -38,10 +38,10 @@ def cleanImages(goodID, redac, redac2):
             subCemeteries = [d for d in os.listdir(subCemPath) if os.path.isdir(os.path.join(subCemPath, d))]
             for subCemetery in subCemeteries:
                 print(f"Processing {cemetery} - {subCemetery}")
-                initialCount, startFlag = process_cemetery(subCemetery, subCemPath, initialCount, start, startFlag, redac2)
+                initialCount, startFlag = processCemetery(subCemetery, subCemPath, initialCount, start, startFlag, redac2)
         else:
             print(f"Processing {cemetery}")
-            initialCount, startFlag = process_cemetery(cemetery, baseCemPath, initialCount, start, startFlag, redac2)
+            initialCount, startFlag = processCemetery(cemetery, baseCemPath, initialCount, start, startFlag, redac2)
       
 
 '''
@@ -68,14 +68,14 @@ directory, calling clean() to adjust image names for each letter subfolder.
 
 @author Mike
 '''
-def process_cemetery(cemeteryName, basePath, initialCount, start, startFlag, redac2):
-    uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
+def processCemetery(cemeteryName, basePath, initialCount, start, startFlag, redac2):
+    uppercaseAlphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
     isFirstFile = True
-    for letter in uppercase_alphabet:
-        name_path = os.path.join(basePath, cemeteryName, letter)
+    for letter in uppercaseAlphabet:
+        namePath = os.path.join(basePath, cemeteryName, letter)
         try:
             print(f"Processing {cemeteryName} - {letter}")
-            initialCount, startFlag = clean(letter, name_path, os.path.join(basePath, cemeteryName), \
+            initialCount, startFlag = clean(letter, namePath, os.path.join(basePath, cemeteryName), \
                 initialCount, isFirstFile, start, startFlag, redac2)
             isFirstFile = False
         except FileNotFoundError:
@@ -220,12 +220,12 @@ def adjustImageName(goodID, badID, goodRow):
     else:
         print("GoodID or BadID file not found. Please check the IDs and directories.")
         quit()
-    start_column = 'A'
-    end_column = 'O'
-    start_column_index = openpyxl.utils.column_index_from_string(start_column)
-    end_column_index = openpyxl.utils.column_index_from_string(end_column)
-    for col_index in range(start_column_index, end_column_index + 1):
-        worksheet.cell(row=goodRow, column=col_index).value = None
+    startColumn = 'A'
+    endColumn = 'O'
+    startColumnIndex = openpyxl.utils.column_index_from_string(startColumn)
+    endColumnIndex = openpyxl.utils.column_index_from_string(endColumn)
+    for colIndex in range(startColumnIndex, endColumnIndex + 1):
+        worksheet.cell(row=goodRow, column=colIndex).value = None
     worksheet[f'O{goodRow}'].hyperlink = None
     print(f"Record {goodID} data from row {goodRow} cleared successfully.")
 
@@ -249,31 +249,31 @@ active in order to adjust them automatically later in the process.
 '''
 def cleanDelete(cemetery, badID, badRow):
     baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
-    for dirpath, dirnames, filenames in os.walk(baseRedacPath):
-        for filename in filenames:
-            if f"{badID:05d}" in filename:
-                file_path = os.path.join(dirpath, filename)
-                os.remove(file_path)
-                print(f"\nRedacted file, {filename}, deleted successfully.")
+    for dirPath, dirNames, fileNames in os.walk(baseRedacPath):
+        for fileName in fileNames:
+            if f"{badID:05d}" in fileName:
+                filePath = os.path.join(dirPath, fileName)
+                os.remove(filePath)
+                print(f"\nRedacted file, {fileName}, deleted successfully.")
     worksheet = workbook[cemetery]
     worksheet.delete_rows(badRow)
     print(f"Row {badRow} deleted successfully.")
     for row in range(badRow, worksheet.max_row + 1):
-        next_row = row + 1
-        cell_ref = f'O{row}'
-        next_cell_ref = f'O{next_row}'
-        if next_row <= worksheet.max_row and worksheet[next_cell_ref].hyperlink:
-            temp_hyperlink = worksheet[next_cell_ref].hyperlink
-            worksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=temp_hyperlink.target, display=temp_hyperlink.display)
-            worksheet[cell_ref].value = worksheet[next_cell_ref].value
-            print(f"Hyperlink and value from row {next_row} moved to row {row}.")
+        nextRow = row + 1
+        cellRef = f'O{row}'
+        nextCellRef = f'O{nextRow}'
+        if nextRow <= worksheet.max_row and worksheet[nextCellRef].hyperlink:
+            tempHyperlink = worksheet[nextCellRef].hyperlink
+            worksheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=tempHyperlink.target, display=tempHyperlink.display)
+            worksheet[cellRef].value = worksheet[nextCellRef].value
+            print(f"Hyperlink and value from row {nextRow} moved to row {row}.")
     if worksheet[f'O{worksheet.max_row - 1}'].hyperlink:
-        last_row = worksheet.max_row
-        print(f"Adjusting the hyperlink in the last row, row {last_row}.")
-        second_last_hyperlink = worksheet[f'O{last_row - 1}'].hyperlink
-        new_target = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", second_last_hyperlink.target)
-        worksheet[f'O{last_row}'].hyperlink = Hyperlink(ref=f'O{last_row}', target=new_target, display=second_last_hyperlink.display)
-        print(f"Updated hyperlink in row {last_row} to new target, {new_target}.\n")
+        lastRow = worksheet.max_row
+        print(f"Adjusting the hyperlink in the last row, row {lastRow}.")
+        secondLastHyperlink = worksheet[f'O{lastRow - 1}'].hyperlink
+        newTarget = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", secondLastHyperlink.target)
+        worksheet[f'O{lastRow}'].hyperlink = Hyperlink(ref=f'O{lastRow}', target=newTarget, display=secondLastHyperlink.display)
+        print(f"Updated hyperlink in row {lastRow} to new target, {newTarget}.\n")
 
 
 '''
@@ -292,27 +292,27 @@ they accurately reflect the current record IDs following modifications.
 @author Mike
 '''
 def cleanHyperlinks(cemetery, startIndex):
-    base_path = fr'\\ucclerk\pgmdoc\Veterans\Cemetery\{cemetery}'
-    file_directory_map = {}
-    for dirpath, dirnames, filenames in os.walk(base_path):
-        for filename in filenames:
-            file_id = ''.join(filter(str.isdigit, filename))[:5]
-            if file_id:
-                file_directory_map[file_id] = dirpath
-    new_id = worksheet[f'A{startIndex}'].value
+    basePath = fr'\\ucclerk\pgmdoc\Veterans\Cemetery\{cemetery}'
+    fileDirectoryMap = {}
+    for dirPath, dirNames, fileNames in os.walk(basePath):
+        for fileName in fileNames:
+            fileID = ''.join(filter(str.isdigit, fileName))[:5]
+            if fileID:
+                fileDirectoryMap[fileID] = dirPath
+    newID = worksheet[f'A{startIndex}'].value
     for row in range(startIndex, worksheet.max_row + 1):
-        worksheet[f'A{row}'].value = new_id
-        cell_ref = f'O{row}'
-        if worksheet[cell_ref].hyperlink:
-            orig_target = worksheet[cell_ref].hyperlink.target.replace("%20", " ")
-            formatted_id = f"{new_id:05d}"
-            folder_name = file_directory_map.get(formatted_id, "UnknownFolder")[-1]
-            modified_string = re.sub(fr'(\\)([A-Z])(\\)', f'\\1{folder_name}\\3', orig_target)
-            modified_string = re.sub(fr'({cemetery}[A-Z])\d{{5}}', f'{cemetery}{folder_name}{formatted_id}', modified_string)
-            worksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=modified_string, display="PDF Image")
-            worksheet[cell_ref].value = "PDF Image"
-            print(f"Updated hyperlink from {orig_target} to {modified_string} in row {row}.")
-        new_id += 1
+        worksheet[f'A{row}'].value = newID
+        cellRef = f'O{row}'
+        if worksheet[cellRef].hyperlink:
+            origTarget = worksheet[cellRef].hyperlink.target.replace("%20", " ")
+            formattedID = f"{newID:05d}"
+            folderName = fileDirectoryMap.get(formattedID, "UnknownFolder")[-1]
+            modifiedString = re.sub(fr'(\\)([A-Z])(\\)', f'\\1{folderName}\\3', origTarget)
+            modifiedString = re.sub(fr'({cemetery}[A-Z])\d{{5}}', f'{cemetery}{folderName}{formattedID}', modifiedString)
+            worksheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=modifiedString, display="PDF Image")
+            worksheet[cellRef].value = "PDF Image"
+            print(f"Updated hyperlink from {origTarget} to {modifiedString} in row {row}.")
+        newID += 1
 
 
 '''

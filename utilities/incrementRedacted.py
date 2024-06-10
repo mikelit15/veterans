@@ -43,7 +43,7 @@ files lacking a numeric part sorted to the beginning.
 
 @author Mike
 '''
-def get_sorted_files(directory):
+def getSortedFiles(directory):
     files = os.listdir(directory)
     files.sort(key=lambda f: int(re.search(r"(\d+)", f).group()) if re.search(r"(\d+)", f) else 0, reverse=True)
     return files
@@ -69,20 +69,20 @@ their numeric part while avoiding overwriting existing files.
 @author Mike
 '''
 def main():
-    directory_path = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Fairview - Redacted\P"
-    files = get_sorted_files(directory_path)
-    start_index = 0 # 0 for the last file in the sorted list
-    target_index = 149  # Example: stop after processing 10 files
-    for i in range(start_index, min(target_index, len(files))):
+    directoryPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Fairview - Redacted\P"
+    files = getSortedFiles(directoryPath)
+    startIndex = 0 # 0 for the last file in the sorted list
+    targetIndex = 149  # Example: stop after processing 10 files
+    for i in range(startIndex, min(targetIndex, len(files))):
         file = files[i]
-        old_path = os.path.join(directory_path, file)
-        new_file = increment_filename(file)
-        new_path = os.path.join(directory_path, new_file)
-        if not os.path.exists(new_path):
-            os.rename(old_path, new_path)
-            print(f"Renamed '{file}' to '{new_file}'")
+        oldPath = os.path.join(directoryPath, file)
+        newFile = incrementFilename(file)
+        newPath = os.path.join(directoryPath, newFile)
+        if not os.path.exists(newPath):
+            os.rename(oldPath, newPath)
+            print(f"Renamed '{file}' to '{newFile}'")
         else:
-            print(f"Cannot rename '{file}' to '{new_file}' as it already exists.")
+            print(f"Cannot rename '{file}' to '{newFile}' as it already exists.")
 
 
 if __name__ == "__main__":

@@ -33,8 +33,8 @@ def findDuplicates(df, excludeList):
     potentialDuplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
     for _, group in potentialDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):
         if not group['VDOBY'].isna().any():
-            confirmed_group = group[group.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'], keep=False)]
-            confirmedDuplicates = pd.concat([confirmedDuplicates, confirmed_group])
+            confirmedGroup = group[group.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'], keep=False)]
+            confirmedDuplicates = pd.concat([confirmedDuplicates, confirmedGroup])
         else:
             confirmedDuplicates = pd.concat([confirmedDuplicates, group])
     confirmedDuplicates['MaxVIDinPair'] = confirmedDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')

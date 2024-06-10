@@ -34,13 +34,13 @@ def warRule(value, world):
     )
     koreanWarPattern = re.compile(r'Korea', re.IGNORECASE)
     vietnamWarPattern = re.compile(r'Vietnam', re.IGNORECASE)
-    simple_world_war_pattern = re.compile(r'\bWorld\s*War\b', re.IGNORECASE) 
+    simpleWorldWarPattern = re.compile(r'\bWorld\s*War\b', re.IGNORECASE) 
     if WW1andWW2_Pattern.search(war):
         identifiedWars.extend(["World War 1", "World War 2"])
     else:
         if WW2_Pattern.search(war):
             identifiedWars.append("World War 2")
-        elif simple_world_war_pattern.search(war):
+        elif simpleWorldWarPattern.search(war):
             identifiedWars.append("World War 1")
         elif not identifiedWars and WW1_Pattern.search(war):
             identifiedWars.append("World War 1")

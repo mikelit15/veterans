@@ -404,7 +404,7 @@ def warRule(value, civil, world):
         war = "World War 2"
     elif (WW1_Pattern.findall(tempText)):
         war = "World War 1"
-    # if (ww1_and_2_pattern.findall(tempText)):
+    # if (WW1and2_Pattern.findall(tempText)):
     #     war = "World War 1 and 2"
     else:
         war = war.replace(".", "").replace("Calv", "").replace("Vols", "")

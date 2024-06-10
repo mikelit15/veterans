@@ -242,8 +242,8 @@ def adjustImageName(goodID, badID, goodRow, goodWorkSheet):
     endColumn = 'O'
     startColumnIndex = openpyxl.utils.column_index_from_string(startColumn)
     endColumnIndex = openpyxl.utils.column_index_from_string(endColumn)
-    for col_index in range(startColumnIndex, endColumnIndex + 1):
-        goodWorkSheet.cell(row=goodRow, column=col_index).value = None
+    for colIndex in range(startColumnIndex, endColumnIndex + 1):
+        goodWorkSheet.cell(row=goodRow, column=colIndex).value = None
     goodWorkSheet[f'O{goodRow}'].hyperlink = None
     print(f"Record {goodID} data from row {goodRow} cleared successfully.")
 

@@ -4,24 +4,24 @@ import openpyxl
 import os
 
 def enhance(worksheet):
-    # current_directory = r"//ucclerk/pgmdoc/Veterans"
-    current_directory = os.getcwd()
-    png_files = [file for file in os.listdir(current_directory) if file.lower().endswith('.png')]
-    row_index = 2
-    for x in png_files:
+    # currentDirectory = r"//ucclerk/pgmdoc/Veterans"
+    currentDirectory = os.getcwd()
+    pngFiles = [file for file in os.listdir(currentDirectory) if file.lower().endswith('.png')]
+    rowIndex = 2
+    for x in pngFiles:
         # image = Image.open(r"//ucclerk/pgmdoc/Veterans/"+x)
         image = Image.open(x)
         # enhancer = ImageEnhance.Contrast(image)
         # image = enhancer.enhance(3.0)
         count = 0
         for x in coords:
-            cropped_image = image.crop(x)
-            text = pytesseract.image_to_string(cropped_image, lang='eng')
-            filtered_text = text.replace("♀", "").replace("\n", "").strip()
-            data[count] = filtered_text
+            croppedImage = image.crop(x)
+            text = pytesseract.image_to_string(croppedImage, lang='eng')
+            filteredText = text.replace("♀", "").replace("\n", "").strip()
+            data[count] = filteredText
             count+=1 
-            worksheet.cell(row=row_index, column=count, value=filtered_text)
-        row_index += 1
+            worksheet.cell(row=rowIndex, column=count, value=filteredText)
+        rowIndex += 1
 coords = [(205, 194, 1153, 258), (1357, 196, 1710, 254), (372, 263, 1777, 309),
           (321, 321, 901, 367), (1072, 319, 1783, 370), (211, 380, 553, 426), 
           (624, 378, 1762, 426), (371, 434, 1004, 488), (1505, 438, 1730, 516),

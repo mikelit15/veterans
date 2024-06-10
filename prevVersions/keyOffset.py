@@ -53,35 +53,35 @@ def easyOCR(imagePath):
     keys = [[1, "name"], [6, "born"], [20, "record"], [21, "service"]]
     for x in text:
         print(x)
-    prev_bbox = None  
+    prevBbox = None  
     currentWord = "" 
-    current_bbox = None
+    currentBbox = None
     # Loop through the OCR results
     for key in keys:
         found = False 
         for bbox, word, score in text:
-            if (prev_bbox and 
-                    0 <= (bbox[0][0] - prev_bbox[1][0]) <= 70 and 
-                    (bbox[0][1] - prev_bbox[1][1]) <= 10):                    
+            if (prevBbox and 
+                    0 <= (bbox[0][0] - prevBbox[1][0]) <= 70 and 
+                    (bbox[0][1] - prevBbox[1][1]) <= 10):                    
                     currentWord += " " + word
-                    current_bbox[1] = bbox[1]
-                    current_bbox[2] = bbox[2]
+                    currentBbox[1] = bbox[1]
+                    currentBbox[2] = bbox[2]
             else:
                 if key[1].lower() in currentWord.lower() and ("REGISTRATION" not in currentWord):
                     if bbox[0][1] > 600:
-                        coords.append([currentWord.upper(), current_bbox])
+                        coords.append([currentWord.upper(), currentBbox])
                         found = True
                         break
                 currentWord = word
-                current_bbox = bbox.copy()
-            prev_bbox = bbox
+                currentBbox = bbox.copy()
+            prevBbox = bbox
         if not found:
-            dummy_coords = [[0, 0], [0, 0], [0, 0], [0, 0]]
-            coords.append([key[1].upper(), dummy_coords])
+            dummyCoords = [[0, 0], [0, 0], [0, 0], [0, 0]]
+            coords.append([key[1].upper(), dummyCoords])
 
     return coords
 
-def tesseractOCR(imagePath, row_index, coords):
+def tesseractOCR(imagePath, rowIndex, coords):
     image = Image.open(imagePath)
     count = 0
     counter = 1
@@ -90,14 +90,14 @@ def tesseractOCR(imagePath, row_index, coords):
     # print(pytesseract.image_to_string(nt, lang='eng'))
     offset = [3700, 1481, 5875, 2696]
     for x in coords: 
-        cropped_image = image.crop((x[1][2][0] - 15, x[1][0][1] - 120, x[1][1][0] + offset[count], x[1][2][1] - 9))
-        # cropped_image = image.crop((219, 452, 413, 520))
-        text = pytesseract.image_to_string(cropped_image, lang='eng')
-        filtered_text = text.replace("♀", "").replace("\n", "").replace("«", "") \
+        croppedImage = image.crop((x[1][2][0] - 15, x[1][0][1] - 120, x[1][1][0] + offset[count], x[1][2][1] - 9))
+        # croppedImage = image.crop((219, 452, 413, 520))
+        text = pytesseract.image_to_string(croppedImage, lang='eng')
+        filteredText = text.replace("♀", "").replace("\n", "").replace("«", "") \
                         .replace("_", " ").replace("—. ", " ").replace("(", " ") \
                         .replace("CEMETERY", "").strip()
-        worksheet.cell(row=row_index, column=counter, value=filtered_text)
-        print(filtered_text)
+        worksheet.cell(row=rowIndex, column=counter, value=filteredText)
+        print(filteredText)
         counter += 1
         count += 1
     os.remove(imagePath)
@@ -105,32 +105,32 @@ def tesseractOCR(imagePath, row_index, coords):
 # Loop through all images
 workbook = openpyxl.load_workbook('Veterans.xlsx')
 worksheet = workbook['Evergreen']
-current_directory = os.getcwd()
-row_index = 2
+currentDirectory = os.getcwd()
+rowIndex = 2
 pytesseract.pytesseract.tesseract_cmd = r'C:\Users\michael.litvin\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
 os.environ['TESSDATA_PREFIX'] = r'C:\Users\michael.litvin\Downloads'
-name_coordinates = []
-png_files = [file for file in os.listdir(current_directory) if file.lower().endswith('.png')]
-for x in range(len(png_files)):
+nameCoordinates = []
+pngFiles = [file for file in os.listdir(currentDirectory) if file.lower().endswith('.png')]
+for x in range(len(pngFiles)):
     if x % 2 != 0:
         continue
-    elif "output" not in png_files[x] and "edit" not in png_files[x]:
-        preProcess(png_files[x], png_files[x+1])
+    elif "output" not in pngFiles[x] and "edit" not in pngFiles[x]:
+        preProcess(pngFiles[x], pngFiles[x+1])
     
-edit_files = [file for file in os.listdir(current_directory) if file.lower().endswith('edit.png')]
-for x in edit_files:
-    name_coordinates = easyOCR(x)
-    tesseractOCR(x, row_index, name_coordinates)
-    row_index += 1
+editFiles = [file for file in os.listdir(currentDirectory) if file.lower().endswith('edit.png')]
+for x in editFiles:
+    nameCoordinates = easyOCR(x)
+    tesseractOCR(x, rowIndex, nameCoordinates)
+    rowIndex += 1
 workbook.save('Veterans.xlsx')
 
 # Process one image
 # imagePath = "00009 edit.png"
 # image = Image.open(imagePath)
-# current_directory = os.getcwd()
+# currentDirectory = os.getcwd()
 # preProcess(imagePath)
 # nt = image.crop((1792, 2739, 2307, 2903))
 # print(pytesseract.image_to_string(nt, lang='eng'))
 
-# name_coordinates = easyOCR(imagePath)
-# tesseractOCR(imagePath, row_index, name_coordinates)
+# nameCoordinates = easyOCR(imagePath)
+# tesseractOCR(imagePath, rowIndex, nameCoordinates)

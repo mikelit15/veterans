@@ -522,11 +522,11 @@ class Worker(QThread):
     def cleanHyperlinks(self, badWorksheet, startIndex, newID):
         basePath = fr'\\ucclerk\pgmdoc\Veterans\Cemetery'
         fileDirectoryMap = {}
-        for dirpath, dirnames, filenames in os.walk(basePath):
-            for filename in filenames:
-                fileID = ''.join(filter(str.isdigit, filename))[:5]
+        for dirPath, dirNames, fileNames in os.walk(basePath):
+            for fileName in fileNames:
+                fileID = ''.join(filter(str.isdigit, fileName))[:5]
                 if fileID:
-                    fileDirectoryMap[fileID] = dirpath
+                    fileDirectoryMap[fileID] = dirPath
         for row in range(startIndex, badWorksheet.max_row + 1):
             badWorksheet[f'A{row}'].value = newID
             cellRef = f'O{row}'

@@ -25,14 +25,14 @@ by 'start' and 'startFlag'.
 
 @author Mike
 '''
-def process_cemetery(cemeteryName, basePath, initialCount, start, startFlag):
-    uppercase_alphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
+def processCemetery(cemeteryName, basePath, initialCount, start, startFlag):
+    uppercaseAlphabet = [chr(i) for i in range(ord('A'), ord('Z') + 1)]
     firstFileFlag = True
-    for letter in uppercase_alphabet:
-        name_path = os.path.join(basePath, cemeteryName, letter)
+    for letter in uppercaseAlphabet:
+        namePath = os.path.join(basePath, cemeteryName, letter)
         try:
             print(f"Processing {cemeteryName} - {letter}")
-            initialCount, startFlag = clean(cemeteryName, letter, name_path, os.path.join(basePath, cemeteryName), \
+            initialCount, startFlag = clean(cemeteryName, letter, namePath, os.path.join(basePath, cemeteryName), \
                 initialCount, firstFileFlag, start, startFlag)
             firstFileFlag = False
         except FileNotFoundError:
@@ -125,10 +125,10 @@ def cleanImages(goodID):
             subCemeteries = [d for d in os.listdir(subCemPath) if os.path.isdir(os.path.join(subCemPath, d))]
             for subCemetery in subCemeteries:
                 print(f"Processing {cemetery} - {subCemetery}")
-                initialCount, startFlag = process_cemetery(subCemetery, subCemPath, initialCount, start, startFlag)
+                initialCount, startFlag = processCemetery(subCemetery, subCemPath, initialCount, start, startFlag)
         else:
             print(f"Processing {cemetery}")
-            initialCount, startFlag = process_cemetery(cemetery, baseCemPath, initialCount, start, startFlag)
+            initialCount, startFlag = processCemetery(cemetery, baseCemPath, initialCount, start, startFlag)
       
         
 '''
@@ -162,7 +162,7 @@ def cleanRedacted(badID):
 Adjusts hyperlinks in an Excel file that contain numerical IDs, decrementing those IDs by 1
 starting from a specified index. This function is used when IDs in a series are modified and 
 corresponding hyperlinks need to reflect these changes. Hyperlinks with IDs greater than or 
-equal to start_index will have their ID decremented by 1.
+equal to startIndex will have their ID decremented by 1.
 
 @param badRow (int) - The row number from which to start adjusting hyperlinks.
 @param cemetery (str) - The name of current cemetery, for file pathing
@@ -172,16 +172,16 @@ equal to start_index will have their ID decremented by 1.
 @author Mike
 '''     
 def cleanHyperlink(badRow, cemetery):
-    def decrement_with_rollover(path):
+    def decrementWithRollover(path):
         pattern = re.compile(fr"({cemetery})([A-Z])(\d+)(\s*redacted\.pdf)")
-        def handle_decrement(match):
+        def handleDecrement(match):
             prefix, letter, num, suffix = match.groups()
-            new_num = int(num) - 2
-            if new_num < 0:
-                new_num = 9999  
-            new_number_formatted = f"{new_num:0{len(num)}d}"
-            return f"{prefix}{letter}{new_number_formatted}{suffix}"
-        return pattern.sub(handle_decrement, path)
+            newNum = int(num) - 2
+            if newNum < 0:
+                newNum = 9999  
+            newNumberFormatted = f"{newNum:0{len(num)}d}"
+            return f"{prefix}{letter}{newNumberFormatted}{suffix}"
+        return pattern.sub(handleDecrement, path)
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     columnWithHyperlinks = 'O'
     startIndex = badRow 
@@ -194,10 +194,10 @@ def cleanHyperlink(badRow, cemetery):
         if cell.hyperlink:
             url = cell.hyperlink.target
             url = url.replace("%20", " ")
-            new_url = decrement_with_rollover(url)
-            if new_url != url:
-                cell.hyperlink.target = new_url
-                print(f"Updated hyperlink from {os.path.basename(url)} to {os.path.basename(new_url)}")
+            newURL = decrementWithRollover(url)
+            if newURL != url:
+                cell.hyperlink.target = newURL
+                print(f"Updated hyperlink from {os.path.basename(url)} to {os.path.basename(newURL)}")
     workbook.save(excelFilePath)
     print("Hyperlinks updated.")
 
@@ -222,12 +222,12 @@ removing redundant or incorrect files.
 '''
 def cleanDelete(cemetery, badID, badRow):
     baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
-    for dirpath, dirnames, filenames in os.walk(baseRedacPath):
-        for filename in filenames:
-            if f"{badID:05d}" in filename:
-                file_path = os.path.join(dirpath, filename)
-                os.remove(file_path)
-                print(f"{filename} deleted successfully.")
+    for dirPath, dirNames, fileNames in os.walk(baseRedacPath):
+        for fileName in fileNames:
+            if f"{badID:05d}" in fileName:
+                filePath = os.path.join(dirPath, fileName)
+                os.remove(filePath)
+                print(f"{fileName} deleted successfully.")
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     workbook = openpyxl.load_workbook(excelFilePath)
     worksheet = workbook[cemetery]
@@ -236,21 +236,21 @@ def cleanDelete(cemetery, badID, badRow):
     for row in range(badRow, worksheet.max_row + 1):
         worksheet[f'A{row}'].value = worksheet[f'A{row}'].value - 1
         print(f"{worksheet[f'A{row}'].value + 1} changed to {worksheet[f'A{row}'].value}")
-        next_row = row + 1
-        cell_ref = f'O{row}'
-        next_cell_ref = f'O{next_row}'
-        if next_row <= worksheet.max_row and worksheet[next_cell_ref].hyperlink:
-            temp_hyperlink = worksheet[next_cell_ref].hyperlink
-            worksheet[cell_ref].hyperlink = Hyperlink(ref=cell_ref, target=temp_hyperlink.target, display=temp_hyperlink.display)
-            worksheet[cell_ref].value = worksheet[next_cell_ref].value
-            print(f"Hyperlink and value from row {next_row} moved to row {row}.")
+        nextRow = row + 1
+        cellRef = f'O{row}'
+        nextCellRef = f'O{nextRow}'
+        if nextRow <= worksheet.max_row and worksheet[nextCellRef].hyperlink:
+            tempHyperlink = worksheet[nextCellRef].hyperlink
+            worksheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=tempHyperlink.target, display=tempHyperlink.display)
+            worksheet[cellRef].value = worksheet[nextCellRef].value
+            print(f"Hyperlink and value from row {nextRow} moved to row {row}.")
     if worksheet[f'O{worksheet.max_row - 1}'].hyperlink:
-        last_row = worksheet.max_row
-        print(f"Adjusting the last hyperlink in row {last_row}.")
-        second_last_hyperlink = worksheet[f'O{last_row - 1}'].hyperlink
-        new_target = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", second_last_hyperlink.target)
-        worksheet[f'O{last_row}'].hyperlink = Hyperlink(ref=f'O{last_row}', target=new_target, display=second_last_hyperlink.display)
-        print(f"Updated hyperlink in row {last_row} to {new_target}.")
+        lastRow = worksheet.max_row
+        print(f"Adjusting the last hyperlink in row {lastRow}.")
+        secondLastHyperlink = worksheet[f'O{lastRow - 1}'].hyperlink
+        newTarget = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", secondLastHyperlink.target)
+        worksheet[f'O{lastRow}'].hyperlink = Hyperlink(ref=f'O{lastRow}', target=newTarget, display=secondLastHyperlink.display)
+        print(f"Updated hyperlink in row {lastRow} to {newTarget}.")
     workbook.save(excelFilePath)
        
 
@@ -276,13 +276,13 @@ def adjustImageName(cemetery, goodID, badID, goodRow):
     badIDFound = False
     goodIDFilePath = ""
     badIDFilePath = ""
-    for dirpath, dirnames, filenames in os.walk(baseCemPath):
-        for filename in filenames:
-            if f"{goodID:05d}" in filename:
-                goodIDFilePath = os.path.join(dirpath, filename)
+    for dirPath, dirNames, fileNames in os.walk(baseCemPath):
+        for fileName in fileNames:
+            if f"{goodID:05d}" in fileName:
+                goodIDFilePath = os.path.join(dirPath, fileName)
                 goodIDFound = True
-            elif f"{badID:05d}" in filename:
-                badIDFilePath = os.path.join(dirpath, filename)
+            elif f"{badID:05d}" in fileName:
+                badIDFilePath = os.path.join(dirPath, fileName)
                 badIDFound = True
             if goodIDFound and badIDFound:
                 break
@@ -305,12 +305,12 @@ def adjustImageName(cemetery, goodID, badID, goodRow):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     workbook = openpyxl.load_workbook(excelFilePath)
     worksheet = workbook[cemetery]
-    start_column = 'A'
-    end_column = 'O'
-    start_column_index = openpyxl.utils.column_index_from_string(start_column)
-    end_column_index = openpyxl.utils.column_index_from_string(end_column)
-    for col_index in range(start_column_index, end_column_index + 1):
-        worksheet.cell(row=goodRow, column=col_index).value = None
+    startColumn = 'A'
+    endColumn = 'O'
+    startColumnIndex = openpyxl.utils.column_index_from_string(startColumn)
+    endColumnIndex = openpyxl.utils.column_index_from_string(endColumn)
+    for colIndex in range(startColumnIndex, endColumnIndex + 1):
+        worksheet.cell(row=goodRow, column=colIndex).value = None
     worksheet[f'O{goodRow}'].hyperlink = None
     workbook.save(excelFilePath)
     print(f"Record {goodID} data from row {goodID + 1} cleared successfully.")
