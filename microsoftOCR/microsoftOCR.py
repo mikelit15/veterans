@@ -163,10 +163,10 @@ def extractKeyValuePairs(result):
     for idx, invoice in enumerate(result.documents):
         name = invoice.fields.get("Name")
         if name.content != None:
-            kvs["NAME"].append(name.content)
+            kvs["NAME"].append(name.content.replace("\n", " "))
         kin = invoice.fields.get("Kin")
         if kin.content != None:
-            kvs["KIN"].append(kin.content)
+            kvs["KIN"].append(kin.content.replace("\n", " "))
         nameCoord = invoice.fields.get("nameCoord")
         if nameCoord.content != None:
             for region in nameCoord.bounding_regions:
@@ -181,32 +181,32 @@ def extractKeyValuePairs(result):
                 serialCoords.append((int(polygon[2].x), int(polygon[2].y)))
         born = invoice.fields.get("Born")
         if born.content != None:
-            kvs["BORN"].append(born.content)
+            kvs["BORN"].append(born.content.replace("\n", " "))
         death = invoice.fields.get("Date of Death")
         if death.content != None:
-            kvs["DATE OF DEATH"].append(death.content)
+            kvs["DATE OF DEATH"].append(death.content.replace("\n", " "))
         buried = invoice.fields.get("Buried")
         if buried.content != None:
-            kvs["BURIED"].append(buried.content)
+            kvs["BURIED"].append(buried.content.replace("\n", " "))
         century = invoice.fields.get("19")
         if century.content != None:
-            kvs["19"].append(century.content)
+            kvs["19"].append(century.content.replace("\n", " "))
         cemetery = invoice.fields.get("IN")
         if cemetery.content != None:
-            kvs["IN"].append(cemetery.content)
+            kvs["IN"].append(cemetery.content.replace("\n", " "))
         warRecord = invoice.fields.get("War Record")
         if warRecord.content != None:
-            kvs["WAR RECORD"].append(warRecord.content)
+            kvs["WAR RECORD"].append(warRecord.content.replace("\n", " "))
         branch = invoice.fields.get("Branch of Service")
         if branch.content != None:
-            kvs["BRANCH OF SERVICE"].append(branch.content)
+            kvs["BRANCH OF SERVICE"].append(branch.content.replace("\n", " "))
         app = invoice.fields.get("App")
         if app.content != None:
-            kvs["APPLICATION"].append(app.content)
+            kvs["APPLICATION"].append(app.content.replace("\n", " "))
         world = invoice.fields.get("War")
         if world.content != None:
             if "War" in world.content:
-                kvs[""].append(world.content)
+                kvs[""].append(world.content.replace("\n", " "))
                 war = world.content
         # care = invoice.fields.get("Care Assigned")
         # if care.content != None:
@@ -754,5 +754,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "T" # Change this to continue running through the current cemetery
+    letter = "W" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)
