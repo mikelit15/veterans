@@ -754,5 +754,5 @@ if __name__ == "__main__":
     global cemetery
     cemetery = "Graceland" # Change this to continue running through cemeteries
     global letter
-    letter = "W" # Change this to continue running through the current cemetery
+    letter = "Z" # Change this to continue running through the current cemetery
     main(False, cemetery, letter)

@@ -1,8 +1,5 @@
-from nameparser import HumanName
-from nameparser.config import CONSTANTS
 import re
 from collections import OrderedDict
-import probablepeople
 
 '''
 Parses and formats a full name into its constituent parts: first name, middle name, 
@@ -14,162 +11,14 @@ the formatted name components to a list.
 
 @author Mike
 ''' 
-# def nameRule(finalVals, value):
-#     suffiFlag = False
-#     value = value.replace("NAME", "").replace("Name", "").replace("name", "")\
-#         .replace("\n", " ").replace("SERIAL", "").replace("Serial", "").replace("serial", "")
-#     CONSTANTS.force_mixed_case_capitalization = True
-#     name = HumanName(value)
-#     flag = True
-#     if name.last.isupper():
-#         name.last = name.last[0] + name.last[1:].lower()
-#     tempLast = name.last[0]
-#     for letter in name.last[1:]:
-#         if letter.isupper() and flag:
-#             tempLast += " "
-#             flag = False
-#         elif letter == " ":
-#             flag = False
-#         tempLast += letter
-#     name.last = tempLast
-#     name.capitalize(force=True)
-#     firstName = name.first
-#     middleName = name.middle
-#     lastName = name.last
-#     suffix = name.suffix
-#     title = name.title
-#     suffi = ["Jr", "Sr", "I", "II", "III", "IV"]
-#     temp = value.replace("Jr.", "").replace("Sr.", "").replace("I.", "").replace("II.", "")\
-#         .replace("III.", "").replace("IV.", "")
-#     temp = value.replace("Jr", "").replace("Sr", "").replace("I", "").replace("II", "")\
-#         .replace("III", "").replace("IV", "")
-#     if ("," in value and "." in firstName):
-#         if len(middleName) > 0:
-#             middleName = name.first
-#             firstName = name.middle
-#         else:
-#             lastName = name.last
-#             firstName = name.first
-#     elif ("." in firstName):
-#         if len(middleName) > 0:
-#             lastName = name.first
-#             firstName = name.middle
-#             middleName = name.last
-#         else:
-#             lastName = name.first
-#             firstName = name.last
-#     elif ("." in lastName):
-#         if len(middleName) == 0:
-#             lastName = name.last
-#             firstName = name.first
-#         else:
-#             lastName = name.first
-#             middleName = name.last
-#             firstName = name.middle
-#     elif len(suffix) > 0 and not middleName:
-#         suffix = suffix.replace(", ", "")
-#         middleName = suffix.replace("Sr.", "").replace("Jr.", "").replace("I.", "").replace("II.", "")\
-#         .replace("III.", "").replace("IV.", "")
-#         middleName = suffix.replace("Sr", "").replace("Jr", "").replace("I", "").replace("II", "")\
-#         .replace("III", "").replace("IV", "")
-#         suffix = suffix.replace(middleName, "")
-#     elif len(suffix) > 0 and middleName:
-#         suffix = suffix.replace(", ", "")
-#         # suffix = suffix.replace(middleName, "")
-#     for x in suffi:
-#         if x in value:
-#             suffiFlag = True
-#     if suffiFlag and "." not in temp and "," not in temp:
-#         if len(middleName) > 0:
-#             firstName = name.middle
-#             middleName = name.last
-#             lastName = name.first
-#         else:
-#             firstName = name.last
-#             lastName = name.first
-#     # elif "." not in temp and "," not in temp:
-#     #     if len(middleName) > 0:
-#     #         firstName = name.middle
-#     #         middleName = name.last
-#     #         lastName = name.first
-#     #     else:
-#     #         lastName = name.first
-#     #         firstName = name.last
-#     if len(middleName) > 2:
-#         middleName = middleName.replace(".", "")
-#     dots = 0
-#     for x in firstName:
-#         if (x == "."):
-#             dots+=1
-#     if (dots == 2):
-#         firstName = firstName.upper()
-#     else:
-#         firstName = firstName.replace(".", "")
-#     if title and not suffix:
-#         suffix = title
-#     if middleName in suffi:
-#         suffi = middleName
-#         middleName = ""
-#     suffix = re.sub(r"[^a-zA-Z']", '', suffix)
-#     if suffix:
-#         if not "." in suffix:
-#             suffix += "."
-#     try:
-#         if middleName[-1] == "/":
-#             middleName = middleName[:-1]
-#     except IndexError:
-#         pass
-#     middleName = re.sub(r"[^a-zA-Z']", '', middleName)
-#     if len(middleName) == 1:
-#         middleName += "."
-#     if firstName.replace(".", "").lower() == "wm":
-#         firstName = "William"
-#     elif firstName.replace(".", "").lower() == "chas":
-#         firstName = "Charles"
-#     elif firstName.replace(".", "").lower() == "geo":
-#         firstName = "George"
-#     elif firstName.replace(".", "").lower() == "thos":
-#         firstName = "Thomas"
-#     elif firstName.replace(".", "").lower() == "jos":
-#         firstName = "Joseph"
-#     elif firstName.replace(".", "").lower() == "edw":
-#         firstName = "Edward"
-#     elif firstName.replace(".", "").lower() == "benj":
-#         firstName = "Benjamin" 
-#     lastName = lastName.replace("' ", "'")
-#     lastName = lastName[0].upper() + lastName[1:]
-#     if len(lastName) == 1 and middleName:
-#         temp = lastName
-#         lastName = middleName
-#         middleName = temp + "."
-#     if firstName:
-#         if not firstName[0].isalpha() or firstName[0] == " ":
-#             firstName = firstName[1:]
-#         if not firstName[-1].isalpha() or firstName[0] == " ":
-#             firstName = firstName[:-1]
-#     if middleName:
-#         if not middleName[0].isalpha() or middleName[0] == " ":
-#             middleName = middleName[1:]
-#         if (not middleName[-1].isalpha() and middleName[-1] != ".") or middleName[-1] == " ":
-#             middleName = middleName[:-1]
-#     if lastName:
-#         if not lastName[0].isalpha() or lastName[0] == " ":
-#             lastName = lastName[1:]
-#         if not lastName[-1].isalpha() or lastName[-1] == " ":
-#             lastName = lastName[:-1]
-#     if "Mc" in lastName:
-#         lastName = lastName.replace(" ", "")
-#     finalVals.append(re.sub(r"[^a-zA-Z' ]", '', lastName))
-#     finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName))
-#     finalVals.append(middleName.replace("0", "O"))
-#     finalVals.append(suffix)
 def nameRule(finalVals, name):
     suffi = ["jr", "sr", "i", "ii", "iii", "iv", "jr.", "sr.", "i.", "ii.", "iii.", "iv."]
     multi_part_surname_prefixes = ['St.', 'De', 'O\'', 'Van']
 
     def preprocess_name(name):
+        name = re.sub(r"\(.*?\)", "", name)
         name = re.sub(r"[^a-zA-Z',. ]", '', name)
-        name = name.replace("\n", ", ")
+        name = name.replace("\n", ", ")          
         if name.count('.') == 1 and name.count(',') == 0 and name.split()[-1].lower() not in suffi:
             parts = name.split('.')
             if len(parts) == 2:
@@ -189,7 +38,7 @@ def nameRule(finalVals, name):
         for part in name_parts:
             is_multi_part_surname_prefix = False
             for prefix in multi_part_surname_prefixes:
-                if prefix.lower() in part.lower():
+                if prefix.lower() in part[:3].lower():
                     is_multi_part_surname_prefix = True
                     break
             if is_multi_part_surname_prefix:
@@ -212,14 +61,26 @@ def nameRule(finalVals, name):
     def handle_repeated_label_error(name):
         suffix = ""
         tokens = name.split(',')
+        for x in range(len(tokens)):
+            tokens[x] = tokens[x].replace(" ", "")
         if len(tokens) == 2:
             surname = tokens[0].strip()
             given_names = tokens[1].strip().split()
-            for x in range(len(given_names)):
-                given_names[x] = given_names[x].replace(" ", "")
-                if given_names[x].lower() in suffi:
-                    suffix = given_names.pop(x)
-            if len(given_names) == 2:
+            try:
+                for x in range(len(given_names)):
+                    given_names[x] = given_names[x].replace(" ", "")
+                    if given_names[x].lower() in suffi:
+                        suffix = given_names.pop(x)
+            except Exception:
+                pass
+            if len(given_names) == 1:
+                return OrderedDict([
+                    ('Surname', surname),
+                    ('GivenName', given_names[0]),
+                    ('MiddleName', ""),
+                    ('SuffixGenerational', suffix)
+                ])
+            elif len(given_names) == 2:
                 return OrderedDict([
                     ('Surname', surname),
                     ('GivenName', given_names[0]),
@@ -234,21 +95,60 @@ def nameRule(finalVals, name):
                     ('SuffixGenerational', given_names[2] + '.')
                 ])
             elif len(given_names) == 3:
+                flag = False
+                for x in range(len(given_names)):
+                    if given_names[x].lower() in suffi:
+                        suffix = given_names.pop(x)
+                        flag = True
+                if flag:
+                    return OrderedDict([
+                        ('Surname', surname),
+                        ('GivenName', given_names[0]),
+                        ('MiddleName', given_names[1]),
+                        ('SuffixGenerational', suffix)
+                    ])
+                else:
+                    return OrderedDict([
+                        ('Surname', surname),
+                        ('GivenName', given_names[0]),
+                        ('MiddleName', given_names[2]),
+                        ('SuffixGenerational', "")
+                    ])
+        elif len(tokens) == 3:
+            surname = tokens[0].strip()
+            given_names = tokens[1].strip().split()
+            try:
+                for x in range(len(tokens)):
+                    tokens[x] = tokens[x].replace(" ", "")
+                    if tokens[x].lower() in suffi:
+                        suffix = tokens.pop(x)
+            except Exception:
+                pass
+            if len(given_names) == 1 and not suffix:
+                return(handle_no_comma_name(name.replace(",", "")))
+            if len(given_names) == 1:
                 return OrderedDict([
                     ('Surname', surname),
                     ('GivenName', given_names[0]),
-                    ('MiddleInitial', given_names[1]),
-                    ('SuffixGenerational', given_names[2])
-                ])
-        elif len(tokens) == 3:
-            surname = tokens[0].strip()
-            firstName = tokens[1].strip()
-            middleName = tokens[2].strip()
-            return OrderedDict([
-                    ('Surname', surname),
-                    ('GivenName', firstName),
-                    ('MiddleName', middleName),
+                    ('MiddleName', ""),
                     ('SuffixGenerational', suffix)
+                ])
+            elif len(given_names) == 2:
+                return OrderedDict([
+                    ('Surname', surname),
+                    ('GivenName', given_names[0]),
+                    ('MiddleName', given_names[1]),
+                    ('SuffixGenerational', suffix)
+                ])
+            elif len(given_names) == 3:
+                for x in range(len(given_names)):
+                    if given_names[x].lower() in suffi:
+                        suffix = given_names.pop(x)
+                return OrderedDict([
+                    ('Surname', surname),
+                    ('GivenName', given_names[0]),
+                    ('MiddleName', given_names[1]),
+                    ('SuffixGenerational', given_names[2] + '.')
                 ])
         elif len(tokens) == 4:
             for x in range(len(tokens)):
@@ -347,18 +247,10 @@ def nameRule(finalVals, name):
     name = preprocess_name(name)
     name = format_name(name)
     
-    if "," not in name and "." not in name:
+    if "," not in name:
         result = handle_no_comma_name(name)
     else:
         result = handle_repeated_label_error(name)
-    #     try:
-    #         result, category = probablepeople.tag(name, type="person")
-    #     except probablepeople.RepeatedLabelError:
-    #         result = handle_repeated_label_error(name)
-    #     except Exception as e:
-    #         result = None
-    #     if not result:
-    #         result = handle_no_comma_name(name)
     lastName = result.get('Surname', result.get('PrefixOther', '').replace(".", ""))
     firstName = result.get('GivenName', '')
     if lastName[-1] == ".":
@@ -374,6 +266,6 @@ def nameRule(finalVals, name):
     if suffix and suffix[-1] != ".":
         suffix += "."
     finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', lastName))
-    finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName))
-    finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', middleName))
+    finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName.capitalize()))
+    finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', middleName.capitalize()))
     finalVals.append(re.sub(r"[^a-zA-Z'.]", '', suffix))

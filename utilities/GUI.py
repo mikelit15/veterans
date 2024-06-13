@@ -855,8 +855,8 @@ class MainWindow(QMainWindow):
         self.status.setFixedWidth(150)
         mainLayout.addWidget(self.status, 0, alignment= Qt.AlignmentFlag.AlignCenter)
         layout1.addLayout(mainLayout)
-        self.changeDisplayStyle(self.checkButton, self.pauseButton, self.cleanButton, \
-            self.goodIDBox, self.badIDBox, self.scrollArea, self.displayModeBox, self.displayModeBox.currentText())
+        # self.changeDisplayStyle(self.checkButton, self.pauseButton, self.cleanButton, \
+        #     self.goodIDBox, self.badIDBox, self.scrollArea, self.displayModeBox, self.displayModeBox.currentText())
     
     
     '''

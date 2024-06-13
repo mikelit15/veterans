@@ -1,4 +1,3 @@
-import probablepeople
 from collections import OrderedDict
 import re
 
@@ -8,8 +7,9 @@ def parseName(name):
     multi_part_surname_prefixes = ['St.', 'De', 'O\'', 'Van']
 
     def preprocess_name(name):
+        name = re.sub(r"\(.*?\)", "", name)
         name = re.sub(r"[^a-zA-Z',. ]", '', name)
-        name = name.replace("\n", ", ")
+        name = name.replace("\n", ", ")          
         if name.count('.') == 1 and name.count(',') == 0 and name.split()[-1].lower() not in suffi:
             parts = name.split('.')
             if len(parts) == 2:
@@ -29,7 +29,7 @@ def parseName(name):
         for part in name_parts:
             is_multi_part_surname_prefix = False
             for prefix in multi_part_surname_prefixes:
-                if prefix.lower() in part.lower():
+                if prefix.lower() in part[:3].lower():
                     is_multi_part_surname_prefix = True
                     break
             if is_multi_part_surname_prefix:
@@ -55,11 +55,21 @@ def parseName(name):
         if len(tokens) == 2:
             surname = tokens[0].strip()
             given_names = tokens[1].strip().split()
-            for x in range(len(given_names)):
-                given_names[x] = given_names[x].replace(" ", "")
-                if given_names[x].lower() in suffi:
-                    suffix = given_names.pop(x)
-            if len(given_names) == 2:
+            try:
+                for x in range(len(given_names)):
+                    given_names[x] = given_names[x].replace(" ", "")
+                    if given_names[x].lower() in suffi:
+                        suffix = given_names.pop(x)
+            except Exception:
+                pass
+            if len(given_names) == 1:
+                return OrderedDict([
+                    ('Surname', surname),
+                    ('GivenName', given_names[0]),
+                    ('MiddleName', ""),
+                    ('SuffixGenerational', suffix)
+                ])
+            elif len(given_names) == 2:
                 return OrderedDict([
                     ('Surname', surname),
                     ('GivenName', given_names[0]),
@@ -74,21 +84,60 @@ def parseName(name):
                     ('SuffixGenerational', given_names[2] + '.')
                 ])
             elif len(given_names) == 3:
+                flag = False
+                for x in range(len(given_names)):
+                    if given_names[x].lower() in suffi:
+                        suffix = given_names.pop(x)
+                        flag = True
+                if flag:
+                    return OrderedDict([
+                        ('Surname', surname),
+                        ('GivenName', given_names[0]),
+                        ('MiddleName', given_names[1]),
+                        ('SuffixGenerational', suffix)
+                    ])
+                else:
+                    return OrderedDict([
+                        ('Surname', surname),
+                        ('GivenName', given_names[0]),
+                        ('MiddleName', given_names[2]),
+                        ('SuffixGenerational', "")
+                    ])
+        elif len(tokens) == 3:
+            surname = tokens[0].strip()
+            given_names = tokens[1].strip().split()
+            try:
+                for x in range(len(tokens)):
+                    tokens[x] = tokens[x].replace(" ", "")
+                    if tokens[x].lower() in suffi:
+                        suffix = tokens.pop(x)
+            except Exception:
+                pass
+            if len(given_names) == 1 and not suffix:
+                return(handle_no_comma_name(name.replace(",", "")))
+            if len(given_names) == 1:
                 return OrderedDict([
                     ('Surname', surname),
                     ('GivenName', given_names[0]),
-                    ('MiddleInitial', given_names[1]),
-                    ('SuffixGenerational', given_names[2])
-                ])
-        elif len(tokens) == 3:
-            surname = tokens[0].strip()
-            firstName = tokens[1].strip()
-            middleName = tokens[2].strip()
-            return OrderedDict([
-                    ('Surname', surname),
-                    ('GivenName', firstName),
-                    ('MiddleName', middleName),
+                    ('MiddleName', ""),
                     ('SuffixGenerational', suffix)
+                ])
+            elif len(given_names) == 2:
+                return OrderedDict([
+                    ('Surname', surname),
+                    ('GivenName', given_names[0]),
+                    ('MiddleName', given_names[1]),
+                    ('SuffixGenerational', suffix)
+                ])
+            elif len(given_names) == 3:
+                for x in range(len(given_names)):
+                    if given_names[x].lower() in suffi:
+                        suffix = given_names.pop(x)
+                return OrderedDict([
+                    ('Surname', surname),
+                    ('GivenName', given_names[0]),
+                    ('MiddleName', given_names[1]),
+                    ('SuffixGenerational', given_names[2] + '.')
                 ])
         elif len(tokens) == 4:
             for x in range(len(tokens)):
@@ -187,18 +236,10 @@ def parseName(name):
     name = preprocess_name(name)
     name = format_name(name)
     
-    if "," not in name and "." not in name:
+    if "," not in name:
         result = handle_no_comma_name(name)
     else:
         result = handle_repeated_label_error(name)
-    #     try:
-    #         result, category = probablepeople.tag(name, type="person")
-    #     except probablepeople.RepeatedLabelError:
-    #         result = handle_repeated_label_error(name)
-    #     except Exception as e:
-    #         result = None
-    #     if not result:
-    #         result = handle_no_comma_name(name)
     lastName = result.get('Surname', result.get('PrefixOther', '').replace(".", ""))
     firstName = result.get('GivenName', '')
     if lastName[-1] == ".":
@@ -214,13 +255,14 @@ def parseName(name):
     if suffix and suffix[-1] != ".":
         suffix += "."
     finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', lastName))
-    finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName))
-    finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', middleName))
+    finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName.capitalize()))
+    finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', middleName.capitalize()))
     finalVals.append(re.sub(r"[^a-zA-Z'.]", '', suffix))
     return finalVals
 
 # Example usage
-print(parseName('Wahl, Erwin, J.'))
+# 'Williams Thomas Benjamin, Jr ,'
+print(parseName('Zielinski, Leonard W.'))
 # print(parseName("Smith, John"))
 # print(parseName("Smith, John D."))
 # print(parseName("Smith, John, D."))
