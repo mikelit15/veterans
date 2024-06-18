@@ -5,7 +5,7 @@ import re
 import sys
 from openpyxl.worksheet.hyperlink import Hyperlink
 sys.path.append(r'C:\workspace\veterans')
-from testFiles import duplicates
+from testFiles import duplicatesTest
 from testFiles import microsoftOCRTest
 
 

@@ -546,7 +546,7 @@ class Worker(QThread):
     def compareHyperlinkLetters(self, workbookPath):
         workbook = openpyxl.load_workbook(workbookPath)
         pattern = re.compile(
-            r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folderLetter>[A-Z])[\\/][^\\/]+(?P<folderLetter>[A-Z])\d+ redacted\.pdf'
+            r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folderLetter>[A-Z])[\\/][^\\/]+(?P<fileLetter>[A-Z])\d+ redacted\.pdf'
         )
         flag = False
         for sheetName in workbook.sheetnames:

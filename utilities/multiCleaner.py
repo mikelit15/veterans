@@ -26,12 +26,12 @@ Jewish and Misc folders as they contain more, much smaller, cemeteries.
 - Starts processing file names at goodID - 600
 @author Mike
 '''
-def cleanImages(goodID, redac, redac2):
+def cleanImages(fullClean, goodID, redac, redac2):
     baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
     start = goodID - 600
-    startFlag = True
+    startFlag = not fullClean
     for cemetery in cemeterys:
         if cemetery in ["Jewish", "Misc"]:
             subCemPath = os.path.join(baseCemPath, cemetery)
@@ -347,25 +347,31 @@ and file letter in the hyperlink do not match and prints these discrepancies.
 @author Mike
 '''
 def compareHyperlinkLetters(workbookPath):
+    print("Checking hyperlinks...")
     workbook = openpyxl.load_workbook(workbookPath)
     pattern = re.compile(
-        r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folderLetter>[A-Z])[\\/][^\\/]+(?P<folderLetter>[A-Z])\d+ redacted\.pdf'
+        r'Cemetery - Redacted[\\/][^\\/]+ - Redacted[\\/](?P<folderLetter>[A-Z])[\\/][^\\/]+(?P<fileLetter>[A-Z])\d+ redacted\.pdf'
     )
     for sheetName in workbook.sheetnames:
         worksheet = workbook[sheetName]
-        for row in worksheet.iter_rows(min_row=2, max_col=worksheet.max_column):
-            cell = row[14]  
-            if cell.hyperlink:
-                hyperlink = cell.hyperlink.target.replace("%20", " ")
-                match = pattern.search(hyperlink)
-                if match:
-                    folderLetter = match.group(1)
-                    fileLetter = match.group(2)
-                    if folderLetter == fileLetter:
-                        pass
-                    else:
-                        print(f"Not matching: {hyperlink} in row {cell.row}")
-
+        flag = False
+        for sheetName in workbook.sheetnames:
+            worksheet = workbook[sheetName]
+            for row in worksheet.iter_rows(min_row=2, max_col=worksheet.max_column):
+                cell = row[14]  
+                if cell.hyperlink:
+                    hyperlink = cell.hyperlink.target.replace("%20", " ")
+                    match = pattern.search(hyperlink)
+                    if match:
+                        folderLetter = match.group(1)
+                        fileLetter = match.group(2)
+                        if folderLetter == fileLetter:
+                            pass
+                        else:
+                            flag = True
+                            print(f"Not matching: {hyperlink} in row {cell.row}\n")
+        if not flag:
+            print("All hyperlinks are correct.")
 
 '''
 Main function to process and update Excel sheets containing good and bad IDs. It adjusts
@@ -388,7 +394,7 @@ The Excel file is saved after each major operation to ensure data consistency.
 
 @author Mike
 '''        
-def main(goodIDs, badIDs):
+def main(fullClean, goodIDs, badIDs):
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     goodWorkSheet = None
     badWorksheet = None
@@ -419,8 +425,8 @@ def main(goodIDs, badIDs):
     if min(badIDs) < miniG:
         miniG = min(badIDs) - 1
     miniB = min(badIDs)
-    cleanImages(miniG, "", "")
-    cleanImages(miniG, " - Redacted", " redacted")
+    cleanImages(fullClean, miniG, "", "")
+    cleanImages(fullClean, miniG, " - Redacted", " redacted")
     workbook = openpyxl.load_workbook(excelFilePath)
     for x in range(0, len(goodIDs)):
         for sheet in workbook.sheetnames:
@@ -443,9 +449,9 @@ def main(goodIDs, badIDs):
             breakFlag = True
     workbook.save(excelFilePath)
     compareHyperlinkLetters(excelFilePath)
-    duplicates.main()
 
 if __name__ == "__main__": 
-    goodIDs = [10677] 
-    badIDs = [10678]
-    main(goodIDs, badIDs)
+    fullClean = False
+    goodIDs = [11280, 11396] 
+    badIDs = [11284, 11397]
+    main(fullClean, goodIDs, badIDs)

@@ -12,10 +12,14 @@ abbreviations and naming conventions.
 '''
 def branchRule(finalVals, value, war):
     value = value.replace("\n", " ")
+    if value.count('.') >= 3:
+        value = value.replace(" ", "")
+    value = value.replace("USA", "")
     armys = ["co", "army", "inf", "infantry", "infan", "med", "cav", "div", \
-             "sig", "art", "corps", "corp", "artillery", "army", "q m c "]
-    navys = ["hospital", "navy", "naval", "u s n ", "u s n", "avy", "u s n r ", "u s s ", \
-             "usnr", "uss", "usn", "u s n r f" , "usnrf"]
+             "sig", "art", "corps", "corp", "artillery", "army", "qmc", "q m c", \
+             "ind"]
+    navys = ["hospital", "navy", "naval", "avy", "usnr", "uss", "usn", "usnrf", \
+             "u s n r", "u s s", "u s n", "u s n r f" ,"merchant"]
     guards = ["113", "102d", "114", "44", "181", "250", "112", "national"]
     branch = value
     branch = branch.replace("/", " ").replace(".", " ").replace("th", "").replace("-", "")\
@@ -24,7 +28,9 @@ def branchRule(finalVals, value, war):
     if war in value and war != "":
         branch = ""
         value = ""
-    if "air force" in branch.lower() or "air corp" in branch.lower() or "usaf" in branch.lower():
+    if branch[-1:] == " ":
+        branch = branch[:-1]
+    if "air force" in branch.lower() or "air corp" in branch.lower() or "u s a f" in branch.lower():
         branch = "Air Force"
     elif "marine" in branch.lower():
         branch = "Marine Corps"
