@@ -74,6 +74,8 @@ def processCemetery(cemeteryName, basePath, initialCount, start, startFlag, reda
     for letter in uppercaseAlphabet:
         namePath = os.path.join(basePath, cemeteryName, letter)
         try:
+            if cemeteryName == "B'Nai Abraham":
+                pass
             print(f"Processing {cemeteryName} - {letter}")
             initialCount, startFlag = clean(letter, namePath, os.path.join(basePath, cemeteryName), \
                 initialCount, isFirstFile, start, startFlag, redac2)
@@ -113,6 +115,7 @@ count for the numbering sequence.
 @author Mike
 '''
 def clean(letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag, redac2):
+    global cemSet, miscSet, jewishSet
     pdfFiles = sorted(os.listdir(namePath))
     letters = sorted([folder for folder in os.listdir(cemPath) if os.path.isdir(os.path.join(cemPath, folder))])
     try:
@@ -123,8 +126,17 @@ def clean(letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag
     folderBefore = letters[folderBeforeIndex]
     pdfFilesBefore = sorted([file for file in os.listdir(os.path.join(cemPath, folderBefore)) if file.lower().endswith('.pdf')])
     if letter == "A" and folderBefore == "A":
-        cemeteryFolders = sorted(os.listdir(os.path.dirname(cemPath)))
-        currentCemeteryIndex = cemeteryFolders.index(os.path.basename(os.path.normpath(cemPath)))
+        if os.path.basename(os.path.normpath(cemPath)) in cemSet:
+            cemeteryFolders = sorted(os.listdir(os.path.dirname(cemPath)))
+            currentCemeteryIndex = cemeteryFolders.index(os.path.basename(os.path.normpath(cemPath)))
+        elif os.path.basename(os.path.normpath(cemPath)) in jewishSet:
+            cemPath = os.path.dirname(cemPath)
+            cemeteryFolders = sorted(os.listdir(os.path.dirname(cemPath)))
+            currentCemeteryIndex = cemeteryFolders.index("Jewish")
+        elif os.path.basename(os.path.normpath(cemPath)) in miscSet:
+            cemPath = os.path.dirname(cemPath)
+            cemeteryFolders = sorted(os.listdir(os.path.dirname(cemPath)))
+            currentCemeteryIndex = cemeteryFolders.index("Misc")
         if currentCemeteryIndex > 0:
             previousCemeteryIndex = currentCemeteryIndex - 1
             previousCemeteryFolder = cemeteryFolders[previousCemeteryIndex]
@@ -395,63 +407,74 @@ The Excel file is saved after each major operation to ensure data consistency.
 @author Mike
 '''        
 def main(fullClean, goodIDs, badIDs):
+    cemeterys = []
+    for x in os.listdir(r"\\ucclerk\pgmdoc\Veterans\Cemetery"):
+        cemeterys.append(x)
+    miscs = []
+    for x in os.listdir(r"\\ucclerk\pgmdoc\Veterans\Cemetery\Misc"):
+        miscs.append(x)
+    jewishs = []
+    for x in os.listdir(r"\\ucclerk\pgmdoc\Veterans\Cemetery\Jewish"):
+        jewishs.append(x)
+    global cemSet, miscSet, jewishSet
+    cemSet, miscSet, jewishSet = set(cemeterys), set(miscs), set(jewishs)
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     goodWorkSheet = None
     badWorksheet = None
-    for x in range(0, len(goodIDs)):
-        workbook = openpyxl.load_workbook(excelFilePath)
-        for sheet in workbook.sheetnames:
-            worksheet = workbook[sheet]
-            for row in range(2, worksheet.max_row + 1):
-                if worksheet[f'A{row}'].value == goodIDs[x]:
-                    goodRow = row
-                    goodSheet = sheet
-                if worksheet[f'A{row}'].value == badIDs[x]:
-                    badRow = row
-                    badSheet = sheet    
-        goodWorkSheet = workbook[goodSheet] 
-        if goodWorkSheet.title == "Extra":
-            letter = "A"
-        else:
-            letter = goodWorkSheet[f'B{goodRow}'].value[0]
-        adjustImageName(goodIDs[x], badIDs[x], goodRow, goodWorkSheet)
-        workbook.save(excelFilePath)
-        microsoftOCR.main(True, goodWorkSheet.title, letter)
-        workbook = openpyxl.load_workbook(excelFilePath)
-        badWorksheet = workbook[badSheet]
-        cleanDelete(badWorksheet, badIDs[x], badRow)
-        workbook.save(excelFilePath)
-    miniG = min(goodIDs)
-    if min(badIDs) < miniG:
-        miniG = min(badIDs) - 1
-    miniB = min(badIDs)
-    cleanImages(fullClean, miniG, "", "")
-    cleanImages(fullClean, miniG, " - Redacted", " redacted")
-    workbook = openpyxl.load_workbook(excelFilePath)
-    for x in range(0, len(goodIDs)):
-        for sheet in workbook.sheetnames:
-            worksheet = workbook[sheet]
-            for row in range(2, worksheet.max_row + 1):
-                if worksheet[f'A{row}'].value == miniB-1:
-                    startIndex = row
-                    startSheet = sheet 
-    badWorksheet = workbook[startSheet]
-    newID = badWorksheet[f'A{startIndex}'].value
-    newID = cleanHyperlinks(badWorksheet, startIndex, newID)
-    workbook.save(excelFilePath)
-    breakFlag = False
-    workbook = openpyxl.load_workbook(excelFilePath)
-    for x in range(0, len(workbook.sheetnames)):
-        if breakFlag:
-            badWorksheet = workbook[workbook.sheetnames[x]]
-            newID = cleanHyperlinks(badWorksheet, 2, newID)
-        if workbook.sheetnames[x] == badWorksheet.title:
-            breakFlag = True
-    workbook.save(excelFilePath)
-    compareHyperlinkLetters(excelFilePath)
+    # for x in range(0, len(goodIDs)):
+    #     workbook = openpyxl.load_workbook(excelFilePath)
+    #     for sheet in workbook.sheetnames:
+    #         worksheet = workbook[sheet]
+    #         for row in range(2, worksheet.max_row + 1):
+    #             if worksheet[f'A{row}'].value == goodIDs[x]:
+    #                 goodRow = row
+    #                 goodSheet = sheet
+    #             if worksheet[f'A{row}'].value == badIDs[x]:
+    #                 badRow = row
+    #                 badSheet = sheet    
+    #     goodWorkSheet = workbook[goodSheet] 
+    #     if goodWorkSheet.title == "Extra":
+    #         letter = "A"
+    #     else:
+    #         letter = goodWorkSheet[f'B{goodRow}'].value[0]
+    #     adjustImageName(goodIDs[x], badIDs[x], goodRow, goodWorkSheet)
+    #     workbook.save(excelFilePath)
+    #     microsoftOCR.main(True, goodWorkSheet.title, letter)
+    #     workbook = openpyxl.load_workbook(excelFilePath)
+    #     badWorksheet = workbook[badSheet]
+    #     cleanDelete(badWorksheet, badIDs[x], badRow)
+    #     workbook.save(excelFilePath)
+    # miniG = min(goodIDs)
+    # if min(badIDs) < miniG:
+    #     miniG = min(badIDs) - 1
+    # miniB = min(badIDs)
+    cleanImages(fullClean, 22200, "", "")
+    # cleanImages(fullClean, 1, " - Redacted", " redacted")
+    # workbook = openpyxl.load_workbook(excelFilePath)
+    # for x in range(0, len(goodIDs)):
+    #     for sheet in workbook.sheetnames:
+    #         worksheet = workbook[sheet]
+    #         for row in range(2, worksheet.max_row + 1):
+    #             if worksheet[f'A{row}'].value == miniB-1:
+    #                 startIndex = row
+    #                 startSheet = sheet 
+    # badWorksheet = workbook[startSheet]
+    # newID = badWorksheet[f'A{startIndex}'].value
+    # newID = cleanHyperlinks(badWorksheet, startIndex, newID)
+    # workbook.save(excelFilePath)
+    # breakFlag = False
+    # workbook = openpyxl.load_workbook(excelFilePath)
+    # for x in range(0, len(workbook.sheetnames)):
+    #     if breakFlag:
+    #         badWorksheet = workbook[workbook.sheetnames[x]]
+    #         newID = cleanHyperlinks(badWorksheet, 2, newID)
+    #     if workbook.sheetnames[x] == badWorksheet.title:
+    #         breakFlag = True
+    # workbook.save(excelFilePath)
+    # compareHyperlinkLetters(excelFilePath)
 
 if __name__ == "__main__": 
-    fullClean = False
-    goodIDs = [11280, 11396] 
-    badIDs = [11284, 11397]
+    fullClean = True
+    goodIDs = [11280] 
+    badIDs = [11284]
     main(fullClean, goodIDs, badIDs)

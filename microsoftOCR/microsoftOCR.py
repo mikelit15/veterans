@@ -7,6 +7,7 @@ from collections import defaultdict
 import traceback
 import os
 import PyPDF2
+import string
 import fitz
 import cv2
 import time
@@ -42,7 +43,7 @@ the original second page.
 
 @author Mike
 '''
-def redact(filePath, cemetery, letter, nameCoords, serialCoords):
+def redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, miscSubFile):
     imageFile  = "temp.png"
     img = cv2.imread(imageFile)
     if serialCoords:
@@ -61,7 +62,12 @@ def redact(filePath, cemetery, letter, nameCoords, serialCoords):
     image.close()
 
     pdfDocument = fitz.open(filePath)
-    fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+    if jewishSubFile:
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Jewish - Redacted"
+    elif miscSubFile:
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Misc - Redacted" 
+    else:
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"   
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
@@ -93,8 +99,13 @@ of the card, both redacted.
 
 @author Mike
 '''
-def mergeImages(pathA, pathB, cemetery, letter):
-    fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+def mergeImages(pathA, pathB, cemetery, letter, jewishSubFile, miscSubFile):
+    if jewishSubFile:
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Jewish - Redacted"
+    elif miscSubFile:
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Misc - Redacted" 
+    else:
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"   
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
@@ -401,10 +412,14 @@ def createRecord(fileName, id, cemetery, suffix):
                 finalVals.append("")
                 finalVals.append("")
         elif x == "IN":
-            if fuzz.partial_ratio(value.lower(), cemetery.lower()) > 80:
+            if fuzz.partial_ratio(value.lower(), cemetery.lower()) > 70:
                 finalVals.append(cemetery)
             else:
-                value = value.replace("The ", "").replace("Cemetery", "").replace(".", "")
+                value = value.replace("The ", "").replace("Cemetery", "")\
+                    .replace(".", "").replace("Mem", "Memorial").replace("Park", "")\
+                    .replace("Pk", "").replace("PK", "")
+                if value and value[-1] == " ":
+                    value = value[:-1]
                 finalVals.append(value)
         elif x == "19":
             if value:
@@ -637,11 +652,12 @@ that are caught by the program.
 
 @author Mike
 '''
-def main(singleFlag, singleCem, singleLetter):
-    global cemSet, miscSet, jewishSet
+def main(singleFlag, singleCem, singleLetter, worksheet_name):
     networkFolder = r"\\ucclerk\pgmdoc\Veterans"
     os.chdir(networkFolder)
     cemeterys = []
+    jewishSubFile = False
+    miscSubFile = False
     for x in os.listdir(r"Cemetery"):
         cemeterys.append(x)
     miscs = []
@@ -653,13 +669,20 @@ def main(singleFlag, singleCem, singleLetter):
     cemSet, miscSet, jewishSet = set(cemeterys), set(miscs), set(jewishs)
     workbook = openpyxl.load_workbook('Veterans.xlsx')
     cemetery = singleCem 
-    cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
+    if cemetery in jewishSet:
+        cemPath = os.path.join(networkFolder, fr"Cemetery\Jewish\{cemetery}")
+        jewishSubFile = True
+    elif cemetery in miscSet:
+        cemPath = os.path.join(networkFolder, fr"Cemetery\Misc\{cemetery}")
+        miscSubFile = True
+    else:    
+        cemPath = os.path.join(networkFolder, fr"Cemetery\{cemetery}")
     letter = singleLetter 
     namePath = letter 
     namePath = os.path.join(cemPath, namePath)
     pathA = ""
     rowIndex = 2
-    worksheet = workbook[cemetery]
+    worksheet = workbook[worksheet_name]
     warFlag = False
     pdfFiles = sorted(os.listdir(namePath))
     breakFlag = False
@@ -677,7 +700,7 @@ def main(singleFlag, singleCem, singleLetter):
                 if id != int(string.replace("a", "").replace("b", "")):
                     continue
                 vals, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery, "")
-                redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, miscSubFile)
                 worksheet.cell(row=rowIndex, column=15).value = "PDF Image"
                 worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
                 worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile
@@ -698,7 +721,7 @@ def main(singleFlag, singleCem, singleLetter):
                         continue
                     pathA = filePath
                     vals1, warFlag, nameCoords, serialCoords, printedKVS, kinLast = createRecord(filePath, id, cemetery, "A")
-                    redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                    redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, miscSubFile)
                 if "b" in string:
                     if (filePath.replace("b.pdf", "") in pdfFiles):
                         continue
@@ -707,9 +730,9 @@ def main(singleFlag, singleCem, singleLetter):
                         warFlag = False
                     else:
                         warFlag = True
-                    redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords)
+                    redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, miscSubFile)
                     mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
-                    mergeImages(pathA, filePath, cemetery, letter)
+                    mergeImages(pathA, filePath, cemetery, letter, jewishSubFile, miscSubFile)
                     linkText = "PDF Image"
                     worksheet.cell(row=rowIndex, column=15).value = linkText
                     worksheet.cell(row=rowIndex, column=15).font = Font(underline="single", color="0563C1")
@@ -720,7 +743,7 @@ def main(singleFlag, singleCem, singleLetter):
                         breakFlag = True
         except Exception as e:
             errorTraceback = traceback.format_exc()
-            # print(errorTraceback)
+            print(errorTraceback)
             print(f"An error occurred: {e}")
             errorMessage = f"SKIPPED DUE TO ERROR : {errorTraceback}"
             worksheet.cell(row=rowIndex, column=1, value=id)
@@ -751,8 +774,27 @@ def main(singleFlag, singleCem, singleLetter):
             break
 
 if __name__ == "__main__":
-    global cemetery
-    cemetery = "Hazelwood" # Change this to continue running through cemeteries
-    global letter
-    letter = "M" # Change this to continue running through the current cemetery
-    main(False, cemetery, letter)
+    cemetery = "Jewish" # Change this to continue running through cemeteries
+    letter = "A"
+    startFlag = False
+    base_directory = fr"\\ucclerk\pgmdoc\Veterans\Cemetery\{cemetery}"
+    for index in string.ascii_uppercase:
+        if letter != index and startFlag:
+            continue
+        else:
+            startFlag = False
+            letter = index
+            success = False
+            while not success:
+                try:
+                    # Traverse subfolders within the base directory
+                    for subdir in os.listdir(base_directory):
+                        subdir_path = os.path.join(base_directory, subdir)
+                        if os.path.isdir(subdir_path):
+                            main(False, os.path.basename(subdir_path), index, cemetery)
+                    success = True
+                except Exception as e:
+                    if "[WinError 3] The system cannot find the path specified" in str(e):
+                        success = True
+                    else:
+                        print(str(e))
