@@ -44,14 +44,14 @@ the original second page.
 @author Mike
 '''
 def redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, miscSubFile):
-    imageFile  = "temp.png"
+    imageFile = "temp.png"
     img = cv2.imread(imageFile)
     if serialCoords:
-        pt1 = (serialCoords[0][0]-75, serialCoords[0][1]-350)
-        pt3 = (3525, serialCoords[1][1]+50)
+        pt1 = (serialCoords[0][0] - 75, serialCoords[0][1] - 350)
+        pt3 = (3525, serialCoords[1][1] + 50)
     else:
-        pt1 = (nameCoords[0][0]+2050, nameCoords[0][1]-350)
-        pt3 = (3525, nameCoords[1][1]+50)
+        pt1 = (nameCoords[0][0] + 2050, nameCoords[0][1] - 350)
+        pt3 = (3525, nameCoords[1][1] + 50)
     cv2.rectangle(img, pt1, pt3, (0, 0, 0), thickness=cv2.FILLED)
     cv2.imwrite(imageFile, img)
     image = Image.open(imageFile)
@@ -65,14 +65,14 @@ def redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, 
     if jewishSubFile:
         fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Jewish - Redacted"
     elif miscSubFile:
-        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Misc - Redacted" 
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\Misc - Redacted"
     else:
-        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"   
+        fullLocation = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
     redactedLocation = f'{cemetery} - Redacted'
     fullLocation = os.path.join(fullLocation, redactedLocation)
     fullLocation = os.path.join(fullLocation, letter)
-    redactedPDF_Document  = fitz.open(pdfFile)
-    newPDF_Document  = fitz.open()
+    redactedPDF_Document = fitz.open(pdfFile)
+    newPDF_Document = fitz.open()
     newPDF_Document.insert_pdf(redactedPDF_Document, from_page=0, to_page=0)
     newPDF_Document.insert_pdf(pdfDocument, from_page=1, to_page=1)
     tempName = filePath[-9:]
@@ -83,7 +83,7 @@ def redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, 
     newPDF_Document.close()
     redactedPDF_Document.close()
     pdfDocument.close()
-    return newPDF_File    
+    return newPDF_File
 
 
 '''
@@ -307,8 +307,10 @@ def createRecord(fileName, id, cemetery, suffix):
     app = ""
     dob = ""
     kinLast = ""
-    badWar = ["n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", "honorable", \
-        "not shown", "no date shown", "Peace time", "none", "Peace Time"]
+    badWar = ["unk", "n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", \
+        "honorable", "not shown", "no date shown", "peace time", "none"]
+    badBranch = ["unk", "n/a", "yes", "not listed", "age", "unknown", "peacetime", "pt", \
+        "honorable", "not shown", "no date shown", "peace time", "none"]
     nameCoords = None
     serialCoords = None
     warFlag = False
@@ -406,6 +408,9 @@ def createRecord(fileName, id, cemetery, suffix):
             war = war.strip().strip('and').strip()
             flag3 = True
         elif x == "BRANCH OF SERVICE":
+            for x in badBranch:
+                if x in value.lower():
+                    value = ""
             try:
                 branchRule.branchRule(finalVals, value, war)
             except Exception:
@@ -774,27 +779,54 @@ def main(singleFlag, singleCem, singleLetter, worksheet_name):
             break
 
 if __name__ == "__main__":
-    cemetery = "Jewish" # Change this to continue running through cemeteries
-    letter = "A"
     startFlag = False
-    base_directory = fr"\\ucclerk\pgmdoc\Veterans\Cemetery\{cemetery}"
-    for index in string.ascii_uppercase:
-        if letter != index and startFlag:
-            continue
-        else:
-            startFlag = False
-            letter = index
-            success = False
-            while not success:
-                try:
-                    # Traverse subfolders within the base directory
-                    for subdir in os.listdir(base_directory):
-                        subdir_path = os.path.join(base_directory, subdir)
-                        if os.path.isdir(subdir_path):
-                            main(False, os.path.basename(subdir_path), index, cemetery)
-                    success = True
-                except Exception as e:
-                    if "[WinError 3] The system cannot find the path specified" in str(e):
+    base_directory = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+
+    def process_cemetery(base_path, cemetery, start_letter="A", worksheet_name=""):
+        global startFlag
+        for letter in string.ascii_uppercase:
+            if start_letter != letter and not startFlag:
+                continue
+            else:
+                startFlag = True
+                success = False
+                while not success:
+                    try:
+                        letter_path = os.path.join(base_path, cemetery, letter)
+                        if os.path.exists(letter_path) and os.path.isdir(letter_path):
+                            main(False, cemetery, letter, worksheet_name)
                         success = True
-                    else:
-                        print(str(e))
+                    except Exception as e:
+                        if "[WinError 3] The system cannot find the path specified" in str(e):
+                            success = True
+                        else:
+                            print(str(e))
+
+    if len(sys.argv) > 1:
+        start_cemetery = sys.argv[1]
+        start_letter = sys.argv[2] if len(sys.argv) > 2 else "A"
+    else:
+        start_cemetery = "Rosedale"
+        start_letter = "C"
+
+    cemetery_started = False
+    for cemetery in os.listdir(base_directory):
+        if cemetery_started:
+            break
+        cemetery_path = os.path.join(base_directory, cemetery)
+        if cemetery == start_cemetery:
+            cemetery_started = True
+        if cemetery_started:
+            if cemetery == "Jewish" or cemetery == "Misc":
+                sub_path = os.path.join(base_directory, cemetery)
+                sub_cemetery_started = False
+                for sub_cemetery in os.listdir(sub_path):
+                    if sub_cemetery_started:
+                        break
+                    sub_cemetery_path = os.path.join(sub_path, sub_cemetery)
+                    if os.path.isdir(sub_cemetery_path):
+                        process_cemetery(sub_path, sub_cemetery, start_letter if cemetery == start_cemetery and sub_cemetery == start_cemetery else "A", cemetery)
+                        sub_cemetery_started = True if cemetery == start_cemetery and sub_cemetery == start_cemetery else sub_cemetery_started
+            elif os.path.isdir(cemetery_path):
+                process_cemetery(base_directory, cemetery, start_letter if cemetery == start_cemetery else "A", cemetery)
+                break  # Stop after processing the specified cemetery

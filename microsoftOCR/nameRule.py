@@ -42,6 +42,11 @@ def nameRule(finalVals, name):
                     isMultiPartSurnamePrefix = True
                     break
             if isMultiPartSurnamePrefix:
+                part = part.capitalize()
+                part = part.split(prefix)
+                part = part[1].capitalize()
+                part = prefix + part
+                nameParts[0] = part
                 if "\'" in part:
                     split = part.split('\'')
                     split[1] = split[1].capitalize()
@@ -287,6 +292,22 @@ def nameRule(finalVals, name):
             middleName = middleName[:-1] + "."
     if suffix and suffix[-1] != ".":
         suffix += "."
+    if firstName.replace(".", "").lower() == "wm":
+        firstName = "William"
+    elif firstName.replace(".", "").lower() ==  "jas":
+        firstName = "James"
+    elif firstName.replace(".", "").lower() == "chas":
+        firstName = "Charles"
+    elif firstName.replace(".", "").lower() == "geo":
+        firstName = "George"
+    elif firstName.replace(".", "").lower() == "thos":
+        firstName = "Thomas"
+    elif firstName.replace(".", "").lower() == "jos":
+        firstName = "Joseph"
+    elif firstName.replace(".", "").lower() == "edw":
+        firstName = "Edward"
+    elif firstName.replace(".", "").lower() == "benj":
+        firstName = "Benjamin" 
     finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', lastName))
     finalVals.append(re.sub(r"[^a-zA-Z']", '', firstName.capitalize()))
     finalVals.append(re.sub(r"[^a-zA-Z'. ]", '', middleName.capitalize()))

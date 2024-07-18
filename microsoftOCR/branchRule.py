@@ -17,10 +17,16 @@ def branchRule(finalVals, value, war):
     value = value.replace("USA", "")
     armys = ["co", "army", "inf", "infantry", "infan", "med", "cav", "div", \
              "sig", "art", "corps", "corp", "artillery", "army", "qmc", "q m c", \
-             "ind"]
+             "ind", "depot", "312", "usar", "ord", "engrs", "eng", "ordnance", \
+             "detachment", "training regt", "field artillery", "btry", "service unit"]
     navys = ["hospital", "navy", "naval", "avy", "usnr", "uss", "usn", "usnrf", \
-             "u s n r", "u s s", "u s n", "u s n r f" ,"merchant"]
-    guards = ["113", "102d", "114", "44", "181", "250", "112", "national"]
+             "u s n r", "u s s", "u s n", "u s n r f", "merchant"]
+    guards = ["113", "102d", "114", "44", "181", "250", "112", "national", "us guards", \
+              "47th bn"]
+    marines = ["marine", "usmc", "u s m c"]
+    air_forces = ["air force", "air corp", "u s a f", "u s a a f", "aaf", "af"]
+    coast_guard = ["coast guard", "uscg", "u s c g"]
+
     branch = value
     branch = branch.replace("/", " ").replace(".", " ").replace("th", "").replace("-", "")\
              .replace(", ", " ")
@@ -30,19 +36,18 @@ def branchRule(finalVals, value, war):
         value = ""
     if branch[-1:] == " ":
         branch = branch[:-1]
-    if "air force" in branch.lower() or "air corp" in branch.lower() or "u s a f" in branch.lower():
+
+    if any(af in branch.lower() for af in air_forces):
         branch = "Air Force"
-    elif "marine" in branch.lower():
+    elif any(mar in branch.lower() for mar in marines):
         branch = "Marine Corps"
     elif branch.lower() in armys:
         branch = "Army"
     elif branch.lower() in navys:
         branch = "Navy"
-    elif "u s m c " in branch.lower() or "usmc" in branch.lower():
-        branch = "Marine Corps" 
     elif branch.lower() in guards:
         branch = "National Guard"
-    elif "u s c g " in branch.lower():
+    elif any(cg in branch.lower() for cg in coast_guard):
         branch = "Coast Guard"
     else:
         for word in words:
@@ -50,17 +55,20 @@ def branchRule(finalVals, value, war):
             if word in armys:
                 branch = "Army"
                 break
-            elif "air" in word or "aero" in word or "aaf" in word or "af" in word:
+            elif any(af in word for af in air_forces):
                 branch = "Air Force"
                 break
             elif word in navys:
                 branch = "Navy"
                 break
-            elif "coast" in word or "uscg" in word:
+            elif any(cg in word for cg in coast_guard):
                 branch = "Coast Guard"
                 break
             elif word in guards:
                 branch = "National Guard"
+                break
+            elif any(mar in word for mar in marines):
+                branch = "Marine Corps"
                 break
             else:
                 flag1 = False
@@ -80,7 +88,7 @@ def branchRule(finalVals, value, war):
                 if flag2:
                     break
                 branch = ""
-    if value == "N/A":
+    if value == "N/A" or value == "Not Listed":
         value = ""
     finalVals.append(value)   
-    finalVals.append(branch)   
+    finalVals.append(branch)
