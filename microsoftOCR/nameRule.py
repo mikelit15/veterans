@@ -13,7 +13,7 @@ the formatted name components to a list.
 ''' 
 def nameRule(finalVals, name):
     suffi = ["jr", "sr", "i", "ii", "iii", "iv", "jr.", "sr.", "i.", "ii.", "iii.", "iv."]
-    multiPartSurnamePrefixes = ['St.', 'De', 'O\'', 'Van', "Di", "Del", "Mc"]
+    multiPartSurnamePrefixes = ['St.', 'De', 'O\'', 'Van', "Di", "Del", "Mc", "Le"]
 
     def preprocessName(name):
         name = re.sub(r"\(.*?\)", "", name)

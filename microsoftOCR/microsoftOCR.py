@@ -417,8 +417,12 @@ def createRecord(fileName, id, cemetery, suffix):
                 finalVals.append("")
                 finalVals.append("")
         elif x == "IN":
-            if fuzz.partial_ratio(value.lower(), cemetery.lower()) > 70:
-                finalVals.append(cemetery)
+            if "crematory" in value.lower():
+                if fuzz.partial_ratio(value.lower(), cemetery.lower()) > 70:
+                    if "crematory" in value.lower():
+                        finalVals.append(cemetery)
+                else:
+                    finalVals.append(value)
             else:
                 value = value.replace("The ", "").replace("Cemetery", "")\
                     .replace(".", "").replace("Mem", "Memorial").replace("Park", "")\
@@ -430,7 +434,7 @@ def createRecord(fileName, id, cemetery, suffix):
             if value:
                 try:
                     tempCent = value.replace(",", "").replace(".", "").replace(":", "").replace(";", "").replace("/", "")\
-                        .replace(" ", "").replace("\n", "").replace("_", "").replace("in", "").replace("...", "")
+                        .replace(" ", "").replace("\n", "").replace("_", "").replace("in", "").replace("...", "").replace('g', "9")
                     while tempCent and not tempCent[-1].isnumeric():
                         tempCent = tempCent[:-1]
                     if tempCent.count("19") == 2:
@@ -806,8 +810,8 @@ if __name__ == "__main__":
         start_cemetery = sys.argv[1]
         start_letter = sys.argv[2] if len(sys.argv) > 2 else "A"
     else:
-        start_cemetery = "Rosedale"
-        start_letter = "C"
+        start_cemetery = "Rosehill"
+        start_letter = "L"
 
     cemetery_started = False
     for cemetery in os.listdir(base_directory):

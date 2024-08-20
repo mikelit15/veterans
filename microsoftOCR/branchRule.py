@@ -15,16 +15,26 @@ def branchRule(finalVals, value, war):
     if value.count('.') >= 3:
         value = value.replace(" ", "")
     value = value.replace("USA", "")
-    armys = ["co", "army", "inf", "infantry", "infan", "med", "cav", "div", \
-             "sig", "art", "corps", "corp", "artillery", "army", "qmc", "q m c", \
-             "ind", "depot", "312", "usar", "ord", "engrs", "eng", "ordnance", \
-             "detachment", "training regt", "field artillery", "btry", "service unit"]
-    navys = ["hospital", "navy", "naval", "avy", "usnr", "uss", "usn", "usnrf", \
-             "u s n r", "u s s", "u s n", "u s n r f", "merchant"]
-    guards = ["113", "102d", "114", "44", "181", "250", "112", "national", "us guards", \
-              "47th bn"]
-    marines = ["marine", "usmc", "u s m c"]
-    air_forces = ["air force", "air corp", "u s a f", "u s a a f", "aaf", "af"]
+    
+    armys = ["co", "army", "inf", "infantry", "infan", "med", "cav", "div", "sig", "art", 
+             "corps", "corp", "artillery", "army", "qmc", "q m c", "ind", "depot", "312", 
+             "usar", "ord", "engrs", "eng", "ordnance", "detachment", "training regt", 
+             "field artillery", "btry", "service unit", "engineers", "f.a.", "regt", 
+             "vols", "militia", "sanitary squad", "troop", "battery", "transport", 
+             "mounted", "band", "remount", "battalion", "batt", "ammunition", "sec.", 
+             "signal corps", "corps of engineers"]
+    
+    navys = ["hospital", "navy", "naval", "avy", "usnr", "uss", "usn", "usnrf", "u s n r", 
+             "u s s", "u s n", "u s n r f", "merchant", "yeoman", "steamer", "submarine"]
+    
+    guards = ["113", "102d", "114", "44", "181", "250", "112", "national", "us guards", 
+              "47th bn", "guards", "n j", "state vol", "militia", "regt"]
+    
+    marines = ["marine", "usmc", "u s m c", "marines"]
+    
+    air_forces = ["air force", "air corp", "u s a f", "u s a a f", "aaf", "af", "aviation", 
+                  "flying squadron", "air service", "air training", "air squadron", "fighting squadron"]
+    
     coast_guard = ["coast guard", "uscg", "u s c g"]
 
     branch = value
@@ -88,6 +98,7 @@ def branchRule(finalVals, value, war):
                 if flag2:
                     break
                 branch = ""
+    
     if value == "N/A" or value == "Not Listed":
         value = ""
     finalVals.append(value)   

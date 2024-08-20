@@ -42,12 +42,12 @@ def warRule(value, world):
         r'(WW|WORLD\s*WAR|WORLD\s*WARS)\s*'  # Starts with "WW" or "World War" with optional spaces
         r'(1|I|i|l|L|T|ONE)'  # First part of the pattern for World War 1
         r'(\s*(and|&)\s*|\sand\s*|\s*&\s*|)'  # Optional connector: "and", "&", with or without spaces
-        r'(2|II|ii|ll|LL|TT|TWO|11|H|WW2|WWII)|'  # Second part of the pattern for World War 2, optional to allow single mentions
+        r'(WW|WORLD\s*WAR|WORLD\s*WARS|2|II|ii|ll|LL|TT|TWO|11|TI|IT|IL|LI|LT|TL|WW2|WWII)|'  # Second part of the pattern for World War 2, optional to allow single mentions
         r'WW1andWW11',  # Explicitly matches "WW1andWW11"
         re.IGNORECASE
     )
     koreanWarPattern = re.compile(r'Korea', re.IGNORECASE)
-    vietnamWarPattern = re.compile(r'Vietnam', re.IGNORECASE)
+    vietnamWarPattern = re.compile(r'Vietnam|Viet Nam', re.IGNORECASE)
     simpleWorldWarPattern = re.compile(r'\bWorld\s*War\b', re.IGNORECASE) 
     if WW1andWW2_Pattern.search(war):
         identifiedWars.extend(["World War 1", "World War 2"])

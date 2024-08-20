@@ -44,6 +44,7 @@ def findDuplicates(df, excludeList):
 
 def main():
     filePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
+    outputFilePath = r"\\ucclerk\pgmdoc\Veterans\confirmed_duplicates.txt"
     combinedDF = pd.DataFrame()
     confirmedDuplicates = pd.DataFrame()
     
@@ -66,6 +67,8 @@ def main():
             print("### No Duplicates ###")
         else:
             print(confirmedDuplicates)
+            with open(outputFilePath, 'w') as file:
+                confirmedDuplicates.to_string(file, index=False)
     except Exception as e:
         print("### No Duplicates ###")
         print(f"Error: {e}")
