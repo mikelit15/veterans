@@ -2,12 +2,10 @@ import openpyxl
 import os
 import shutil
 import re
-import sys
+import time
+from PyPDF2 import PdfMerger
 from openpyxl.worksheet.hyperlink import Hyperlink
-import duplicates
-sys.path.append(r'C:\workspace\veterans')
-from microsoftOCR import microsoftOCR
-
+from openpyxl.styles import PatternFill
 
 '''
 Initiates the file name cleaning process. This function goes through each cemetery folder
@@ -17,20 +15,22 @@ the process of this function, especially for further cemeteries. Special handlin
 required if a cemetery folder contains more cemetery subfolders. This is the case for 
 Jewish and Misc folders as they contain more, much smaller, cemeteries.
 
+@param fullClean (bool) - A flag indicating whether the full cleaning process should be done
 @param goodID (int) - A file ID used to determine when to start processing
 @param redac (str) - The redacted folder name extension
 @param redac2 (str) - The redacted file name extension
 
-- Processes all cemeteries in the veternas cemetery folder, or the cemetery redacted
+- Processes all cemeteries in the veterans' cemetery folder or the cemetery redacted
   folder.
 - Starts processing file names at goodID - 600
+
 @author Mike
 '''
 def cleanImages(fullClean, goodID, redac, redac2):
     baseCemPath = fr"\\ucclerk\pgmdoc\Veterans\Cemetery{redac}"
     cemeterys = [d for d in os.listdir(baseCemPath) if os.path.isdir(os.path.join(baseCemPath, d))]
     initialCount = 1
-    start = goodID - 600
+    start = goodID
     startFlag = not fullClean
     for cemetery in cemeterys:
         if cemetery in [f"Jewish{redac}", f"Misc{redac}"]:
@@ -43,7 +43,6 @@ def cleanImages(fullClean, goodID, redac, redac2):
             print(f"Processing {cemetery}")
             initialCount, startFlag = processCemetery(cemetery, baseCemPath, initialCount, start, startFlag, redac, redac2)
       
-
 '''
 Iterates through alphabetically-based letter subfolders within a specified cemetery 
 directory, calling clean() to adjust image names for each letter subfolder.
@@ -56,6 +55,7 @@ directory, calling clean() to adjust image names for each letter subfolder.
                      a file.
 @param startFlag (bool) - A flag indicating whether the process should start renaming from 
                           the 'start' parameter.
+@param redac (str) - The redacted folder name extension
 @param redac2 (str) - The redacted file name extension
 
 @return initialCount (int) - The starting point for file numbering within each alphabetical 
@@ -63,7 +63,7 @@ directory, calling clean() to adjust image names for each letter subfolder.
 @return startFlag (bool) - A flag indicating whether the process should start renaming from 
                            the 'start' parameter.
 
-- Iterates through A-Z folder, calling clean() for each letter
+- Iterates through A-Z folders, calling clean() for each letter
 - Returns updated initialCount and startFlag
 
 @author Mike
@@ -84,7 +84,7 @@ def processCemetery(cemeteryName, basePath, initialCount, start, startFlag, reda
 
 '''
 Iterates through every PDF file in the given letter subfolder, renaming them to ensure 
-sequential ordering and removes extra "a" and "b" redacted files. The function maintaines
+sequential ordering and removes extra "a" and "b" redacted files. The function maintains
 continuity and handles special cases, such as the redacted files should not increment the 
 count for the numbering sequence.
 
@@ -100,6 +100,7 @@ count for the numbering sequence.
                      is True.
 @param startFlag (bool) - A flag that, if True, delays file processing until the 'start' 
                           value is reached.
+@param redac (str) - The redacted folder name extension
 @param redac2 (str) - The redacted file name extension
 
 @return counter (int) - The next starting count for continued processing.
@@ -193,120 +194,6 @@ def clean(letter, namePath, cemPath, initialCount, isFirstFile, start, startFlag
 
     return counter, startFlag
 
-
-'''
-Adjusts the filenames and paths for image files associated with goodID and badID. GoodID 
-receives a "a.pdf" suffix and badID receives a "b.pdf" suffix. badID is also adjusted to 
-match the same letter and folder as the goodID if needed. The data in goodRow is then cleared
-and the hyperlink forcefully cleared to allow for microsoftOCR to locate and append the new
-merged data.
-
-@param goodID (int): The correct identifier associated with the proper record.
-@param badID (int): The incorrect identifier that needs to be adjusted to match the good ID.
-@param goodRow (int): The row in the Excel spreadsheet where the good ID is located.
-
-- Searches for files matching goodID and badID
-- Adds the suffix, "a.pdf", to goodID
-- Adds the suffix, "b.pdf", to badID. Changes letter in file name and moves to correct
-  letter subfolder is necessary.
-- Clears the data in Excel row associated with the goodID
-
-@author Mike
-'''
-def adjustImageName(goodID, badID, goodRow, goodWorkSheet):
-    baseCemPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
-    goodIDFound = False
-    badIDFound = False
-    goodIDFilePath = ""
-    badIDFilePath = ""
-    for dirPath, dirNames, fileNames in os.walk(baseCemPath):
-        for fileName in fileNames:
-            if f"{goodID:05d}" in fileName:
-                goodIDFilePath = os.path.join(dirPath, fileName)
-                goodIDFound = True
-            elif f"{badID:05d}" in fileName:
-                badIDFilePath = os.path.join(dirPath, fileName)
-                badIDFound = True
-            if goodIDFound and badIDFound:
-                break
-        if goodIDFound and badIDFound:
-            break
-    if goodIDFound and badIDFound:
-        goodIDPrefix = os.path.basename(os.path.dirname(goodIDFilePath))
-        badIDPrefix = os.path.basename(os.path.dirname(badIDFilePath))
-        newBadIDFilename = os.path.basename(goodIDFilePath).replace(f"{goodID:05d}", f"{goodID:05d}b").replace(badIDPrefix, goodIDPrefix)
-        newBadIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newBadIDFilename)
-        if not "a.pdf" in os.path.basename(goodIDFilePath):
-            newGoodIDFilename = os.path.basename(goodIDFilePath).replace(".pdf", "a.pdf")
-            newGoodIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newGoodIDFilename)
-            os.rename(goodIDFilePath, newGoodIDFilePath)
-            print(f"{os.path.basename(goodIDFilePath)} renamed to {newGoodIDFilename}")
-        shutil.move(badIDFilePath, newBadIDFilePath)
-        print(f"{os.path.basename(badIDFilePath)} moved and renamed to {newBadIDFilename}")
-    elif goodIDFound:
-        print("BadID file not found. Please check the IDs and directories.")
-        quit()
-    elif badIDFound:
-        print("GoodID file not found. Please check the IDs and directories.")
-        quit()
-    else:
-        print("GoodID and BadID files not found. Please check the IDs and directories.")
-        quit()
-    startColumn = 'A'
-    endColumn = 'O'
-    startColumnIndex = openpyxl.utils.column_index_from_string(startColumn)
-    endColumnIndex = openpyxl.utils.column_index_from_string(endColumn)
-    for colIndex in range(startColumnIndex, endColumnIndex + 1):
-        goodWorkSheet.cell(row=goodRow, column=colIndex).value = None
-    goodWorkSheet[f'O{goodRow}'].hyperlink = None
-    print(f"Record {goodID} data from row {goodRow} cleared successfully.")
-
-
-'''
-Deletes redacted image file associated with a badID and updates an Excel spreadsheet to 
-remove the corresponding row. Due to a bug with the openpyxl module, hyperlinks do not 
-move up a row with the rest of the cell data when calling .delete_rows(). So the hyperlinks 
-are forced up one row and the hyperlink id and ref are adjusted to make the hyperlinks 
-active in order to adjust them automatically later in the process. 
-
-@param cemetery (str): The name of the cemetery where the file is located.
-@param badID (int): The ID of the file to be deleted.
-@param badRow (int): The row in the Excel spreadsheet corresponding to badID.
-
-- Deletes the redacted file with badID ID number
-- Deletes the Excel row corresponding to the bad ID
-- Hyperlinks are adjusted starting from badRow
-
-@author Mike
-'''
-def cleanDelete(badWorkSheet, badID, badRow):
-    baseRedacPath = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
-    for dirPath, dirNames, fileNames in os.walk(baseRedacPath):
-        for fileName in fileNames:
-            if f"{badID:05d}" in fileName:
-                filePath = os.path.join(dirPath, fileName)
-                os.remove(filePath)
-                print(f"\nRedacted file, {fileName}, deleted successfully.")
-    badWorkSheet.delete_rows(badRow)
-    print(f"Row {badRow} deleted successfully.")
-    for row in range(badRow, badWorkSheet.max_row + 1):
-        nextRow = row + 1
-        cellRef = f'O{row}'
-        nextCellRef = f'O{nextRow}'
-        if nextRow <= badWorkSheet.max_row and badWorkSheet[nextCellRef].hyperlink:
-            tempHyperlink = badWorkSheet[nextCellRef].hyperlink
-            badWorkSheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=tempHyperlink.target, display=tempHyperlink.display)
-            badWorkSheet[cellRef].value = badWorkSheet[nextCellRef].value
-            print(f"Hyperlink and value from row {nextRow} moved to row {row}.")
-    if badWorkSheet[f'O{badWorkSheet.max_row - 1}'].hyperlink:
-        lastRow = badWorkSheet.max_row
-        print(f"Adjusting the hyperlink in the last row, row {lastRow}.")
-        secondLastHyperlink = badWorkSheet[f'O{lastRow - 1}'].hyperlink
-        newTarget = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", secondLastHyperlink.target)
-        badWorkSheet[f'O{lastRow}'].hyperlink = Hyperlink(ref=f'O{lastRow}', target=newTarget, display=secondLastHyperlink.display)
-        print(f"Updated hyperlink in row {lastRow} to new target, {newTarget}.\n")
-
-
 '''
 Updates the record ID numbers in column A to fix fill any gaps and continue going in 
 sequential order. Updates hyperlink references in an Excel spreadsheet starting from a 
@@ -315,10 +202,14 @@ they accurately reflect the current record IDs following modifications.
 
 @param startIndex (int): The row index from which to start updating hyperlinks in the 
                          spreadsheet.
+@param newID (int): The new record ID to assign starting from startIndex.
+@param fileDirectoryMap (dict): A dictionary mapping file IDs to their respective directories.
 
 - Adjusts record ID in column A 
 - Takes the hyperlink in the cell and changes the ID portion of the file name to match 
   the ID in column A for each row starting at startIndex
+
+@return newID (int): The updated record ID after processing.
 
 @author Mike
 '''
@@ -393,6 +284,7 @@ Main function to process and update Excel sheets containing good and bad IDs. It
 image names, updates hyperlinks, cleans up records, and compares hyperlink letters to 
 ensure consistency.
 
+@param fullClean (bool): A flag indicating whether the full cleaning process should be done
 @param goodIDs (list): List of good IDs to be processed.
 @param badIDs (list): List of bad IDs to be processed.
 
@@ -408,7 +300,7 @@ The function uses various helper functions such as `adjustImageName`, `microsoft
 The Excel file is saved after each major operation to ensure data consistency.
 
 @author Mike
-'''        
+'''      
 def main(fullClean, goodIDs, badIDs):
     cemeterys = [x for x in os.listdir(r"\\ucclerk\pgmdoc\Veterans\Cemetery")]
     miscs = [x for x in os.listdir(r"\\ucclerk\pgmdoc\Veterans\Cemetery\Misc")]
@@ -417,74 +309,153 @@ def main(fullClean, goodIDs, badIDs):
     cemSet, miscSet, jewishSet = set(cemeterys), set(miscs), set(jewishs)
     excelFilePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     basePath = fr'\\ucclerk\pgmdoc\Veterans\Cemetery'
-    goodWorkSheet = None
-    badWorksheet = None
-    for x in range(0, len(goodIDs)):
-        workbook = openpyxl.load_workbook(excelFilePath)
-        goodRow = ""
-        badRow = ""
-        goodSheet = ""
-        badSheet = ""
-        worksheet = None
-        goodWorkSheet = None
-        badWorksheet = None
-        letter = ""
+    redactedBasePath = fr'\\ucclerk\pgmdoc\Veterans\Cemetery - redacted'
+    workbook = openpyxl.load_workbook(excelFilePath)
+    for goodID, badID in zip(goodIDs, badIDs):
+        print(f"Processing Good ID: {goodID}, Bad ID: {badID}...")
+        goodRow, badRow = None, None
+        goodSheet, badSheet = None, None
+        goodWorkSheet, badWorksheet = None, None
+
+        # Find goodID and badID in sheets
         for sheet in workbook.sheetnames:
             worksheet = workbook[sheet]
             for row in range(2, worksheet.max_row + 1):
-                if worksheet[f'A{row}'].value == goodIDs[x]:
+                if worksheet[f'A{row}'].value == goodID:
                     goodRow = row
                     goodSheet = sheet
-                    if sheet == "Jewish":
-                        goodSheet = worksheet[f'N{goodRow}'].value
-                if worksheet[f'A{row}'].value == badIDs[x]:
+                    print(f"Good ID {goodID} found in sheet: {goodSheet}, row: {goodRow}")
+                if worksheet[f'A{row}'].value == badID:
                     badRow = row
                     badSheet = sheet
-                    if sheet == "Jewish":
-                        badSheet = worksheet[f'N{badRow}'].value
+                    print(f"Bad ID {badID} found in sheet: {badSheet}, row: {badRow}")
                 if goodRow and badRow:
-                    break  
-        if goodSheet in jewishSet:
-            goodWorkSheet = workbook["Jewish"]
-        elif goodSheet in miscSet:
-            goodWorkSheet = workbook["Misc"] 
-        else:
-            goodWorkSheet = workbook[goodSheet]
-        if goodWorkSheet == "Extra":
-            letter = "A"
-        else:
-            letter = goodWorkSheet[f'B{goodRow}'].value[0]
-        adjustImageName(goodIDs[x], badIDs[x], goodRow, goodWorkSheet)
+                    break
+            if goodRow and badRow:
+                break
+        if goodRow is None or badRow is None:
+            print(f"Failed to find either Good ID {goodID} or Bad ID {badID}, skipping...")
+            continue
+        
+        # Assign worksheets
+        goodWorkSheet = workbook[goodSheet]
+        badWorksheet = workbook[badSheet]
+
+        # Get row data for both goodID and badID
+        vals1 = [goodWorkSheet.cell(row=goodRow, column=col).value for col in range(2, 16)]
+        vals2 = [badWorksheet.cell(row=badRow, column=col).value for col in range(2, 16)]
+        print(f"Retrieved values from Good ID row {goodRow}:\n", end="")
+        print(' | '.join(str(value) for value in vals1 if value is not None))
+        print(f"Retrieved values from Bad ID row {badRow}:\n", end="")
+        print(' | '.join(str(value) for value in vals2 if value is not None))
+        time.sleep(8)
+        
+        # Clear the goodRow data (starting from column B) and delete badRow
+        for col in range(2, goodWorkSheet.max_column + 1):
+            goodWorkSheet.cell(row=goodRow, column=col).value = None
+        print(f"Cleared data from Good ID row {goodRow}.")
+        badWorksheet.delete_rows(badRow)
+        print(f"Row {badRow} deleted successfully.")
+        for row in range(badRow, badWorksheet.max_row + 1):
+            nextRow = row + 1
+            cellRef = f'O{row}'
+            nextCellRef = f'O{nextRow}'
+            if nextRow <= badWorksheet.max_row and badWorksheet[nextCellRef].hyperlink:
+                tempHyperlink = badWorksheet[nextCellRef].hyperlink
+                badWorksheet[cellRef].hyperlink = Hyperlink(ref=cellRef, target=tempHyperlink.target, display=tempHyperlink.display)
+                badWorksheet[cellRef].value = badWorksheet[nextCellRef].value
+                print(f"Hyperlink and value from row {nextRow} moved to row {row}.")
+        if badWorksheet[f'O{badWorksheet.max_row - 1}'].hyperlink:
+            lastRow = badWorksheet.max_row
+            print(f"Adjusting the hyperlink in the last row, row {lastRow}.")
+            secondLastHyperlink = badWorksheet[f'O{lastRow - 1}'].hyperlink
+            newTarget = re.sub(r'(\d+)(?=%\d+)', lambda m: f"{int(m.group(1)) + 1:05d}", secondLastHyperlink.target)
+            badWorksheet[f'O{lastRow}'].hyperlink = Hyperlink(ref=f'O{lastRow}', target=newTarget, display=secondLastHyperlink.display)
+            print(f"Updated hyperlink in row {lastRow} to new target, {newTarget}.\n")
+        
+        # Merge values but keep goodID's hyperlink and other values for columns A and O
+        mergedArray = []
+        for col in range(len(vals1)):
+            if col == 0:  # Column A (1st column, Good ID)
+                mergedArray.append(vals1[col])
+            elif col == 14:  # Column O (15th column, hyperlink)
+                mergedArray.append(vals1[col])
+            else:
+                mergedArray.append(max(vals1[col], vals2[col], key=lambda x: len(str(x)) if x else 0))
+        print(f"Merged values into Good ID row {goodRow}.")        
+        counter = 2
+        for value in mergedArray:
+            goodWorkSheet.cell(row=goodRow, column=counter, value=value)
+            counter += 1
+
+        # Highlight cells in GoodRow, columns B - N and P
+        highlight_fill = PatternFill(start_color="001AFF", end_color="001AFF", fill_type="solid")
+        for col in range(2, 15):  # Columns B (2) to N (14)
+            goodWorkSheet.cell(row=goodRow, column=col).fill = highlight_fill
+        # Highlight column P (16)
+        goodWorkSheet.cell(row=goodRow, column=16).fill = highlight_fill
+        print(f"Highlighted cells in GoodRow {goodRow}, columns B - N and P with color #001AFF.")
+        
+        # File handling: Apply the suffix "a" and "b" to goodFilePath and badFilePath and move if necessary
+        goodIDFilePath, badIDFilePath = None, None
+        for dirPath, _, fileNames in os.walk(basePath):
+            for fileName in fileNames:
+                if f"{goodID:05d}" in fileName:
+                    goodIDFilePath = os.path.join(dirPath, fileName)
+                if f"{badID:05d}" in fileName:
+                    badIDFilePath = os.path.join(dirPath, fileName)
+                if goodIDFilePath and badIDFilePath:
+                    break
+        if goodIDFilePath and badIDFilePath:
+            goodIDPrefix = os.path.basename(os.path.dirname(goodIDFilePath))
+            badIDPrefix = os.path.basename(os.path.dirname(badIDFilePath))
+            newBadIDFilename = os.path.basename(goodIDFilePath).replace(f"{goodID:05d}", f"{goodID:05d}b").replace(badIDPrefix, goodIDPrefix)
+            newBadIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newBadIDFilename)
+            if not "a.pdf" in os.path.basename(goodIDFilePath):
+                newGoodIDFilename = os.path.basename(goodIDFilePath).replace(".pdf", "a.pdf")
+                newGoodIDFilePath = os.path.join(os.path.dirname(goodIDFilePath), newGoodIDFilename)
+                os.rename(goodIDFilePath, newGoodIDFilePath)
+                print(f"{os.path.basename(goodIDFilePath)} renamed to {newGoodIDFilename}")
+            shutil.move(badIDFilePath, newBadIDFilePath)
+            print(f"{os.path.basename(badIDFilePath)} moved and renamed to {newBadIDFilename}")
+
+        # Redacted file handling: Combine redacted versions of the good and bad files
+        redactedGoodFilePath, redactedBadFilePath = None, None
+        for dirPath, _, fileNames in os.walk(redactedBasePath):
+            for fileName in fileNames:
+                if f"{goodID:05d}" in fileName:
+                    redactedGoodFilePath = os.path.join(dirPath, fileName)
+                if f"{badID:05d}" in fileName:
+                    redactedBadFilePath = os.path.join(dirPath, fileName)
+                if redactedGoodFilePath and redactedBadFilePath:
+                    break
+        if redactedGoodFilePath and redactedBadFilePath:
+            print(f"Combining redacted files for Good ID {goodID} and Bad ID {badID}...")
+            merger = PdfMerger()
+            with open(redactedGoodFilePath, 'rb') as f1, open(redactedBadFilePath, 'rb') as f2:
+                merger.append(f1)
+                merger.append(f2)
+                tempRedactedFilePath = redactedGoodFilePath.replace(".pdf", "_temp.pdf")
+                with open(tempRedactedFilePath, 'wb') as tempFile:
+                    merger.write(tempFile)
+            merger.close()
+            os.remove(redactedGoodFilePath)
+            os.remove(redactedBadFilePath)
+            os.rename(tempRedactedFilePath, redactedGoodFilePath)
+            print(f"Redacted files combined and renamed back to {redactedGoodFilePath}")
         workbook.save(excelFilePath)
-        if goodSheet in jewishSet or goodSheet in miscSet:
-            microsoftOCR.runMain(True, goodSheet, letter)
-        else:
-            microsoftOCR.runMain(True, goodWorkSheet.title, letter)
-        workbook = openpyxl.load_workbook(excelFilePath)
-        if badSheet in jewishSet:
-            badWorksheet = workbook["Jewish"]
-        elif badSheet in miscSet:
-            badWorksheet = workbook["Misc"] 
-        else:
-            badWorksheet = workbook[badSheet]
-        cleanDelete(badWorksheet, badIDs[x], badRow)
-        workbook.save(excelFilePath)
-    miniG = min(goodIDs)
-    if min(badIDs) < miniG:
-        miniG = min(badIDs) - 1
-    miniB = min(badIDs)
+
     cleanImages(fullClean, 1, "", "")
     cleanImages(fullClean, 1, " - Redacted", " redacted")
-    workbook = openpyxl.load_workbook(excelFilePath)
     fileDirectoryMap = {}
-    for dirPath, dirNames, fileNames in os.walk(basePath):
+    for dirPath, _, fileNames in os.walk(basePath):
         for fileName in fileNames:
             fileID = ''.join(filter(str.isdigit, fileName))[:5]
             if fileID:
                 fileDirectoryMap[fileID] = dirPath
     newID = 1
-    for x in range(0, len(workbook.sheetnames)):
-        badWorksheet = workbook[workbook.sheetnames[x]]
+    for sheetName in workbook.sheetnames:
+        badWorksheet = workbook[sheetName]
         newID = cleanHyperlinks(badWorksheet, 2, newID, fileDirectoryMap)
     workbook.save(excelFilePath)
     compareHyperlinkLetters(excelFilePath)
@@ -501,6 +472,6 @@ if __name__ == "__main__":
                17287, 12235, 31547, 12218, 31549, 31564, 26203, 493, 496, 31573]
     badIDs = [42442, 14996, 16981, 16987, 35679, 14999, 17000, 35701, 15000, 17027, 15002, 17035, 15003, 5234, 15007, 17047, 28114, 15008, 4915, 31311, 28148,
               12079, 15011, 15012, 31551, 4893, 15013, 15015, 15014, 15016, 31368, 28179, 15019, 12240, 373, 42530, 15026, 41411, 17212, 15028, 15029, 445, 
-              31431, 28222, 15036, 31456, 15038, 28225, 31461, 18039, 10840, 15041, 28233, 17246, 31553, 28246, 17307, 23978, 12238, 15044, 17284, 15045, 
+              31431, 28222, 15036, 31456, 15038, 28225, 31461, 15039, 15040, 15041, 28233, 17246, 31553, 28246, 17307, 23978, 12238, 15044, 17284, 15045, 
               15046, 17329, 12236, 31559, 12219, 31562, 31565, 15049, 15050, 15052, 12234]
     main(fullClean, goodIDs, badIDs)

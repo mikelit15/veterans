@@ -472,7 +472,7 @@ field and handles row highlighting in the output based on specific conditions.
 
 @author Mike
 '''
-def mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter):
+def mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter, dupFlag):
     counter = 1
     def length(item):
         return len(str(item))
@@ -482,54 +482,7 @@ def mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, lette
     for x in mergedArray:
         worksheet.cell(row=rowIndex, column=counter, value=x)
         counter += 1
-    highlightColors = {
-        "mergedNoIssues": PatternFill(start_color="E3963E", end_color="E3963E", fill_type="solid"),
-        "mergedAdjusted": PatternFill(start_color="00FFB9", end_color="00FFB9", fill_type="solid"),
-        "mergedNoDOD": PatternFill(start_color="00C6FF", end_color="00C6FF", fill_type="solid"),
-        "mergedCemeteryMismatch": PatternFill(start_color="FC80AC", end_color="FC80AC", fill_type="solid"),
-        "mergedLastNameMismatch": PatternFill(start_color="D2042D", end_color="D2042D", fill_type="solid"),
-        "mergedNameBug": PatternFill(start_color="0B8C36", end_color="0B8C36", fill_type="solid"),
-        "badDate": PatternFill(start_color="99CC00", end_color="99CC00", fill_type="solid")}
-    requiredColors = []
-    requiredColors.append(highlightColors["mergedNoIssues"])
-    if warFlag:
-        requiredColors.append(highlightColors["mergedAdjusted"])
-    if (worksheet[f'{"I"}{rowIndex}'].value == ""):
-        requiredColors.append(highlightColors["mergedNoDOD"])
-    if worksheet[f'{"G"}{rowIndex}'].value:
-        if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
-            requiredColors.append(highlightColors["badDate"])
-    if worksheet[f'{"I"}{rowIndex}'].value:
-        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1":
-            if str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2":
-                if str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0":
-                    if str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "23":
-                        requiredColors.append(highlightColors["badDate"]) 
-                else:
-                    requiredColors.append(highlightColors["badDate"]) 
-            else:
-                requiredColors.append(highlightColors["badDate"]) 
-    if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
-        requiredColors.append(highlightColors["mergedCemeteryMismatch"])
-    try:
-        if worksheet[f'{"B"}{rowIndex}'].value[0] != letter:
-            requiredColors.append(highlightColors["mergedLastNameMismatch"])
-    except Exception:
-        pass
-    if (worksheet[f'{"B"}{rowIndex}'].value) == (worksheet[f'{"C"}{rowIndex}'].value):
-        requiredColors.append(highlightColors["mergedNameBug"])
-    if requiredColors:
-        numColors = len(requiredColors)
-        colsPerColor = max(1, (14 - 2) // numColors)
-        for colIndex in range(2, 16 + 1):
-            if colIndex == 15:
-                continue
-            colorIndex = (colIndex - 2) // colsPerColor
-            colorIndex = min(colorIndex, numColors - 1) 
-            cell = worksheet.cell(row=rowIndex, column=colIndex)
-            cell.fill = requiredColors[colorIndex]
-        cell = worksheet.cell(row=rowIndex, column=16)
-        cell.fill = requiredColors[-1]
+    highlightMulti(worksheet, letter, cemetery, rowIndex, warFlag, dupFlag)
         
 
 '''
@@ -547,7 +500,20 @@ def findNextEmptyRow(worksheet):
             return row[0].row
     return worksheet.max_row + 1 
 
+'''
+Highlights a single record row based on various conditions such as 
+discrepancies in cemetery, missing dates, or mismatches in last names. 
+Applies different fill colors to cells based on which conditions are met.
 
+@param worksheet - The worksheet where the highlighting will be applied
+@param cemetery (str) - The name of the cemetery to compare against the record
+@param letter (str) - The letter representing the starting letter of the last name
+@param warFlag (bool) - A flag indicating if there were issues found in the war-related fields
+@param rowIndex (int) - The index of the row to be highlighted
+@param kinLast (str) - The last name extracted from the next of kin field, for comparison
+
+@author Mike
+'''
 def highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast):
     tempFlag = False
     tempFlag2 = False
@@ -634,6 +600,75 @@ def highlightSingle(worksheet, cemetery, letter, warFlag, rowIndex, kinLast):
         cell.fill = requiredColors[-1]
 
 '''
+Highlights a row in the worksheet based on multiple conditions for merged records. 
+Different fill colors are applied depending on the conditions met, including duplicate 
+records, cemetery mismatches, and missing dates of death.
+
+@param worksheet - The worksheet where the highlighting will be applied
+@param letter (str) - The letter representing the starting letter of the last name
+@param cemetery (str) - The name of the cemetery to compare against the record
+@param rowIndex (int) - The index of the row to be highlighted
+@param warFlag (bool) - A flag indicating if there were issues found in the war-related fields
+@param dupFlag (bool) - A flag indicating if the record is a duplicate
+
+@return None
+
+@author Mike
+'''
+def highlightMulti(worksheet, letter, cemetery, rowIndex, warFlag, dupFlag):
+    highlightColors = {
+    "mergedDuplicate": PatternFill(start_color="001AFF", end_color="001AFF", fill_type="solid"),
+    "mergedNoIssues": PatternFill(start_color="E3963E", end_color="E3963E", fill_type="solid"),
+    "mergedAdjusted": PatternFill(start_color="00FFB9", end_color="00FFB9", fill_type="solid"),
+    "mergedNoDOD": PatternFill(start_color="00C6FF", end_color="00C6FF", fill_type="solid"),
+    "mergedCemeteryMismatch": PatternFill(start_color="FC80AC", end_color="FC80AC", fill_type="solid"),
+    "mergedLastNameMismatch": PatternFill(start_color="D2042D", end_color="D2042D", fill_type="solid"),
+    "mergedNameBug": PatternFill(start_color="0B8C36", end_color="0B8C36", fill_type="solid"),
+    "badDate": PatternFill(start_color="99CC00", end_color="99CC00", fill_type="solid")}
+    requiredColors = []
+    requiredColors.append(highlightColors["mergedNoIssues"])
+    if dupFlag:
+        requiredColors.append(highlightColors['mergedDuplicate'])
+    if warFlag:
+        requiredColors.append(highlightColors["mergedAdjusted"])
+    if (worksheet[f'{"I"}{rowIndex}'].value == ""):
+        requiredColors.append(highlightColors["mergedNoDOD"])
+    if worksheet[f'{"G"}{rowIndex}'].value:
+        if str(worksheet[f'{"G"}{rowIndex}'].value)[0] != "1":
+            requiredColors.append(highlightColors["badDate"])
+    if worksheet[f'{"I"}{rowIndex}'].value:
+        if str(worksheet[f'{"I"}{rowIndex}'].value)[0] != "1":
+            if str(worksheet[f'{"I"}{rowIndex}'].value)[0] == "2":
+                if str(worksheet[f'{"I"}{rowIndex}'].value)[1] == "0":
+                    if str(worksheet[f'{"I"}{rowIndex}'].value)[2:] > "23":
+                        requiredColors.append(highlightColors["badDate"]) 
+                else:
+                    requiredColors.append(highlightColors["badDate"]) 
+            else:
+                requiredColors.append(highlightColors["badDate"]) 
+    if (worksheet[f'{"N"}{rowIndex}'].value) != cemetery:
+        requiredColors.append(highlightColors["mergedCemeteryMismatch"])
+    try:
+        if worksheet[f'{"B"}{rowIndex}'].value[0] != letter:
+            requiredColors.append(highlightColors["mergedLastNameMismatch"])
+    except Exception:
+        pass
+    if (worksheet[f'{"B"}{rowIndex}'].value) == (worksheet[f'{"C"}{rowIndex}'].value):
+        requiredColors.append(highlightColors["mergedNameBug"])
+    if requiredColors:
+        numColors = len(requiredColors)
+        colsPerColor = max(1, (14 - 2) // numColors)
+        for colIndex in range(2, 16 + 1):
+            if colIndex == 15:
+                continue
+            colorIndex = (colIndex - 2) // colsPerColor
+            colorIndex = min(colorIndex, numColors - 1) 
+            cell = worksheet.cell(row=rowIndex, column=colIndex)
+            cell.fill = requiredColors[colorIndex]
+        cell = worksheet.cell(row=rowIndex, column=16)
+        cell.fill = requiredColors[-1]
+
+'''
 The main function that controls files sent to be processed as well as 
 the data that is put into the excel sheet. It sets up the current working 
 directory, the current sheet in the spreadsheet, and loops through all the 
@@ -661,21 +696,11 @@ that are caught by the program.
 
 @author Mike
 '''
-def main(singleFlag, singleCem, singleLetter, worksheet_name):
+def main(dupFlag, singleCem, singleLetter, worksheet_name, cemSet, miscSet, jewishSet):
     networkFolder = r"\\ucclerk\pgmdoc\Veterans"
     os.chdir(networkFolder)
-    cemeterys = []
     jewishSubFile = False
     miscSubFile = False
-    for x in os.listdir(r"Cemetery"):
-        cemeterys.append(x)
-    miscs = []
-    for x in os.listdir(r"Cemetery\Misc"):
-        miscs.append(x)
-    jewishs = []
-    for x in os.listdir(r"Cemetery\Jewish"):
-        jewishs.append(x)
-    cemSet, miscSet, jewishSet = set(cemeterys), set(miscs), set(jewishs)
     workbook = openpyxl.load_workbook('Veterans.xlsx')
     cemetery = singleCem 
     if cemetery in jewishSet:
@@ -703,7 +728,7 @@ def main(singleFlag, singleCem, singleLetter, worksheet_name):
             try:
                 id = worksheet[f'{"A"}{rowIndex-1}'].value + 1
             except Exception:
-                id = int(pdfFiles[0][:-4].split(letter)[-1].lstrip('0'))
+                id = int(pdfFiles[0][:-5].split(letter)[-1].lstrip('0'))
             string = pdfFiles[y][:-4].split(letter)[-1].lstrip('0')
             if "a" not in string and "b" not in string:
                 if id != int(string.replace("a", "").replace("b", "")):
@@ -740,7 +765,7 @@ def main(singleFlag, singleCem, singleLetter, worksheet_name):
                     else:
                         warFlag = True
                     redactedFile = redact(filePath, cemetery, letter, nameCoords, serialCoords, jewishSubFile, miscSubFile)
-                    mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter)
+                    mergeRecords(worksheet, vals1, vals2, rowIndex, id, warFlag, cemetery, letter, dupFlag)
                     mergeImages(pathA, filePath, cemetery, letter, jewishSubFile, miscSubFile)
                     linkText = "PDF Image"
                     worksheet.cell(row=rowIndex, column=15).value = linkText
@@ -748,7 +773,7 @@ def main(singleFlag, singleCem, singleLetter, worksheet_name):
                     worksheet.cell(row=rowIndex, column=15).hyperlink = redactedFile.replace("b redacted.pdf", " redacted.pdf")
                     id += 1
                     rowIndex += 1
-                    if singleFlag:
+                    if dupFlag:
                         breakFlag = True
         except Exception as e:
             errorTraceback = traceback.format_exc()
@@ -780,13 +805,47 @@ def main(singleFlag, singleCem, singleLetter, worksheet_name):
             logFile.write("\n")
         workbook.save('Veterans.xlsx')
         if breakFlag:
-            break
+            return
 
-if __name__ == "__main__":
+'''
+The main entry point for processing cemetery records. Handles setting up the 
+network folder path and identifying whether the cemetery is part of the Misc, 
+Jewish, or standard categories. Calls the `main` function to process records.
+
+@param dupFlag (bool) - Flag to indicate if the function is being called for duplicate checking
+@param cem (str) - The name of the cemetery being processed
+@param let (str) - The letter of the current folder being processed (alphabetical last name)
+
+@return None
+
+@author Mike
+'''
+def runMain(dupFlag, cem, let):
+    global startFlag
     startFlag = False
-    base_directory = r"\\ucclerk\pgmdoc\Veterans\Cemetery"
+    networkFolder = r"\\ucclerk\pgmdoc\Veterans"
+    os.chdir(networkFolder)
+    base_directory = r"Cemetery"
+    cemeterys = os.listdir(base_directory)
+    miscs = os.listdir(r"Cemetery\Misc")
+    jewishs = os.listdir(r"Cemetery\Jewish")
+    cemSet, miscSet, jewishSet = set(cemeterys), set(miscs), set(jewishs)
 
-    def process_cemetery(base_path, cemetery, start_letter="A", worksheet_name=""):
+    '''
+    Processes records for a specific cemetery and letter. Calls the `main` function 
+    to handle the actual processing of records and highlights rows based on specific 
+    conditions.
+
+    @param base_path (str) - The base path where the cemetery folders are located
+    @param cemetery (str) - The name of the cemetery being processed
+    @param start_letter (str) - The letter of the last name folder to start processing
+    @param worksheet_name (str) - The name of the worksheet where the data is being recorded
+
+    @return None
+
+    @author Mike
+    '''
+    def process_cemetery(base_path, cemetery, start_letter, worksheet_name):
         global startFlag
         for letter in string.ascii_uppercase:
             if start_letter != letter and not startFlag:
@@ -798,39 +857,43 @@ if __name__ == "__main__":
                     try:
                         letter_path = os.path.join(base_path, cemetery, letter)
                         if os.path.exists(letter_path) and os.path.isdir(letter_path):
-                            main(False, cemetery, letter, worksheet_name)
+                            main(dupFlag, cemetery, letter, worksheet_name, cemSet, miscSet, jewishSet)
                         success = True
                     except Exception as e:
                         if "[WinError 3] The system cannot find the path specified" in str(e):
                             success = True
                         else:
                             print(str(e))
-
-    if len(sys.argv) > 1:
-        start_cemetery = sys.argv[1]
-        start_letter = sys.argv[2] if len(sys.argv) > 2 else "A"
-    else:
-        start_cemetery = "Rosehill"
-        start_letter = "L"
-
+                return
     cemetery_started = False
     for cemetery in os.listdir(base_directory):
         if cemetery_started:
             break
         cemetery_path = os.path.join(base_directory, cemetery)
-        if cemetery == start_cemetery:
+        if cem == cemetery:
+            cemetery_started = True
+        elif cem in jewishSet:
+            cemetery = "Jewish"
+            cemetery_started = True
+        elif cem in miscSet:
+            cemetery = "Misc"
             cemetery_started = True
         if cemetery_started:
             if cemetery == "Jewish" or cemetery == "Misc":
                 sub_path = os.path.join(base_directory, cemetery)
-                sub_cemetery_started = False
                 for sub_cemetery in os.listdir(sub_path):
-                    if sub_cemetery_started:
-                        break
+                    if sub_cemetery != cem:
+                        continue
                     sub_cemetery_path = os.path.join(sub_path, sub_cemetery)
                     if os.path.isdir(sub_cemetery_path):
-                        process_cemetery(sub_path, sub_cemetery, start_letter if cemetery == start_cemetery and sub_cemetery == start_cemetery else "A", cemetery)
-                        sub_cemetery_started = True if cemetery == start_cemetery and sub_cemetery == start_cemetery else sub_cemetery_started
+                        process_cemetery(sub_path, sub_cemetery, let, cemetery)
+                        if dupFlag:
+                            return
             elif os.path.isdir(cemetery_path):
-                process_cemetery(base_directory, cemetery, start_letter if cemetery == start_cemetery else "A", cemetery)
-                break  # Stop after processing the specified cemetery
+                process_cemetery(base_directory, cemetery, let, cemetery)
+                break  
+
+if __name__ == "__main__":
+    cem = "Hillside"
+    let = "Y"
+    runMain(False, cem, let) 

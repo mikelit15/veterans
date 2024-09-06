@@ -11,9 +11,13 @@ duplicate records. The process includes several key steps:
       fields
     - organize and display the confirmed duplicates for review
 
-@author: Mike
-'''
+@param sheetName (str) - The name of the sheet in the Excel file to be processed
+@param excelFile (str) - The path to the Excel file to be loaded
 
+@return df (DataFrame) - Processed DataFrame with relevant columns loaded and adjusted
+
+@author Mike
+'''
 def loadAndProcessSheet(sheetName, excelFile):
     df = pd.read_excel(excelFile, sheet_name=sheetName, usecols="A:K")
     df.reset_index(inplace=True, drop=True)
@@ -27,6 +31,17 @@ def loadAndProcessSheet(sheetName, excelFile):
     df['SHEET NAME'] = sheetName  
     return df
 
+'''
+Identifies duplicate records based on specific fields such as last name, first name, 
+and date of death year. Handles confirmed duplicates and organizes them for review.
+
+@param df (DataFrame) - The DataFrame to search for duplicates
+@param excludeList (list) - A list of IDs to exclude from the duplicate check
+
+@return confirmedDuplicates (DataFrame) - DataFrame containing confirmed duplicates
+
+@author Mike
+'''
 def findDuplicates(df, excludeList):
     df = df[~df['VID'].isin(excludeList)]
     confirmedDuplicates = pd.DataFrame()
@@ -42,13 +57,23 @@ def findDuplicates(df, excludeList):
     confirmedDuplicates.drop(columns=['MaxVIDinPair'], inplace=True)
     return confirmedDuplicates
 
+
+'''
+Main function that processes the Excel file, identifies duplicates, and saves the results.
+Iterates through all sheets in the Excel file and checks for duplicates across the entire dataset.
+
+@return confirmedDuplicates (DataFrame) - DataFrame containing all confirmed duplicates 
+                                          across the sheets processed
+                                                                      
+@author Mike
+'''
 def main():
     filePath = r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx"
     outputFilePath = r"\\ucclerk\pgmdoc\Veterans\confirmed_duplicates.txt"
     combinedDF = pd.DataFrame()
     confirmedDuplicates = pd.DataFrame()
     
-    excludeList = [8465, 424, 9494, 2123, 4661, 4662]
+    excludeList = [8465, 424, 9494, 2123, 4661, 4662, 8262, 8350, 8257]
     
     try:
         excelFile = pd.ExcelFile(filePath)
@@ -73,35 +98,6 @@ def main():
         print("### No Duplicates ###")
         print(f"Error: {e}")
     return confirmedDuplicates
-
-# def main(cemetery):
-#     confirmedDuplicates = pd.DataFrame()
-#     try:
-#         df = pd.read_excel(r"\\ucclerk\pgmdoc\Veterans\Veterans.xlsx", sheetName= cemetery, usecols="A:K")
-#         df.reset_index(inplace=True, drop=True)  
-#         df.index = df.index + 2
-#         df['VDOBY'] = df['VDOBY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
-#         df['VDODY'] = df['VDODY'].apply(lambda x: str(int(x)) if pd.notna(x) else np.nan)
-#         df['VDOBY'] = df['VDOBY'].astype(object).where(pd.notna(df['VDOBY']), np.nan)
-#         df['VDODY'] = df['VDODY'].astype(object).where(pd.notna(df['VDODY']), np.nan)
-#         potentialDuplicates = df[df.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY'], keep=False)]
-#         for _, group in potentialDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY']):
-#             if not group['VDOBY'].isna().any():
-#                 confirmedGroup = group[group.duplicated(subset=['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'], keep=False)]
-#                 confirmedDuplicates = pd.concat([confirmedDuplicates, confirmedGroup])
-#             else:
-#                 confirmedDuplicates = pd.concat([confirmedDuplicates, group])
-#         confirmedDuplicates['MaxVIDinPair'] = confirmedDuplicates.groupby(['VLNAME', 'VFNAME', 'VDODY', 'VDOBY'])['VID'].transform('max')
-#         confirmedDuplicates.sort_values(by=['MaxVIDinPair', 'VID'], inplace=True)
-#         confirmedDuplicates.drop(columns=['MaxVIDinPair'], inplace=True)
-#         if confirmedDuplicates.empty:
-#             print("### No Duplicates ###")
-#         else:
-#             print(confirmedDuplicates)
-#     except Exception as e:
-#         print("### No Duplicates ###")
-#         print(f"Error: {e}")
-#     return confirmedDuplicates
 
 if __name__ == "__main__":
     main()
