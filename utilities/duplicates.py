@@ -73,7 +73,7 @@ def main():
     combinedDF = pd.DataFrame()
     confirmedDuplicates = pd.DataFrame()
     
-    excludeList = [8465, 424, 9494, 2123, 4661, 4662, 8262, 8350, 8257]
+    excludeList = []
     
     try:
         excelFile = pd.ExcelFile(filePath)
