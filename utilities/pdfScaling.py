@@ -1,57 +1,56 @@
-import fitz
+import fitz  
 import os
 import time
 
-inputDirectory = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted - Before Scaling"
-outputDirectory = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted - After Scaling"
+input_directory = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted"
+output_directory = r"\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted - After Scaling"
 
-targetWidth = 842  
-targetHeight = 560
+target_width = 842  
+target_height = 560
 
-retryDelay = 3 
+retry_delay = 3  
+if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
 
-if not os.path.exists(outputDirectory):
-    os.makedirs(outputDirectory)
-
-def resizePDF_WithRetry(inputPDF_Path, outputPDF_Path, targetWidth, targetHeight):
-    while True: 
+def resize_pdf_with_retry(input_pdf_path, output_pdf_path, target_width, target_height):
+    while True:  
         try:
-            PDF_Document = fitz.open(inputPDF_Path)
-            outputPDF = fitz.open()
-            for pageNum in range(len(PDF_Document)):
-                page = PDF_Document.load_page(pageNum)
+            pdf_document = fitz.open(input_pdf_path)
+            output_pdf = fitz.open()
+            for page_num in range(len(pdf_document)):
+                page = pdf_document.load_page(page_num)
                 rect = page.rect
-                newPage = outputPDF.newPage(width=targetWidth, height=targetHeight)
-                scaleX = targetWidth / rect.width
-                scaleY = targetHeight / rect.height
-                scaleFactor = min(scaleX, scaleY)
-                scaledWidth = rect.width * scaleFactor
-                scaledHeight = rect.height * scaleFactor
-                xOffset = (targetWidth - scaledWidth) / 2
-                yOffset = (targetHeight - scaledHeight) / 2
-                matrix = fitz.Matrix(scaleFactor, scaleFactor).pretranslate(xOffset, yOffset)
-                newPage.show_pdf_page(newPage.rect, PDF_Document, pageNum, matrix)
-            outputPDF.save(outputPDF_Path)
-            outputPDF.close()
-            PDF_Document.close()
-            print(f"Successfully resized: {inputPDF_Path}")
-            break 
+                new_page = output_pdf.new_page(width=target_width, height=target_height)
+                scale_x = target_width / rect.width
+                scale_y = target_height / rect.height
+                scale_factor = min(scale_x, scale_y)
+                scaled_width = rect.width * scale_factor
+                scaled_height = rect.height * scale_factor
+                x_offset = (target_width - scaled_width) / 2
+                y_offset = (target_height - scaled_height) / 2
+                matrix = fitz.Matrix(scale_factor, scale_factor).pretranslate(x_offset, y_offset)
+                new_page.show_pdf_page(new_page.rect, pdf_document, page_num, matrix)
+            output_pdf.save(output_pdf_path)
+            output_pdf.close()
+            pdf_document.close()
+            print(f"Successfully resized: {input_pdf_path}")
+            break  
         except Exception as e:
-            print(f"Error processing {inputPDF_Path}: {e}")
-            print(f"Retrying in {retryDelay} seconds...")
-            time.sleep(retryDelay)  
+            print(f"Error processing {input_pdf_path}: {e}")
+            print(f"Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)  
 
-def processDirectory(inputDir, outputDir):
-    for root, dirs, files in os.walk(inputDir):
-        for fileName in files:
-            if fileName.endswith(".pdf"):
-                inputPDF_Path = os.path.join(root, fileName)
-                relativePath = os.path.relpath(inputPDF_Path, inputDir)
-                outputPDF_Path = os.path.join(outputDir, relativePath)
-                outputSubdir = os.path.dirname(outputPDF_Path)
-                if not os.path.exists(outputSubdir):
-                    os.makedirs(outputSubdir)
-                print(f"Resizing {inputPDF_Path} to {targetWidth}x{targetHeight} points (295mm x 205mm)...")
-                resizePDF_WithRetry(inputPDF_Path, outputPDF_Path, targetWidth, targetHeight)
+def process_directory(input_dir, output_dir):
+    for root, dirs, files in os.walk(input_dir):
+        for file_name in files:
+            if file_name.endswith(".pdf"):
+                input_pdf_path = os.path.join(root, file_name)
+                relative_path = os.path.relpath(input_pdf_path, input_dir)
+                output_pdf_path = os.path.join(output_dir, relative_path)
+                output_subdir = os.path.dirname(output_pdf_path)
+                if not os.path.exists(output_subdir):
+                    os.makedirs(output_subdir)
+                print(f"Resizing {input_pdf_path} to {target_width}x{target_height} points (295mm x 205mm)...")
+                resize_pdf_with_retry(input_pdf_path, output_pdf_path, target_width, target_height)
 
-processDirectory(inputDirectory, outputDirectory)
+process_directory(input_directory, output_directory)
