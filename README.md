@@ -1,152 +1,527 @@
 # Veteran Grave Registration Card Processor
 
-This program automates the extraction and cleaning of text from scanned PDF documents of Veteran Grave Registration cards, using them to populate a structured Excel sheet. The process includes redacting sensitive information and organizing data efficiently across network folders.
+A comprehensive automated system for processing scanned PDF documents of Veteran Grave Registration cards. This application leverages Microsoft Azure OCR technology to extract, clean, validate, and organize veteran data into structured Excel spreadsheets while maintaining privacy compliance through automated redaction of sensitive information.
 
-## Project Structure
+## 📋 Table of Contents
 
-### Subfolders:
-- **microsoftOCR**: Contains the main OCR processing scripts leveraging Microsoft Azure OCR services.
-- **prevVersions**: Stores earlier versions of the scripts that used free open-source OCR solutions for archival purposes.
-- **testFiles**: Includes scripts for testing and debugging specific data cleaner functions without affecting the production environment.
-- **utilities**: Holds utility scripts for deduplication tasks.
-- **veteranData**: Stores necessary data files for the GUI.
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Applications](#applications)
+  - [microsoftOCR GUI](#microsoftocr-gui)
+  - [multiCleaner GUI](#multicleaner-gui)
+- [Core Modules](#core-modules)
+- [Data Processing Pipeline](#data-processing-pipeline)
+- [Utilities](#utilities)
+- [Testing](#testing)
+- [Configuration](#configuration)
+- [Network Folder Structure](#network-folder-structure)
 
-## microsoftOCR GUI:
+## 🎯 Overview
 
-### Features and Usage
+This system automates the digitization of historical Veteran Grave Registration cards, transforming scanned PDF documents into structured, searchable data. The application processes thousands of records across multiple cemeteries, applying sophisticated OCR technology, intelligent data cleaning algorithms, and privacy-compliant redaction techniques.
 
-#### 1. Application Launch
-- **Initial Pop-Up**: Upon starting the application, a pop-up window advises the user to click the "Stop Code" button before exiting the application if the code is running. This ensures that all processes are safely concluded to prevent data loss and Excel file corruption.
-- **Main Interface**: After dismissing the pop-up, the main application interface is displayed. This interface is the primary area for user interaction and it displays the current status of the application at the bottom, which can be in one of several states:
-  - **Idle**: The application is ready and waiting for user input, requires a "Run Code" button press to start processing.
-  - **Running...**: Indicates that the code is actively processing the PDF files, extracting and cleaning text, then inserting into an Excel file.
-  - **Paused**: The application has paused processing and requires the user to press "Resume" to continue.
-  - **Stopping...**: The application is finishing up current PDF image to allow the user to safely exit, avoiding accidently corrupting the Excel file.
+### Primary Objectives
+- **Automate Data Extraction**: Extract text from scanned PDF documents using custom-trained Azure OCR models
+- **Ensure Data Quality**: Apply field-specific cleaning rules to standardize names, dates, and military service information
+- **Maintain Privacy Compliance**: Automatically redact sensitive information (Social Security numbers)
+- **Organize Data Efficiently**: Structure data in Excel spreadsheets with hyperlinks to source documents
+- **Enable Historical Research**: Provide accessible, searchable veteran records for administrative and research purposes
 
-#### 2. Filling in the Required Parameters
-  - **Parameter Input**: Users must input two parameters, the cemetery name and the letter of the folder to be processed. Pop-ups will inform the user if either field is not filled out upon clicking the "Run Code" button.
+## ✨ Key Features
 
-#### 3. Run the Code
-  - **Starting the Process**: By pressing the "Run Code" button, the `microsoftOCR.py` code is executed.
-  - **Monitoring Progress**:
-    - The results box displays the ID number being processed.
-    - It then displays the raw key-value pairs extracted from the PDF document.
-    - Any errors encountered during the extraction or cleaning of the text, are displayed in detail in the error field.
-    - After completion of data cleaning, the image gets redacted, and the redacted image is then displayed in the app.
-    - The results box clears, and the next record begins processing.
-  - **Completion**:
-    - This process repeats until all records in the specified letter folder are processed. Upon completion, a pop-up informs the user that all files have been processed, and the app returns to idle status, ready for a new input.
+### Intelligent OCR Processing
+- **Custom Azure OCR Model**: Trained on 100+ annotated images with bounding boxes for precise field extraction
+- **High-Resolution Processing**: Converts PDF pages to high-quality images for optimal OCR accuracy
+- **Field-Specific Extraction**: Identifies and extracts 11+ distinct fields from registration cards
+- **Error Detection**: Comprehensive error logging and validation for quality assurance
 
-#### Button Functionality
-  - **Pause and Resume**:
-    - The pause button halts the processing at any point, allowing users to review the extracted values, error messages, or the redacted image.
-    - The button's text switches to "Resume," which can then be pressed to continue the processing of the PDF documents.
-  - **Safe Stop**:
-    - The stop button completes processing of the current image and ensures the Excel file is saved before breaking out of the main processing loop, puts the app status into "Idle."
-    - This is crucial to prevent data loss and corruption of the Excel file, which can occur if the application is stopped abruptly during processing.
+### Advanced Data Cleaning
+- **Name Standardization**: Handles multi-part surnames, prefixes (O', Mc, Van, etc.), and suffixes (Jr., Sr., I-IV)
+- **Date Normalization**: Converts various date formats into standardized MM/DD/YYYY format
+- **Military Service Formatting**: Interprets historical military abbreviations and service branch codes
+- **War Record Processing**: Standardizes war/conflict designations using historical knowledge
 
-## Detailed Workflow of microsoftOCR.py
+### Privacy & Security
+- **Automated Redaction**: Dynamically calculates and applies black boxes over Social Security numbers
+- **Coordinate-Based Masking**: Uses OCR bounding box coordinates for precise redaction placement
+- **Dual-Page PDF Creation**: Combines redacted first page with original second page
+- **Secure File Management**: Organizes redacted files in separate directory structures
 
-### Step 1: Initialization and Configuration
-- **Setup**: Initialize the environment by setting up paths to the input files and configuring the OCR service credentials.
-- **Configuration Loading**: Load configuration settings that define paths, OCR settings, rules for data parsing, and image redaction.
+### Data Management
+- **Excel Integration**: Populates structured workbooks with validated data
+- **Hyperlink Generation**: Creates clickable links from Excel rows to source PDF documents
+- **Duplicate Detection**: Identifies potential duplicate records based on name and date matching
+- **Batch Processing**: Handles entire cemetery directories organized alphabetically (A-Z)
 
-### Step 2: PDF Loading and Image Extraction
-- **PDF Loading**: Load the PDF document from a specified directory based on the input parameters.
-- **Page Extraction**: Extract the first page from the PDF document.
-- **Image Conversion**: Convert the extracted page into an image format using a high-resolution setting to ensure that the quality is sufficient for accurate OCR recognition.
+### User Interface
+- **PySide6 GUI**: Modern, responsive interface with dark/light mode support
+- **Real-Time Progress Monitoring**: Displays current record ID, extracted values, and errors
+- **Process Control**: Pause, resume, and safe-stop functionality to prevent data corruption
+- **Visual Feedback**: Shows redacted images and processing status in real-time
 
-### Step 3: OCR Processing
-- **Image Preprocessing**: Enhance the image quality by adjusting brightness, contrast, and possibly applying filters to reduce noise and improve text clarity.
-- **Text Extraction**: Submit the preprocessed image to the OCR service. This process involves sending the image to Microsoft Azure, which analyzes the image using a custom built model, using 100+ images with bounding boxes for each required key, and returns the raw text content for each field.
-- **OCR Result Parsing**: Parse the raw OCR output to structure the extracted text into a usable format, separating different fields based on the document layout.
+## 🛠 Technology Stack
 
-### Step 4: Data Cleaning and Validation
-- **Initial Data Cleaning**: Apply initial cleaning rules to correct common OCR errors, such as replacing misrecognized characters or splitting joined words.
-- **Field-Specific Rules**: Execute sophisticated cleaning scripts for each data field, such as:
-  - **Name**: Apply cultural and linguistic rules to handle names correctly.
-  - **Date**: Convert various date formats into a uniform standard format.
-  - **War Record and Branch of Service**: Format military service details using historical and military knowledge to interpret abbreviations and jargon.
-- **Validation**: Validate the cleaned data against a set of predefined rules to ensure accuracy and consistency. Highlights row in Excel sheet if data does not pass the rules.
+### Core Technologies
+- **Python 3.x**: Primary programming language
+- **Microsoft Azure Form Recognizer**: Custom OCR model for document analysis
+- **PySide6 (Qt)**: Cross-platform GUI framework
+- **OpenPyXL**: Excel file manipulation and formatting
+- **PyMuPDF (fitz)**: PDF document processing and manipulation
+- **OpenCV (cv2)**: Image processing and redaction
+- **ReportLab**: PDF generation for redacted documents
 
-### Step 5: Sensitive Information Redaction
-- **Detect Sensitive Information**: Coordinates for social security field bounding box are taken for each PDF document using the custom model.
-- **Calculate Redaction Areas**: Dynamically calculate the coordinates for redaction based on the detected social security location.
-- **Apply Redaction**: Use image processing techniques to overlay black boxes over these coordinates, ensuring the data cannot be read or recovered.
+### Data Processing Libraries
+- **pandas**: Data analysis and duplicate detection
+- **numpy**: Numerical operations for data processing
+- **dateparser**: Intelligent date parsing and normalization
+- **nameparser**: Name parsing and formatting
+- **fuzzywuzzy**: Fuzzy string matching for name validation
+- **PyPDF2**: PDF reading and metadata extraction
 
-### Step 6: Excel Integration
-- **Workbook Preparation**: Open the working Excel workbook.
-- **Data Mapping**: Map the cleaned and validated data into the appropriate columns in the Excel sheet. Each field from the registration card is carefully placed into designated columns to maintain data integrity and facilitate easy data retrieval.
+### Additional Dependencies
+- **PIL (Pillow)**: Image format conversion
+- **qdarktheme**: Modern dark theme styling for Qt applications
+- **traceback**: Detailed error logging and debugging
 
-### Step 7: File Management
-- **Output Saving**: Save the processed Excel file after each record to ensure that data will not be lost due to an unhandled error.
-- **Image Archiving**: Archive the redacted image files in a structured directory system that categorizes images by cemetery name and veteran's last initial for efficient organization and retrieval.
-- **Logging**: Maintain comprehensive logs of each extraction and processing error for auditing and troubleshooting purposes.
+## 📁 Project Structure
 
-## Error Handling
-- **Robust Error Management**: Implement robust try-catch blocks around each major processing step to capture and log exceptions.
-- **Continuity Assurance**: Ensure that the occurrence of an error in processing one file does not halt the entire batch process, allowing the system to move on to the next file.
+```
+veterans/
+├── microsoftOCR/                    # Main OCR processing application
+│   ├── GUI.py                      # PySide6 GUI for OCR application (788 lines)
+│   ├── microsoftOCR.py             # Core OCR processing engine (899 lines)
+│   ├── microsoftOCR_Old.py         # Previous version for reference (946 lines)
+│   ├── nameRule.py                 # Name parsing and formatting rules (313 lines)
+│   ├── nameRuleOld.py              # Legacy name processing (163 lines)
+│   ├── dateRule.py                 # Date parsing and normalization (1,054 lines)
+│   ├── warRule.py                  # War/conflict standardization (97 lines)
+│   └── branchRule.py               # Military branch formatting (105 lines)
+│
+├── utilities/                       # Data management and cleaning utilities
+│   ├── GUI.py                      # PySide6 GUI for utilities (1,025 lines)
+│   ├── multiCleaner.py             # Batch file organization tool (505 lines)
+│   ├── multiCleaner2.0.py          # Enhanced version (471 lines)
+│   ├── multiCleanerOld.py          # Legacy version (379 lines)
+│   ├── singleCleaner.py            # Individual file processing (337 lines)
+│   ├── duplicates.py               # Duplicate record detection (102 lines)
+│   ├── cleanerImage.py             # Image file name cleaning (121 lines)
+│   ├── cleanerHyperlink.py         # Excel hyperlink management (51 lines)
+│   ├── cleanDelete.py              # File deletion with Excel sync (37 lines)
+│   ├── cleanRedacted.py            # Redacted file cleanup (46 lines)
+│   ├── incrementRedacted.py        # Redacted file numbering (89 lines)
+│   ├── hyperlinkFix.py             # Hyperlink repair utility (17 lines)
+│   ├── pdfScaling.py               # PDF dimension analysis (55 lines)
+│   └── miscFunctions.py            # Helper functions (114 lines)
+│
+├── testFiles/                       # Testing and debugging scripts
+│   ├── microsoftOCRTest.py         # OCR functionality tests
+│   ├── multiCleanerTest.py         # Cleaner function tests
+│   ├── dateTest.py                 # Date parsing tests
+│   ├── nameTest.py                 # Name formatting tests
+│   ├── warTest.py                  # War record tests
+│   ├── duplicatesTest.py           # Duplicate detection tests
+│   └── test.py                     # General testing script
+│
+├── prevVersions/                    # Historical implementations
+│   ├── amazonOCR.py                # AWS Textract implementation
+│   ├── amazonOCR orig.py           # Original AWS version
+│   ├── hardCoordinates.py          # Fixed-coordinate redaction
+│   ├── keyCoordiantes.py           # Key-based coordinate mapping
+│   └── keyOffset.py                # Offset calculation methods
+│
+├── veteranData/                     # Application resources
+│   ├── logo.png                    # Application logo (154 KB)
+│   ├── veteranLogo.png             # Veteran-specific branding (907 KB)
+│   └── display_mode.txt            # UI theme preference storage
+│
+└── README.md                        # This documentation file
+```
 
-## Summary
-This highly detailed automated system not only significantly reduces manual labor but also increases the accuracy and privacy compliance of managing veteran grave registration data. Through sophisticated OCR technology and meticulous data handling procedures, the program ensures that the data is processed with high precision and security.
+### Code Statistics
+- **Total Python Files**: 30+
+- **Total Lines of Code**: 7,714+ (core modules only)
+- **Main Application**: microsoftOCR (899 lines)
+- **Largest Module**: dateRule.py (1,054 lines)
+- **GUI Components**: 2 major applications (788 + 1,025 lines)
 
-## multiCleaner GUI:
+## 🚀 Installation
 
-### Features and Usage
+### Prerequisites
+- Python 3.8 or higher
+- Microsoft Azure account with Form Recognizer service
+- Access to network folders (\\ucclerk\pgmdoc\Veterans\)
+- Windows operating system (for network path compatibility)
 
-#### 1. Application Launch
+### Required Python Packages
 
+```bash
+pip install azure-ai-formrecognizer azure-core
+pip install PySide6 qdarktheme
+pip install openpyxl pandas numpy
+pip install PyMuPDF PyPDF2 Pillow opencv-python reportlab
+pip install dateparser nameparser fuzzywuzzy python-Levenshtein
+```
 
-## Detailed Workflow of multiCleaner.py
+### Azure Configuration
+1. Create an Azure Form Recognizer resource
+2. Train a custom model with veteran registration card samples
+3. Configure credentials in the application (endpoint and API key)
 
-### Step 1: Initialization
-- Import necessary libraries and modules.
-- Configure system path to include custom modules like `microsoftOCR`.
+### Network Setup
+Ensure access to the following network paths:
+- `\\ucclerk\pgmdoc\Veterans\Cemetery\` - Source PDF files
+- `\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\` - Redacted output files
+- Excel workbook location for data storage
 
-### Step 2: File Name Cleaning
-- **Function**: `cleanImages()`
-- **Purpose**: To iterate through each cemetery directory and initiate cleaning of the image file names.
-- **Process**:
-  - Define the base directory for cemetery files.
-  - List all subdirectories to handle each cemetery individually.
-  - For standard cemeteries, directly call `process_cemetery()`.
-  - For cemeteries with nested subdirectories like 'Jewish' and 'Misc', process each sub-cemetery individually using `process_cemetery()`.
+## 📱 Applications
 
-### Step 3: Processing Individual Cemeteries
-- **Function**: `process_cemetery()`
-- **Purpose**: To manage file renaming within each cemetery's directory structured alphabetically from 'A' to 'Z'.
-- **Process**:
-  - Generate an alphabetical list for folder navigation.
-  - For each letter subfolder, navigate and call the `clean()` function.
-  - Handle file renaming ensuring sequential order and address special cases for redacted files.
+### microsoftOCR GUI
 
-### Step 4: Detailed File Renaming and Redacted File Handling
-- **Function**: `clean()`
-- **Purpose**: To rename files within a specific letter directory ensuring a sequential naming order and to handle the removal of unnecessary redacted files.
-- **Process**:
-  - Retrieve all PDF files in the target directory.
-  - Calculate the last used index from the previous letter directory to ensure continuity in naming.
-  - Rename files incrementally; remove 'a' and 'b' suffixes from redacted files if necessary.
+The primary application for processing veteran registration cards with OCR technology.
 
-### Step 5: Adjusting File Names and Deleting Redacted Files
-- **Functions**: `adjustImageName()` and `cleanDelete()`
-- **Purpose**: Adjust file names based on good and bad IDs, and handle deletion of improperly redacted files while updating Excel records.
-- **Process**:
-  - Rename files by appending 'a' or 'b' to correct IDs.
-  - Move files to correct directories if needed.
-  - Update Excel workbook to reflect changes and delete Excel rows corresponding to bad IDs.
+#### Features and Usage
 
-### Step 6: Updating Hyperlinks in Excel
-- **Function**: `cleanHyperlinks()`
-- **Purpose**: To update hyperlink references in the Excel spreadsheet to reflect the current record IDs following modifications.
-- **Process**:
-  - Adjust the numeric ID within each hyperlink to ensure they accurately reflect the updated record IDs.
-  - Ensure all hyperlinks are active and correctly pointing to the associated PDF files.
+**1. Application Launch**
+- **Initial Pop-Up**: Warning message advising users to click "Stop Code" before exiting to prevent data corruption
+- **Main Interface**: Displays processing status with four states:
+  - **Idle**: Ready for input, awaiting "Run Code" button press
+  - **Running...**: Actively processing PDF files and extracting data
+  - **Paused**: Processing halted, awaiting "Resume" button press
+  - **Stopping...**: Safely finishing current record before exit
 
-## Summary
-This script provides an automated solution to manage and organize Veteran Grave Registration Card images efficiently, ensuring data accuracy and ease of access for administrative and historical research purposes.
+**2. Required Parameters**
+- **Cemetery Name**: Select from dropdown or enter cemetery name
+- **Letter Folder**: Specify alphabetical folder (A-Z) to process
+- **Validation**: Pop-ups alert if parameters are missing
 
+**3. Processing Workflow**
+- **Run Code**: Initiates `microsoftOCR.py` execution
+- **Progress Display**:
+  - Current record ID being processed
+  - Raw key-value pairs extracted from OCR
+  - Detailed error messages for validation failures
+  - Redacted image preview after processing
+- **Completion**: Pop-up notification when all files in folder are processed
 
+**4. Control Buttons**
+- **Pause/Resume**: Halt processing to review data, then continue
+- **Stop**: Safely complete current record and save Excel before stopping
+- **Run Code**: Start batch processing of selected cemetery/letter folder
 
+#### Extracted Fields
+- Veteran ID (VID)
+- Last Name, First Name, Middle Name, Suffix
+- Date of Birth (Month, Day, Year)
+- Date of Death (Month, Day, Year)
+- War/Conflict
+- Branch of Service
+- Serial Number (redacted in output)
+- Cemetery Location
+- Grave/Plot Information
 
-  
+### multiCleaner GUI
+
+Utility application for organizing, cleaning, and managing processed files.
+
+#### Features
+- **Batch File Renaming**: Ensures sequential numbering across cemetery folders
+- **Redacted File Management**: Handles 'a' and 'b' suffix files for duplicate cards
+- **Hyperlink Synchronization**: Updates Excel hyperlinks after file reorganization
+- **Duplicate Detection**: Identifies potential duplicate veteran records
+- **File Cleanup**: Removes unnecessary or incorrectly processed files
+
+#### Workflow
+1. **Select Operation**: Choose from cleaning, renaming, or duplicate detection
+2. **Specify Parameters**: Cemetery name, starting ID, folder range
+3. **Execute**: Process files with real-time progress feedback
+4. **Review**: Check logs and error reports for issues
+
+## 🔧 Core Modules
+
+### microsoftOCR.py (899 lines)
+**Primary OCR processing engine**
+
+**Key Functions**:
+- `redact(filePath, cemetery, letter, nameCoords, serialCoords, ...)`: Applies black box redaction to Social Security numbers
+- `mergeRedacted(pathA, pathB, cemetery, letter)`: Combines multiple versions of registration cards
+- `processDocument(filePath, cemetery, letter)`: Main processing pipeline for each PDF
+- `extractFields(ocrResult)`: Parses OCR output into structured fields
+- `validateData(fields)`: Applies validation rules to extracted data
+- `saveToExcel(fields, workbook, sheet)`: Writes cleaned data to Excel
+
+**Processing Steps**:
+1. Load PDF and convert first page to high-resolution image
+2. Submit image to Azure Form Recognizer custom model
+3. Extract bounding box coordinates and text values
+4. Apply field-specific cleaning rules
+5. Validate data against business rules
+6. Redact sensitive information using coordinate-based masking
+7. Save data to Excel with hyperlinks
+8. Archive redacted PDF to network folder
+
+### nameRule.py (313 lines)
+**Name parsing and standardization**
+
+**Capabilities**:
+- Handles comma-separated and period-separated name formats
+- Recognizes multi-part surname prefixes (O', Mc, Van, De, Di, Del, Le, St.)
+- Processes suffixes (Jr., Sr., I, II, III, IV)
+- Capitalizes names correctly (including special cases like McDonald, O'Brien)
+- Removes parenthetical notes and invalid characters
+- Splits full names into: Last, First, Middle, Suffix
+
+**Example Transformations**:
+- `"O'BRIEN. JOHN MICHAEL JR"` → Last: O'Brien, First: John, Middle: Michael, Suffix: Jr.
+- `"MCDONALD, ROBERT J"` → Last: McDonald, First: Robert, Middle: J
+- `"VAN DYKE WILLIAM"` → Last: Van Dyke, First: William
+
+### dateRule.py (1,054 lines)
+**Date parsing and normalization**
+
+**Handles Multiple Formats**:
+- `MM/DD/YYYY`, `M/D/YY`, `MM-DD-YYYY`
+- `Month DD, YYYY` (e.g., "January 15, 1945")
+- `Month YYYY` (partial dates)
+- Two-digit years with century inference
+- Malformed dates with extra characters
+
+**Validation**:
+- Checks for valid month (1-12), day (1-31), year ranges
+- Flags impossible dates (e.g., February 30)
+- Handles partial dates (year only, month/year only)
+- Standardizes output to `MM/DD/YYYY` format
+
+### warRule.py (97 lines)
+**Military conflict standardization**
+
+**Recognized Conflicts**:
+- World War I (WWI, WW1, World War 1)
+- World War II (WWII, WW2, World War 2)
+- Korean War (Korea)
+- Vietnam War (Vietnam, Viet Nam)
+- Gulf War, Iraq War, Afghanistan
+- Spanish-American War
+- Civil War
+
+**Standardization**: Converts abbreviations and variations to consistent format
+
+### branchRule.py (105 lines)
+**Military branch formatting**
+
+**Branches**:
+- Army (USA, U.S. Army)
+- Navy (USN, U.S. Navy)
+- Air Force (USAF, U.S. Air Force)
+- Marines (USMC, U.S. Marine Corps)
+- Coast Guard (USCG)
+
+**Formatting**: Standardizes abbreviations and full names
+
+## 🔄 Data Processing Pipeline
+
+### End-to-End Workflow
+
+```
+1. PDF Input
+   ↓
+2. Image Conversion (High-Resolution PNG)
+   ↓
+3. Azure OCR Analysis (Custom Model)
+   ↓
+4. Field Extraction (11+ fields with bounding boxes)
+   ↓
+5. Data Cleaning
+   ├── Name Standardization (nameRule.py)
+   ├── Date Normalization (dateRule.py)
+   ├── War Formatting (warRule.py)
+   └── Branch Formatting (branchRule.py)
+   ↓
+6. Data Validation
+   ├── Required field checks
+   ├── Format validation
+   └── Business rule enforcement
+   ↓
+7. Sensitive Data Redaction
+   ├── Coordinate calculation
+   ├── Black box overlay
+   └── Redacted PDF creation
+   ↓
+8. Excel Integration
+   ├── Data insertion
+   ├── Hyperlink creation
+   ├── Conditional formatting
+   └── Workbook save
+   ↓
+9. File Archiving
+   ├── Organize by cemetery
+   ├── Organize by last name letter
+   └── Network folder storage
+```
+
+### Error Handling Strategy
+
+- **Try-Catch Blocks**: Wrap each processing step to capture exceptions
+- **Detailed Logging**: Record errors with file path, field name, and stack trace
+- **Graceful Degradation**: Continue processing remaining files after errors
+- **User Notification**: Display errors in GUI for review
+- **Excel Highlighting**: Mark problematic rows with colored cells
+
+## 🛠 Utilities
+
+### duplicates.py
+**Identifies potential duplicate veteran records**
+
+**Detection Criteria**:
+- Matching last name + first name + death year
+- Excludes records in exception list
+- Groups duplicates for manual review
+
+**Output**: DataFrame with duplicate groups and row numbers
+
+### multiCleaner.py
+**Batch file organization and renaming**
+
+**Functions**:
+- `cleanImages()`: Processes all cemetery folders
+- `processCemetery()`: Handles A-Z letter subfolders
+- `clean()`: Renames files sequentially
+- `adjustImageName()`: Handles 'a'/'b' suffix files
+- `cleanDelete()`: Removes files and updates Excel
+
+### cleanerHyperlink.py
+**Excel hyperlink management**
+
+**Purpose**: Updates hyperlink formulas after file renaming
+**Process**: Adjusts numeric IDs in hyperlink paths to match new file names
+
+### singleCleaner.py
+**Individual file processing utility**
+
+**Use Cases**:
+- Reprocess single problematic file
+- Test cleaning rules on specific record
+- Manual correction workflow
+
+## 🧪 Testing
+
+### Test Files Overview
+
+**microsoftOCRTest.py**: Comprehensive OCR pipeline testing
+**dateTest.py**: 100+ date format test cases
+**nameTest.py**: Name parsing edge cases
+**warTest.py**: Military conflict standardization tests
+**duplicatesTest.py**: Duplicate detection algorithm validation
+
+### Running Tests
+
+```bash
+# Run all tests
+python testFiles/microsoftOCRTest.py
+python testFiles/dateTest.py
+python testFiles/nameTest.py
+
+# Test specific functionality
+python testFiles/test.py
+```
+
+## ⚙️ Configuration
+
+### Azure Credentials
+Configure in `microsoftOCR.py`:
+```python
+endpoint = "https://your-resource.cognitiveservices.azure.com/"
+api_key = "your-api-key"
+model_id = "your-custom-model-id"
+```
+
+### Network Paths
+Default paths (configurable):
+- Source: `\\ucclerk\pgmdoc\Veterans\Cemetery\`
+- Redacted: `\\ucclerk\pgmdoc\Veterans\Cemetery - Redacted\`
+- Excel: Network location specified in code
+
+### GUI Theme
+Stored in `veteranData/display_mode.txt`:
+- `dark`: Dark mode theme
+- `light`: Light mode theme
+
+## 📂 Network Folder Structure
+
+```
+\\ucclerk\pgmdoc\Veterans\
+├── Cemetery\
+│   ├── [Cemetery Name]\
+│   │   ├── A\
+│   │   │   ├── [CemeteryName]A00001.pdf
+│   │   │   ├── [CemeteryName]A00002.pdf
+│   │   │   └── ...
+│   │   ├── B\
+│   │   ├── C\
+│   │   └── ... (through Z)
+│   ├── Jewish\
+│   │   ├── [Sub-Cemetery]\
+│   │   │   ├── A\
+│   │   │   └── ...
+│   └── Misc\
+│
+└── Cemetery - Redacted\
+    ├── [Cemetery Name] - Redacted\
+    │   ├── A\
+    │   │   ├── [CemeteryName]A00001 redacted.pdf
+    │   │   └── ...
+    │   └── ... (through Z)
+    └── ...
+```
+
+## 📊 Excel Output Format
+
+### Columns
+| Column | Field | Description |
+|--------|-------|-------------|
+| A | VID | Veteran ID (sequential number) |
+| B | VLNAME | Last Name |
+| C | VFNAME | First Name |
+| D | VMNAME | Middle Name |
+| E | VSUFFIX | Suffix (Jr., Sr., etc.) |
+| F | VDOBM | Date of Birth - Month |
+| G | VDOBD | Date of Birth - Day |
+| H | VDOBY | Date of Birth - Year |
+| I | VDODM | Date of Death - Month |
+| J | VDODD | Date of Death - Day |
+| K | VDODY | Date of Death - Year |
+| L | VWAR | War/Conflict |
+| M | VBRANCH | Branch of Service |
+| N | HYPERLINK | Link to redacted PDF |
+
+### Conditional Formatting
+- **Yellow Highlight**: Validation warnings
+- **Red Highlight**: Critical errors
+- **Green Highlight**: Successfully processed
+
+## 🤝 Contributing
+
+This is a production system for government records management. Changes should be:
+1. Thoroughly tested in `testFiles/` environment
+2. Documented with detailed comments
+3. Reviewed for data privacy compliance
+4. Validated against historical records
+
+## 📝 Version History
+
+### Current Version (Microsoft OCR)
+- Custom Azure Form Recognizer model
+- PySide6 GUI with dark/light themes
+- Advanced name/date parsing rules
+- Coordinate-based redaction
+
+### Previous Versions (prevVersions/)
+- **amazonOCR.py**: AWS Textract implementation
+- **hardCoordinates.py**: Fixed-position redaction
+- **keyOffset.py**: Offset-based coordinate calculation
+
+## 🙏 Acknowledgments
+
+This system digitizes and preserves historical veteran records, honoring those who served. The application balances automation efficiency with data accuracy and privacy protection, ensuring these important records remain accessible for future generations.
